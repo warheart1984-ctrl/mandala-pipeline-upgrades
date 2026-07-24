@@ -959,6 +959,69 @@ def test_generate_video_disabled(monkeypatch, tmp_path):
     assert "VIDEO_ENABLED" in detail or "disabled" in detail.lower()
 
 
+def test_rejected_video_deletes_b2_keys(monkeypatch):
+    """Unusable video clips must best-effort delete asset + manifest from B2."""
+    from unittest.mock import MagicMock
+
+    from app.pipeline import GenerationQualityError
+    from app.pipeline_video import VideoGenerateResult, generate_video
+
+    settings = _offline_settings(
+        nvidia_api_key="nvapi-test",
+        b2_key_id="id",
+        b2_app_key="key",
+        b2_bucket="bucket",
+        dry_run=False,
+        video_enabled=True,
+    )
+
+    gen = VideoGenerateResult(
+        run_id="run-bad-video",
+        prompt="neon grid world",
+        model=settings.video_model,
+        provider="nvidia-video",
+        status="ok",
+        asset_key="genblaze-media/x/bad.mp4",
+        manifest_key="genblaze-media/x/bad-manifest.json",
+        asset_sha256="abc",
+        preview_url=None,
+        created_at="2026-01-01T00:00:00+00:00",
+        dry_run=False,
+        modality="video",
+    )
+    # Too small / no ftyp → assess_video_bytes fails.
+    junk = b"not-a-video"
+
+    deleted: list[str] = []
+
+    def fake_run_live_video(**_kwargs):
+        return gen, junk
+
+    def fake_delete_keys(_settings, *keys):
+        deleted.extend([k for k in keys if k])
+
+    mock_http = MagicMock()
+    mock_http.close = MagicMock()
+
+    monkeypatch.setattr("app.pipeline_video._run_live_video", fake_run_live_video)
+    monkeypatch.setattr("app.pipeline_video._best_effort_delete_keys", fake_delete_keys)
+    monkeypatch.setattr(
+        "app.pipeline_video._nvidia_output_dir",
+        lambda: __import__("pathlib").Path(__import__("tempfile").mkdtemp()),
+    )
+    monkeypatch.setattr(
+        "app.nvidia_http.build_nvidia_genai_client",
+        lambda *_a, **_k: mock_http,
+    )
+
+    with pytest.raises(GenerationQualityError):
+        generate_video(settings, "neon grid world")
+
+    assert "genblaze-media/x/bad.mp4" in deleted
+    assert "genblaze-media/x/bad-manifest.json" in deleted
+    mock_http.close.assert_called_once()
+
+
 def test_assets_modality_filter(client):
     client.post("/api/generate", json={"prompt": "still asset"})
     client.post("/api/generate-video", json={"prompt": "video asset"})

@@ -22,6 +22,7 @@ from typing import Any
 from app.config import APP_DIR, NVIDIA_SETUP_HELP, Settings
 from app.pipeline import (
     GenerationQualityError,
+    _best_effort_delete_keys,
     _extract_asset_key,
     _nvidia_output_dir,
     _presign_preview,
@@ -273,6 +274,8 @@ def generate_video(settings: Settings, prompt: str) -> VideoGenerateResult:
         assessment = assess_video_bytes(video_bytes)
         gen.quality = assessment
         if not assessment["ok"]:
+            # Mirror image pipeline: do not leave rejected mp4/manifest in B2.
+            _best_effort_delete_keys(settings, gen.asset_key, gen.manifest_key)
             raise GenerationQualityError(
                 assessment.get("reason")
                 or "NVIDIA returned an unusable video asset."
