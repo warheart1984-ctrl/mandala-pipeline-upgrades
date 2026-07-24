@@ -15,7 +15,7 @@ from typing import Any, Callable
 
 from app.config import APP_DIR, NVIDIA_SETUP_HELP, Settings
 from app.image_quality import assess_image_bytes, extract_nvidia_warnings
-from app.preview_cache import local_preview_url, put_preview
+from app.preview_cache import put_preview
 from app.prompt_rewrite import looks_like_people_prompt, rewrite_as_abstract_geometry
 from app.prompt_sanitize import sanitize_prompt
 
@@ -48,11 +48,16 @@ class GenerateResult:
 
 
 def _attach_local_preview(gen: GenerateResult, image_bytes: bytes | None) -> None:
-    """Prefer same-origin preview so UI works when B2 free-tier caps block GETs."""
+    """Cache still bytes for same-origin ``/api/preview`` without discarding B2 URL.
+
+    Must not overwrite ``gen.preview_url``: that field is persisted in the
+    recent-assets index and is the cloud fallback after prune / restart.
+    ``api_assets`` / ``api_generate`` prefer the local URL at response time when
+    the cache file is present.
+    """
     if not image_bytes or not gen.run_id:
         return
     if put_preview(APP_DIR, gen.run_id, image_bytes):
-        gen.preview_url = local_preview_url(gen.run_id)
         note = "local preview cache (UI avoids B2 download)"
         if note not in (gen.detail or ""):
             gen.detail = (gen.detail + " · " if gen.detail else "") + note

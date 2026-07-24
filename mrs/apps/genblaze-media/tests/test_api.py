@@ -191,6 +191,57 @@ def test_assets_after_generate(client):
     assert assets[0]["preview_url"].startswith("/api/preview/")
 
 
+def test_generate_stores_cloud_url_not_local_path(client):
+    """Index must retain cloud/None preview_url; local swap is response-only."""
+    from app import main as main_mod
+
+    r = client.post("/api/generate", json={"prompt": "index keeps cloud url"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body.get("preview_url", "").startswith("/api/preview/")
+    assert body.get("preview_source") == "local-cache"
+
+    stored = main_mod._index.list_recent(1)[0]
+    stored_url = stored.get("preview_url")
+    assert stored_url is None or not str(stored_url).startswith("/api/preview/")
+
+
+def test_assets_falls_back_to_stored_b2_when_cache_missing(client, tmp_path):
+    """After prune/restart, stored B2 URL must still drive preview_source."""
+    from app import main as main_mod
+    from app.preview_cache import get_preview_path, put_preview
+
+    run_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    b2_url = "https://s3.us-east-005.backblazeb2.com/bucket/key.png?X-Amz-Signature=test"
+    png = bytes.fromhex(
+        "89504e470d0a1a0a0000000d49484452000000010000000108000000003a7e9b55"
+        "0000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082"
+    )
+    assert put_preview(main_mod.APP_DIR, run_id, png) is not None
+    main_mod._index.prepend(
+        {
+            "run_id": run_id,
+            "prompt": "fallback still",
+            "preview_url": b2_url,
+            "created_at": "2026-01-01T00:00:00+00:00",
+        }
+    )
+
+    with_cache = client.get("/api/assets").json()["assets"][0]
+    assert with_cache["preview_source"] == "local-cache"
+    assert with_cache["preview_url"] == f"/api/preview/{run_id}"
+
+    cached = get_preview_path(main_mod.APP_DIR, run_id)
+    assert cached is not None
+    cached.unlink()
+
+    without = client.get("/api/assets").json()["assets"][0]
+    assert without["preview_source"] == "b2-presign"
+    assert without["preview_url"] == b2_url
+    # Index entry must still hold the cloud URL (never replaced by local path).
+    assert main_mod._index.list_recent(1)[0]["preview_url"] == b2_url
+
+
 def test_preview_cache_helpers(tmp_path):
     from app.preview_cache import get_preview_path, local_preview_url, put_preview
 
