@@ -38,6 +38,18 @@ def _offline_settings(**overrides) -> Settings:
     return Settings(**base)
 
 
+@pytest.fixture(autouse=True)
+def _isolate_preview_cache(tmp_path, monkeypatch):
+    """Keep preview-cache writes out of the repo working tree during tests.
+
+    ``generate_image`` (dry-run and mocked-live) caches stills via
+    ``preview_cache.cache_dir``, which defaults under the app's ``data/`` dir.
+    Redirect it to a per-test temp dir so running the suite never leaves stray
+    image files in the repository.
+    """
+    monkeypatch.setenv("GENBLAZE_PREVIEW_CACHE_DIR", str(tmp_path / "preview-cache"))
+
+
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("GENBLAZE_DRY_RUN", "1")
