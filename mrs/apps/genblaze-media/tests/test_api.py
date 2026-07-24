@@ -602,6 +602,10 @@ def test_blank_people_prompt_retries_abstract(monkeypatch):
     assert "person" not in seen_prompts[1].lower()
     assert "woman" not in seen_prompts[1].lower()
     assert "abstract geometry retry" in (result.detail or "")
+    # The raw prompt had no trailing commentary, so the abstract rewrite must not
+    # be mislabeled as "meta-commentary stripped" (note or flag).
+    assert result.prompt_sanitized is False
+    assert "meta-commentary stripped" not in (result.detail or "")
     assert result.asset_key == "genblaze-media/x/ok.png"
     mock_http.close.assert_called_once()
 

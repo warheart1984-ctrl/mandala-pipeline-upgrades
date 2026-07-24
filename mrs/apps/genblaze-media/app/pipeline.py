@@ -543,7 +543,12 @@ def generate_image(settings: Settings, prompt: str) -> GenerateResult:
             )
             last_warnings = warnings
             last_gen = gen
-            gen.prompt_sanitized = attempt_prompt != raw_prompt or prompt_sanitized
+            # `prompt_sanitized` means meta-commentary was stripped from the raw
+            # prompt (cleaned != raw_prompt). The abstract-geometry rewrite is a
+            # different transform with its own detail note, so don't let it flip
+            # this flag — otherwise a successful abstract retry is mislabeled as
+            # "meta-commentary stripped" in the note and the API response.
+            gen.prompt_sanitized = prompt_sanitized
             gen.created_at = created_at
             if abstract_retry_used and attempt_idx > 0:
                 gen.detail = (gen.detail + " · " if gen.detail else "") + (
