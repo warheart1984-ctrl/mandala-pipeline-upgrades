@@ -324,7 +324,6 @@ describe("RT4D Phase B wavefront / RHI", () => {
     assert.equal(rhi._frameGpuDirty, false);
   });
 
-
   it("CPU PathTracer4D still traces Hyper-Caustic Lens (conformance oracle)", () => {
     const { scene, camera } = createHyperCausticLens({ width: 32, height: 24 });
     const tracer = new PathTracer4D({
