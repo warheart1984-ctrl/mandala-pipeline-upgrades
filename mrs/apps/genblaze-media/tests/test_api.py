@@ -265,6 +265,49 @@ def test_preview_cache_helpers(tmp_path):
     assert local_preview_url(run_id) == f"/api/preview/{run_id}"
 
 
+def test_preview_cache_guesses_webm_and_mov(tmp_path):
+    """Non-MP4 clips must cache with playable extensions + Content-Type."""
+    from app.preview_cache import _guess_ext, get_preview_path, media_type_for_path, put_preview
+
+    webm_id = "22222222-2222-2222-2222-222222222222"
+    # EBML header (WebM/Matroska)
+    webm = b"\x1aE\xdf\xa3" + b"\x00" * 32
+    assert _guess_ext(webm) == ".webm"
+    path = put_preview(tmp_path, webm_id, webm)
+    assert path is not None
+    assert path.suffix == ".webm"
+    assert get_preview_path(tmp_path, webm_id) == path
+    assert media_type_for_path(path) == "video/webm"
+
+    mov_id = "33333333-3333-3333-3333-333333333333"
+    # ISO BMFF with QuickTime major brand
+    mov = (
+        (28).to_bytes(4, "big")
+        + b"ftyp"
+        + b"qt  "
+        + (0).to_bytes(4, "big")
+        + b"qt  "
+        + b"\x00" * 16
+    )
+    assert _guess_ext(mov) == ".mov"
+    path_mov = put_preview(tmp_path, mov_id, mov)
+    assert path_mov is not None
+    assert path_mov.suffix == ".mov"
+    assert media_type_for_path(path_mov) == "video/quicktime"
+
+    mp4_id = "44444444-4444-4444-4444-444444444444"
+    mp4 = (
+        (24).to_bytes(4, "big")
+        + b"ftyp"
+        + b"isom"
+        + (0).to_bytes(4, "big")
+        + b"isom"
+        + b"\x00" * 8
+    )
+    assert _guess_ext(mp4) == ".mp4"
+    assert put_preview(tmp_path, mp4_id, mp4).suffix == ".mp4"
+
+
 def test_generate_requires_nvidia_when_not_dry(monkeypatch, tmp_path):
     monkeypatch.setattr(
         "app.main.get_settings",
