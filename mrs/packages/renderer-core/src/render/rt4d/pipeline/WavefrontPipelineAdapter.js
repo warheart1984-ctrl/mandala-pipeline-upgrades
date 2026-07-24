@@ -1,17 +1,16 @@
 import { selectWavefrontConfig } from "./WavefrontConfigSelector.js";
 import { createRt4dWavefrontPipeline } from "../gpu/wavefront/WavefrontPipeline.js";
-import { prepareWorld } from "../WorldOrchestrator.js";
 import { runCPUConformanceGate } from "./CPUConformanceGate.js";
 import { createWavefrontCssvWriter } from "./WavefrontCssvWriter.js";
+import { prepareWorld } from "../WorldOrchestrator.js";
 
 /**
- * Host-facing adapter beside RT4DGPURenderer (Phase B path + Phase C world hooks).
+ * Host-facing adapter beside RT4DGPURenderer (Phase B path).
+ * Phase C: optional worldDoc / worldContext -> prepareWorld + CPU wave step (skeleton).
  *
  * Browser / Node call:
  *   import { renderWavefrontFrame } from "@mrs/renderer-core/rt4d";
  *   const frame = await renderWavefrontFrame("world-id", { quality: "baseline", host: "browser" });
- *
- * Phase C (skeleton): optional worldDoc / worldContext → prepareWorld + CPU wave step.
  *
  * @param {string} worldId
  * @param {object} opts
@@ -21,8 +20,8 @@ import { createWavefrontCssvWriter } from "./WavefrontCssvWriter.js";
  * @param {number} [opts.width]
  * @param {number} [opts.height]
  * @param {number} [opts.seed]
- * @param {boolean} [opts.runConformance] — default true; logs only
- * @param {string} [opts.cssvPath] — optional Node JSONL path
+ * @param {boolean} [opts.runConformance] - default true; logs only
+ * @param {string} [opts.cssvPath] - optional Node JSONL path
  * @param {object} [opts.worldDoc]
  * @param {object} [opts.worldContext]
  * @param {boolean} [opts.stepWave=true]
@@ -30,10 +29,6 @@ import { createWavefrontCssvWriter } from "./WavefrontCssvWriter.js";
  * @param {boolean} [opts.allowLiveGpu]
  */
 export async function renderWavefrontFrame(worldId, opts = {}) {
-  const width = opts.width ?? 8;
-  const height = opts.height ?? 8;
-  const seed = opts.seed ?? 0x4d5253;
-
   let worldContext = opts.worldContext ?? null;
   if (!worldContext && opts.worldDoc) {
     worldContext = prepareWorld(opts.worldDoc);
@@ -41,6 +36,10 @@ export async function renderWavefrontFrame(worldId, opts = {}) {
   if (worldContext?.waveField && opts.stepWave !== false) {
     worldContext.waveField.step();
   }
+
+  const width = opts.width ?? 8;
+  const height = opts.height ?? 8;
+  const seed = opts.seed ?? 0x4d5253;
 
   const config = selectWavefrontConfig({
     quality: opts.quality,
@@ -63,7 +62,7 @@ export async function renderWavefrontFrame(worldId, opts = {}) {
   });
 
   await pipeline.renderFrame(worldId, config);
-  const pixels = pipeline.getPixels();
+  const pixels = await pipeline.getPixels();
 
   let conformance = null;
   if (opts.runConformance !== false) {
@@ -86,9 +85,9 @@ export async function renderWavefrontFrame(worldId, opts = {}) {
     pixels,
     evidence: pipeline.evidence.records,
     dispatchLog: pipeline.rhi.dispatchLog ?? [],
-    worldContext,
     rhiMode: pipeline.rhi.mode ?? "stub",
     conformance,
     engineMode: "wavefront",
+    worldContext,
   };
 }
