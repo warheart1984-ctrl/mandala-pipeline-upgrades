@@ -93,6 +93,7 @@ export class FrameLoop {
       host: "browser",
       worldDoc: this.worldDoc,
       worldContext: this.worldContext,
+      stepWave: false,
       width: this.width,
       height: this.height,
       rhi: this.rhi,
