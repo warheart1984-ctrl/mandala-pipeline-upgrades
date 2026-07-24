@@ -25,7 +25,7 @@ def _offline_settings(**overrides) -> Settings:
         b2_endpoint="https://s3.us-east-005.backblazeb2.com",
         storage_prefix="genblaze-media",
         image_model="black-forest-labs/flux.1-schnell",
-        video_model="nvidia/cosmos-2.0-diffusion-text2world",
+        video_model="nvidia/cosmos-1.0-7b-diffusion-text2world",
         video_enabled=True,
         embed_model="nvidia/nv-embedcode-7b-v1",
         embed_url="https://integrate.api.nvidia.com/v1/embeddings",
@@ -76,7 +76,7 @@ def test_health_ok(client):
     assert body["b2_probe_skipped"] is False
     assert body["b2_probe"] is None
     assert body["embed_model"] == "nvidia/nv-embedcode-7b-v1"
-    assert body["video_model"] == "nvidia/cosmos-2.0-diffusion-text2world"
+    assert body["video_model"] == "nvidia/cosmos-1.0-7b-diffusion-text2world"
     assert body["video_enabled"] is True
     assert body["video_available"] is True  # dry-run + enabled
     assert body["cmm_id"] == "CMM-NIM-Cosmos-v1.0"
@@ -165,6 +165,15 @@ def test_b2_probe_on_health_env_opt_in(monkeypatch):
     monkeypatch.setenv("GENBLAZE_DRY_RUN", "1")
     settings = get_settings()
     assert settings.b2_probe_on_health is True
+
+
+def test_video_model_env_default_is_cosmos_1_0_7b(monkeypatch):
+    from app import config
+
+    monkeypatch.setattr(config, "_load_dotenv_files", lambda: [])
+    monkeypatch.delenv("GENBLAZE_VIDEO_MODEL", raising=False)
+    settings = config.get_settings()
+    assert settings.video_model == "nvidia/cosmos-1.0-7b-diffusion-text2world"
 
 
 def test_ui_served(client):
@@ -1000,6 +1009,23 @@ def test_generate_video_disabled(monkeypatch, tmp_path):
     assert r.status_code == 503
     detail = r.json()["detail"]
     assert "VIDEO_ENABLED" in detail or "disabled" in detail.lower()
+
+
+def test_video_model_validation_refreshes_upstream_probe():
+    from types import SimpleNamespace
+
+    from app.pipeline_video import _validate_video_model
+
+    calls = []
+
+    class Provider:
+        def validate_model(self, model, *, refresh=False):
+            calls.append((model, refresh))
+            return SimpleNamespace(is_terminal_failure=False, detail=None)
+
+    model = "nvidia/cosmos-1.0-7b-diffusion-text2world"
+    _validate_video_model(Provider(), model)
+    assert calls == [(model, True)]
 
 
 def test_rejected_video_deletes_b2_keys(monkeypatch):
