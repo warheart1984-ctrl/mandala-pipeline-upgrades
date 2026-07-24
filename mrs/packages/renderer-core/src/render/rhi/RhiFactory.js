@@ -7,7 +7,7 @@ import { Dx12Rhi } from "./Dx12Rhi.js";
  * - vulkan/dx12: Phase C declared constructors; methods throw (not production)
  *
  * @param {import("./RhiTypes.js").RhiBackend} backend
- * @param {object} [options]
+ * @param {object} [options] — forwarded to WebGpuRhi (and other backends)
  * @returns {import("./RhiContract.js").Rhi}
  */
 export function createRhi(backend, options = {}) {

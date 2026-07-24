@@ -1,21 +1,17 @@
-// generate.wgsl — Phase B/C declared stub (Drive-G-1)
-struct Ray { origin : vec3<f32>, dir : vec3<f32>, }
-@group(0) @binding(0) var<storage, read_write> rays : array<Ray>;
-struct CameraUniform {
-  origin : vec3<f32>, _pad0 : f32,
-  forward : vec3<f32>, _pad1 : f32,
-  right : vec3<f32>, _pad2 : f32,
-  up : vec3<f32>, _pad3 : f32,
-  width : u32, height : u32,
-}
-@group(0) @binding(1) var<uniform> camera : CameraUniform;
-@compute @workgroup_size(8, 8)
-fn main(@builtin(global_invocation_id) id : vec3<u32>) {
-  if (id.x >= camera.width || id.y >= camera.height) { return; }
-  let nx = (f32(id.x) + 0.5) / f32(camera.width);
-  let ny = (f32(id.y) + 0.5) / f32(camera.height);
-  let dir = normalize(camera.forward + (nx * 2.0 - 1.0) * camera.right + (1.0 - ny * 2.0) * camera.up);
-  let index = id.y * camera.width + id.x;
-  rays[index].origin = camera.origin;
-  rays[index].dir = dir;
+// RT4D Phase B — generate stage stub (visible hash + XY gradient).
+struct Params { width: u32, height: u32, stage: u32, seed: u32 }
+@group(0) @binding(0) var<uniform> params: Params;
+@group(0) @binding(1) var<storage, read_write> frame: array<u32>;
+@group(0) @binding(2) var<storage, read_write> paths: array<u32>;
+
+@compute @workgroup_size(8, 8, 1)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= params.width || gid.y >= params.height) { return; }
+  let i = gid.y * params.width + gid.x;
+  let h = (gid.x * 374761393u) ^ (gid.y * 668265263u) ^ params.seed;
+  frame[i] = (255u << 24u)
+    | ((h & 0xffu) << 16u)
+    | (((gid.x * 255u) / max(params.width, 1u)) << 8u)
+    | ((gid.y * 255u) / max(params.height, 1u));
+  if (i < arrayLength(&paths)) { paths[i] = h; }
 }

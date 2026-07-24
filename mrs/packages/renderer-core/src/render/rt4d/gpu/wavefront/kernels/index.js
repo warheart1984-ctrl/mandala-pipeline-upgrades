@@ -1,5 +1,6 @@
 /**
- * Load WGSL sources (Node-friendly). Does not require navigator.gpu.
+ * Load WGSL sources for wavefront stubs (Node-friendly).
+ * Does not require navigator.gpu. Browser hosts may use embedded defaults in WebGpuRhi.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
