@@ -39,4 +39,14 @@ export {
 } from "./gpu/wavefront/index.js";
 export { renderWavefrontFrame } from "./pipeline/WavefrontPipelineAdapter.js";
 export { selectWavefrontConfig } from "./pipeline/WavefrontConfigSelector.js";
-export { createRhi, WebGpuRhi, RHI_BACKENDS } from "../rhi/RhiFactory.js";
+export { createRhi, WebGpuRhi, VulkanRhi, Dx12Rhi, MultiGpuArbitrator, RHI_BACKENDS } from "../rhi/RhiFactory.js";
+export {
+  CurvatureField,
+  ForceField,
+  WaveField,
+  fromWorldWaveConfig,
+  stepWaveField,
+} from "./physics/index.js";
+export { HdrCanvas } from "./gallery/index.js";
+export { prepareWorld, bindWorld, validateWorldDocumentV2, PlpValidator } from "./WorldOrchestrator.js";
+export { FrameLoop } from "./FrameLoop.js";

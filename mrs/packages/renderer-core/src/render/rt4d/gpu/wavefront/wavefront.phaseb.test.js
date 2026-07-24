@@ -8,13 +8,17 @@ import { PathTracer4D } from "../../integrator/PathTracer4D.js";
 import { createHyperCausticLens } from "../../scene/TestHyperCausticLens.js";
 
 describe("RT4D Phase B wavefront / RHI stubs", () => {
-  it("createRhi webgpu works; vulkan/dx12 throw roadmap errors", async () => {
+  it("createRhi webgpu works; vulkan/dx12 construct but methods throw", async () => {
     const rhi = createRhi("webgpu");
     assert.equal(rhi.getBackend(), "webgpu");
     const devices = await rhi.getDevices();
     assert.ok(devices.length >= 1);
-    assert.throws(() => createRhi("vulkan"), /roadmap/i);
-    assert.throws(() => createRhi("dx12"), /roadmap/i);
+    const vk = createRhi("vulkan");
+    assert.equal(vk.getBackend(), "vulkan");
+    await assert.rejects(() => vk.getDevices(), /not implemented|roadmap/i);
+    const dx = createRhi("dx12");
+    assert.equal(dx.getBackend(), "dx12");
+    await assert.rejects(() => dx.dispatchKernel(), /not implemented|roadmap/i);
   });
 
   it("conformance defaults are record-optional (enforce false)", () => {
