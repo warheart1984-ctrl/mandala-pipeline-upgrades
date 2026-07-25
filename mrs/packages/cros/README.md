@@ -11,6 +11,7 @@ A focused foundation for a governed cinematic render stack:
 | Piece | Path | Status |
 | --- | --- | --- |
 | Constitution (CI-001..CI-006) | `constitution/` | **design** — prose + machine-readable JSON |
+| Lifecycle bridge (SX-PTIG) | `constitution/LIFECYCLE.md` + `lifecycle-bridge.json` | **declared** — continuity ≠ acceptance; not a runtime gate |
 | Lineage artifact schemas (7) | `schemas/` | **specified** — Draft 2020-12, unit-validated |
 | Dual conformance profiles | `profiles/` | `cros.dcc-offline` **declared**; `cros.gen-ai-nim` **skeleton** |
 | Python package | `src/cros/` | **skeleton / partial** — types, hashing, validators, gen-ai planner |
