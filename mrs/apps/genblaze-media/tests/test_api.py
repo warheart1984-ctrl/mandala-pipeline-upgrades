@@ -524,6 +524,38 @@ def test_api_generate_surfaces_transfer_cause(monkeypatch, tmp_path):
     assert "Access denied" in detail or "underlying" in detail
 
 
+def test_api_generate_explains_empty_nvidia_504(monkeypatch, tmp_path):
+    """An empty upstream 504 should give an actionable cold-start message."""
+    from app import main as main_mod
+    from app.index_store import AssetIndex
+
+    monkeypatch.setattr(
+        "app.main.get_settings",
+        lambda: _offline_settings(
+            nvidia_api_key="nvapi-test",
+            b2_key_id="id",
+            b2_app_key="key",
+            b2_bucket="bucket",
+            dry_run=False,
+        ),
+    )
+    main_mod._index = AssetIndex(tmp_path / "recent-empty-504.json")
+
+    def boom(_settings, _prompt):
+        raise Exception('NVIDIA image generate failed (504): {"_raw": ""}')
+
+    monkeypatch.setattr("app.main.generate_image", boom)
+    c = TestClient(app)
+    r = c.post("/api/generate", json={"prompt": "cold start"})
+
+    assert r.status_code == 502
+    detail = r.json()["detail"]
+    assert "empty 504 gateway response" in detail
+    assert "cold start" in detail
+    assert "retry once" in detail
+    assert "NVCF_POLL_SECONDS" in detail
+
+
 def test_sanitize_strips_meta_commentary():
     from app.prompt_sanitize import sanitize_prompt
 

@@ -103,7 +103,8 @@ mrs/packages/cros/
 | Gen-ai evidence field enforcement | yes | |
 | Offline DCC planner | | raises `UnsupportedProfileError` |
 | Offline required-field enforcement | | declared, not machine-checked |
-| Any real adapter (NIM, Cycles, …) | | none — `NullRenderAdapter` only |
+| Any real adapter (NIM, Cycles, …) | | none — `NullRenderAdapter`; `adapters/seedance.py` is **skeleton** only |
+| Seedance live HTTP | | owned by genblaze-media (`GENBLAZE_VIDEO_BACKEND=seedance`), not this package |
 | Replay executor | | `verdict: unverified` only |
 | Farm / OIDN / ACES / color mgmt | | absent |
 | Coupling to genblaze-media | none (banned) | optional future HTTP export |
