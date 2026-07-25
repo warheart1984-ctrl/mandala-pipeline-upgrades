@@ -18,6 +18,7 @@ from app.main import app  # noqa: E402
 def _offline_settings(**overrides) -> Settings:
     base = dict(
         nvidia_api_key=None,
+        fal_api_key=None,
         b2_key_id=None,
         b2_app_key=None,
         b2_bucket="test-bucket",
@@ -27,6 +28,13 @@ def _offline_settings(**overrides) -> Settings:
         image_model="black-forest-labs/flux.1-schnell",
         video_model="nvidia/cosmos-1.0-7b-diffusion-text2world",
         video_enabled=False,
+        video_backend="nvidia",
+        seedance_model="bytedance/seedance-2.0/text-to-video",
+        seedance_resolution="720p",
+        seedance_duration="5",
+        seedance_aspect_ratio="16:9",
+        seedance_generate_audio=True,
+        seedance_watermark=False,
         embed_model="nvidia/nv-embedcode-7b-v1",
         embed_url="https://integrate.api.nvidia.com/v1/embeddings",
         embed_timeout_seconds=60.0,
@@ -92,6 +100,7 @@ def test_health_ok(client):
     assert body["b2_probe"] is None
     assert body["embed_model"] == "nvidia/nv-embedcode-7b-v1"
     assert body["video_model"] == "nvidia/cosmos-1.0-7b-diffusion-text2world"
+    assert body["video_backend"] == "nvidia"
     assert body["video_enabled"] is False
     assert body["video_available"] is False  # disabled by default (stills judge demo)
     assert body["cmm_id"] == "CMM-NIM-Cosmos-v1.0"
