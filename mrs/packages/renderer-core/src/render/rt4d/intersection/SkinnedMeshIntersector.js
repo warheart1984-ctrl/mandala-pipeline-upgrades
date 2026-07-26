@@ -19,6 +19,10 @@ export function sharedMeshBvhCacheSize() {
   return sharedBvhCache.size;
 }
 
+export function createSharedBvhCache() {
+  return new Map();
+}
+
 function readVec(vertices, index, stride = 3) {
   if (Array.isArray(vertices[index])) {
     const v = vertices[index];
@@ -93,6 +97,7 @@ export class SkinnedMeshIntersector {
     this.materialSlots = primitive.materialSlots ?? null;
     this.defaultMaterialId = primitive.materialId ?? primitive.material?.id ?? "default";
     this.bvhKey = bvhCacheKey(primitive);
+    this.bvhCache = options.bvhCache ?? sharedBvhCache;
     this.bvh = this._buildOrReuseBvh(options);
   }
 
@@ -107,10 +112,10 @@ export class SkinnedMeshIntersector {
 
   _buildOrReuseBvh(options = {}) {
     if (!this.bvhKey) return buildDynamicBvh(this.vertices, this.indices, options);
-    const cached = sharedBvhCache.get(this.bvhKey);
+    const cached = this.bvhCache.get(this.bvhKey);
     if (cached) return cached;
     const bvh = buildDynamicBvh(this.vertices, this.indices, options);
-    sharedBvhCache.set(this.bvhKey, bvh);
+    this.bvhCache.set(this.bvhKey, bvh);
     return bvh;
   }
 
