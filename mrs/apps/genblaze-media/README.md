@@ -143,6 +143,19 @@ must still finish inside the platform request timeout. `render.yaml` therefore
 pins `RT4D_RENDER_WIDTH/HEIGHT=256` and `RT4D_SAMPLES=8`. Those numbers are a
 conservative starting point, not a measured budget — time a render on the
 target plan before raising them.
+### Docker / Render follow-up (Node not yet in the image)
+
+The root / app Dockerfiles install Python only. To make `rt4d` work on Render you must add Node to the image (example, not applied in this change):
+
+```dockerfile
+# Example follow-up — do NOT claim this is already deployed:
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm \
+ && rm -rf /var/lib/apt/lists/*
+# Also COPY mrs/packages/renderer-core into the image (or a multi-stage build)
+# and set RT4D_SCRIPT_PATH accordingly.
+```
+
+Until that lands, `/health.rt4d.available` will be `false` on the deployed image even when `GENBLAZE_IMAGE_BACKEND=rt4d` is set. Local monorepo runs work today.
 
 ## Run locally
 
