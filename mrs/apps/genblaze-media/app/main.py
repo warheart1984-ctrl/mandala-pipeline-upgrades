@@ -336,10 +336,12 @@ def _run_generate_common(body: GenerateRequest, *, video: bool) -> dict:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:
         # Missing NVIDIA/RT4D setup, video disabled, or B2 config — 503 with setup text.
+        # RT4D CLI crashes/timeouts raise RT4DRenderError (not RuntimeError) → 502 below.
         # Transfer/sink failures are re-raised as non-RuntimeError (see pipeline).
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         # Include chained transfer cause when present (Genblaze SinkError omits it).
+        # Also covers RT4DRenderError (present CLI, failed/timed-out render).
         detail = _format_generation_failure(exc)
         raise HTTPException(status_code=502, detail=f"generation failed: {detail}") from exc
 
