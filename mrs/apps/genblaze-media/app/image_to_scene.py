@@ -21,7 +21,11 @@ from typing import Any, Callable
 
 import httpx
 
-from app.config import APP_DIR, REPO_ROOT, Settings
+from app.config import (
+    APP_DIR,
+    Settings,
+    validate_scene_spec_default_script_path,
+)
 from app.image_ingest import (
     analyze_image_bytes,
     decode_base64_payload,
@@ -56,17 +60,6 @@ _SURFACE_BY_FRAMING = {
 }
 
 _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "image_to_scene_spec.md"
-
-
-def validate_scene_spec_default_script_path(repo_root: Path = REPO_ROOT) -> Path:
-    return (
-        repo_root
-        / "mrs"
-        / "packages"
-        / "renderer-core"
-        / "scripts"
-        / "validate-scene-spec.mjs"
-    )
 
 
 def image_to_scene_availability(settings: Settings) -> dict[str, Any]:
