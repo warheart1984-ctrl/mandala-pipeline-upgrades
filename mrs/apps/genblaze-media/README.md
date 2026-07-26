@@ -6,7 +6,7 @@ Thin **FastAPI** service: user prompt → **Genblaze** (`genblaze-nvidia` + `gen
 | --- | --- |
 | Product story | **Declared:** provenanced *concept* stills for MRS / 4D scene authoring |
 | Genblaze 4D render | **Not claimed** — Genblaze's NVIDIA path generates 2D (NIM FLUX); MRS remains the 4D renderer |
-| RT4D image backend | **Prepared** — `GENBLAZE_IMAGE_BACKEND=rt4d` shells out to renderer-core `render-still.mjs` for deterministic procedural 4D stills (NOT text-to-image). Requires Node; the **repo-root** Dockerfile bundles it, the app-local one cannot. Render deploy **not yet verified** — check `/health.rt4d.available` |
+| RT4D image backend | **Prepared** — `GENBLAZE_IMAGE_BACKEND=rt4d` shells out to renderer-core `render-still.mjs` for deterministic procedural 4D stills (NOT text-to-image). Requires Node; the **repo-root** Dockerfile bundles Node 22 + renderer-core; the app-local one cannot. Live Render RT4D is only verified after Manual Deploy + `/health.rt4d.available: true` |
 | Operator deploy | **Prepared** — Dockerfile + `render.yaml` (Render free web) |
 | Live NIM generate | **Requires** `NVIDIA_API_KEY` at runtime (default backend) |
 | NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared** — defaults **on** when `NVIDIA_API_KEY` is set and `GENBLAZE_VIDEO_ENABLED` is unset; pin `0` for stills-only (Render blueprint does). Cosmos catalog access is key-dependent; docs **declared** not enforced |
@@ -84,7 +84,19 @@ Get a free NIM key: [build.nvidia.com](https://build.nvidia.com/).
 | Provenance | Seed, scene id, palette, camera, samples, max depth, PNG sha256, cheap PI-GEO-LENGTH invariant evidence |
 | Local enable | `GENBLAZE_IMAGE_BACKEND=rt4d` + Node 18+ on PATH + monorepo `renderer-core` checkout |
 | Docker | The **repo-root** Dockerfile bundles Node 22 + `renderer-core` sources (build-time render smoke test). The **app-local** Dockerfile does not — its context cannot reach `mrs/packages/renderer-core` |
-| Deployed Render service | Declared, **not yet verified on Render**. Treat `/health.rt4d.available` on the live URL as the only evidence; a service on an older image still reports `false` until redeployed |
+| Deployed Render service | Treat live `/health.rt4d.available: true` (after Manual Deploy from the repo-root Dockerfile) as the only evidence. Older / app-local images report `false` even with env set |
+| HTTP errors (RT4D) | Missing Node/script → **503** (setup). CLI crash / timeout / empty PNG → `RT4DRenderError` → **502** (generation). Covered by `tests/test_rt4d.py` (PR #40) |
+| Prompts starting with `--` | Accepted — value is passed as `--prompt`'s argument (not re-parsed as flags) |
+
+### What changed (operator pointer)
+
+| Landed | Notes |
+| --- | --- |
+| **Merged** (#39) | Repo-root Docker image bundles Node + `renderer-core`; do **not** expect RT4D from the app-local Dockerfile |
+| **PR #40** (open on this branch) | 502 vs 503 split for RT4D failures; prompts whose text starts with `--` |
+| Health `rt4d_note` | Describes the procedural path; **`rt4d.available`** is authoritative for whether this running image has Node + script (not a “Node missing from Docker” claim — root Dockerfile includes it) |
+
+Monorepo summary: [`mrs/README.md`](../../README.md) → Operator changelog.
 
 ### Enable locally
 
@@ -145,8 +157,9 @@ conservative starting point, not a measured budget — time a render on the
 target plan before raising them.
 
 A live Render service still reports `/health.rt4d.available=false` until it is
-**redeployed from the repo-root Dockerfile** (older images and the app-local
-image have no Node). Do not treat dashboard env alone as proof.
+**Manually Deployed** from the **repo-root** Dockerfile (older images and the
+app-local image have no Node). Do not treat dashboard env alone as proof —
+confirm `rt4d.available: true` on the live URL before claiming RT4D works.
 
 ## Run locally
 
@@ -264,6 +277,9 @@ With **valid** B2 keys (no NVIDIA): `/health` reports `b2_configured` without li
 | `NVIDIA image generate failed (504): {"_raw": ""}` | Upstream gateway returned no diagnostic body. If warmup also returns 504, `/health.nvidia_nim_status` reports unavailable. Raise poll to 300, wait and retry once, or opt into delayed retry with double-bill risk. No fal image fallback is wired. |
 | `asset transfer(s) failed; manifest was not uploaded` | NVIDIA FLUX returns base64; Genblaze writes `file://` under CWD (`/app` in Docker). `AssetTransfer` only allowlists system temp — transfer fails and SinkError omits the cause. Fix: write NVIDIA payloads under `tempfile` + surface underlying transfer exception in the API detail |
 | Solid black / empty JPEG after “success” | Observed: valid ~6 KiB 1024² JPEG, mean luminance 0, one color — common when FLUX.1-schnell NIM blanks photoreal-people prompts. Pipeline rejects near-black stills with HTTP **422**, strips trailing meta-commentary, optionally retries once with an abstract geometry rewrite (`GENBLAZE_ABSTRACT_RETRY`, default on), and best-effort deletes the rejected B2 asset/manifest |
+| RT4D `503` (setup) | `node` or `render-still.mjs` missing on this image — use repo-root Dockerfile + Manual Deploy, or local Node 18+ + monorepo checkout |
+| RT4D `502` (generation) | Node/script present but CLI crashed, timed out, or wrote empty/missing PNG (`RT4DRenderError`) — inspect detail; not fixed by env alone |
+| RT4D prompt starts with `--` | Supported; string is the prompt value, not extra CLI flags |
 | Broken image icon / preview errors after successful generate | Metadata + B2 keys exist, but browser GET of the private presigned URL returns **AccessDenied: Transaction cap exceeded** (B2 free-tier daily caps). Fix: serve UI from same-origin `/api/preview/{run_id}` local cache after generate; wait for Caps & Alerts reset (~00:00 GMT) before more B2 traffic |
 | Cosmos 2.0 model-not-found | Operator catalog probe reported `nvidia/cosmos-2.0-diffusion-text2world` as `DEAD`; it is not available in the probed upstream NVCF catalog. Use `nvidia/cosmos-1.0-7b-diffusion-text2world`, or the `nvidia/cosmos-1.0-12b-diffusion-text2world` fallback when available on the key. The live path refreshes model validation before generation. |
 | `GENBLAZE_DRY_RUN=1` | Offline unit-test path only — not for Devpost live demos |
@@ -272,7 +288,7 @@ With **valid** B2 keys (no NVIDIA): `/health` reports `b2_configured` without li
 | Method | Path | Notes |
 | --- | --- | --- |
 | GET | `/health` | Boots always; NVIDIA/B2/RT4D flags; ListObjects probe only if `B2_PROBE_ON_HEALTH=1` |
-| POST | `/api/generate` | Live Genblaze FLUX→B2 (default), or RT4D when `GENBLAZE_IMAGE_BACKEND=rt4d`; 503 if the selected backend is not configured |
+| POST | `/api/generate` | Live Genblaze FLUX→B2 (default), or RT4D when `GENBLAZE_IMAGE_BACKEND=rt4d`; **503** if setup missing; RT4D CLI failure → **502** |
 | POST | `/api/generate-video` | Selected Cosmos or Seedance backend → B2; 503 if disabled or its credential is missing |
 | GET | `/api/assets` | Local recent index (capped); optional `?modality=image\|video` |
 | GET | `/media/stills` · `/media/nvidia` · `/media/nim-cosmos` | 302 into SPA hash anchors |
