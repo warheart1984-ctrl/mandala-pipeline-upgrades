@@ -58,7 +58,7 @@ export function createWaveField3D(options = {}) {
   const dx = options.dx ?? 1;
   const c = options.c ?? 1;
   // Default dt targets σ ≈ 0.5 / √3 under unit dx — still caller's responsibility.
-  const dt = options.dt ?? (0.5 * dx) / (c * Math.SQRT3);
+  const dt = options.dt ?? (0.5 * dx) / (c * Math.sqrt(3));
   const origin = {
     x: options.origin?.x ?? 0,
     y: options.origin?.y ?? 0,

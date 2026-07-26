@@ -43,6 +43,17 @@ describe("stepWaveField3D", () => {
     for (let i = 0; i < field.psi.length; i++) if (field.psi[i] !== 0) any = true;
     assert.equal(any, true);
   });
+
+  it("default dt (no options.dt) is finite and one step stays finite (Math.sqrt(3) regression)", () => {
+    const field = createWaveField3D({ nx: 8, ny: 8, nz: 8, dx: 1, c: 1 });
+    assert.equal(Number.isFinite(field.dt), true);
+    field.psi[idx(field, 4, 4, 4)] = 1;
+    field.psiPrev[idx(field, 4, 4, 4)] = 1;
+    stepWaveField3D(field);
+    for (let i = 0; i < field.psi.length; i++) {
+      assert.equal(Number.isFinite(field.psi[i]), true);
+    }
+  });
 });
 
 describe("bridgeMap3Dto4D", () => {
