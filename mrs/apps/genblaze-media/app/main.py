@@ -192,6 +192,7 @@ class GenerateRequest(BaseModel):
             "Render quality for then_scene MRS still: 'draft'/'fast' (default, "
             "smaller/noisier, typically tens of seconds) or 'final'/'high' (RT4D_* "
             "profile, slower). Ignored when then_scene is false."
+            "Also enabled by GENBLAZE_FLUX_THEN_SCENE=1."
         ),
     )
 

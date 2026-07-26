@@ -19,6 +19,7 @@ from app.config import (
     scene_spec_default_script_path,
     validate_scene_spec_default_script_path,
 )
+from app.config import Settings, scene_spec_default_script_path
 from app.main import app
 from app.rt4d_provider import RT4DRenderError
 from app.scene_spec_provider import (

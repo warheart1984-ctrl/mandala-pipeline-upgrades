@@ -69,6 +69,10 @@ Use exactly one of:
     "height": 256,
     "samples": 4,
     "maxDepth": 3,
+    "width": 448,
+    "height": 448,
+    "samples": 20,
+    "maxDepth": 5,
     "seed": 0
   }
 }

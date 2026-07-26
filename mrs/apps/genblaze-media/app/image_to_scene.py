@@ -26,6 +26,7 @@ from app.config import (
     Settings,
     validate_scene_spec_default_script_path,
 )
+from app.config import APP_DIR, REPO_ROOT, Settings
 from app.image_ingest import (
     analyze_image_bytes,
     decode_base64_payload,
@@ -68,6 +69,17 @@ _SURFACE_BY_FRAMING = {
 }
 
 _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "image_to_scene_spec.md"
+
+
+def validate_scene_spec_default_script_path(repo_root: Path = REPO_ROOT) -> Path:
+    return (
+        repo_root
+        / "mrs"
+        / "packages"
+        / "renderer-core"
+        / "scripts"
+        / "validate-scene-spec.mjs"
+    )
 
 
 def image_to_scene_availability(settings: Settings) -> dict[str, Any]:
@@ -148,6 +160,14 @@ def build_heuristic_scene_spec(
     # before the server-side quality clamp (also draft by default).
     out_w = max(64, min(DRAFT_WIDTH, w if w <= DRAFT_WIDTH else DRAFT_WIDTH))
     out_h = max(64, min(DRAFT_HEIGHT, h if h <= DRAFT_HEIGHT else DRAFT_HEIGHT))
+    w = int(width or analysis.get("width") or 448)
+    h = int(height or analysis.get("height") or 448)
+    # Keep render size modest; clamp to RT4D caps used elsewhere.
+    out_w = max(64, min(1024, w if w <= 1024 else 448))
+    out_h = max(64, min(1024, h if h <= 1024 else 448))
+    # Prefer square-ish stills when source is huge.
+    if out_w > 512 or out_h > 512:
+        out_w, out_h = 448, 448
 
     seed = seed_from_sha256(image_sha256)
     short = (image_sha256 or uuid.uuid4().hex)[:10]
@@ -201,6 +221,8 @@ def build_heuristic_scene_spec(
             "height": out_h,
             "samples": DRAFT_SAMPLES,
             "maxDepth": DRAFT_MAX_DEPTH,
+            "samples": 20,
+            "maxDepth": 5,
             "seed": seed,
         },
         "metadata": {

@@ -11,6 +11,10 @@ Thin **FastAPI** service: user prompt → **Genblaze** (`genblaze-nvidia` + `gen
 | Operator deploy | **Prepared** — Dockerfile + `render.yaml` (Render free web) |
 | Live NIM generate | **Requires** `NVIDIA_API_KEY` at runtime (default backend) |
 | NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared but off by default** (stills-only demo) — API/pipeline intact; set `GENBLAZE_VIDEO_ENABLED=1` to re-enable UI + API. Cosmos catalog access is key-dependent; docs **declared** not enforced |
+| RT4D image backend | **Prepared** — `GENBLAZE_IMAGE_BACKEND=rt4d` shells out to renderer-core `render-still.mjs` for deterministic procedural 4D stills (NOT text-to-image). Requires Node; the **repo-root** Dockerfile bundles it, the app-local one cannot. Render deploy **not yet verified** — check `/health.rt4d.available` |
+| Operator deploy | **Prepared** — Dockerfile + `render.yaml` (Render free web) |
+| Live NIM generate | **Requires** `NVIDIA_API_KEY` at runtime (default backend) |
+| NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared** — defaults **on** when `NVIDIA_API_KEY` is set and `GENBLAZE_VIDEO_ENABLED` is unset; pin `0` for stills-only (Render blueprint does). Cosmos catalog access is key-dependent; docs **declared** not enforced |
 | Seedance 2.0 video (fal) | **Prepared** opt-in path (`GENBLAZE_VIDEO_BACKEND=seedance` + `FAL_KEY`); **fal API is billed** — not Dreamina/Jimeng free credits; default `720p`; watermark/1080p **not guaranteed**; temporal layers **declared** only |
 | CROS (`/cros` page) | **Docs only** — static reference UI; this app does **not** implement or import CROS |
 | B2 persistence | **Tests** path via `genblaze-s3` / dual-exported `B2_APP_KEY` |
@@ -40,6 +44,9 @@ default path. This does **not** claim GPU acceleration or sub-second renders.
 Honest copy: **scene interpretation + path-traced full frame**. Responses include `analysis_mode` / `note` stating this is **not** geometric reconstruction. Phase 3 depth/mesh/pose recovery is **declared roadmap only** (see `docs/4d-engine/v2/scene-spec/IMAGE_TO_SCENE_RFC.md`).
 
 Dual FLUX + MRS: set `GENBLAZE_FLUX_THEN_SCENE=1` or pass `"then_scene": true` on `POST /api/generate`. The FLUX concept still is **kept**; the MRS frame is returned alongside under `then_scene` with separate modality/provider labels (draft quality by default).
+Honest copy: **scene interpretation + path-traced full frame**. Responses include `analysis_mode` / `note` stating this is **not** geometric reconstruction. Phase 3 depth/mesh/pose recovery is **declared roadmap only** (see `docs/4d-engine/v2/scene-spec/IMAGE_TO_SCENE_RFC.md`).
+
+Dual FLUX + MRS: set `GENBLAZE_FLUX_THEN_SCENE=1` or pass `"then_scene": true` on `POST /api/generate`. The FLUX concept still is **kept**; the MRS frame is returned alongside under `then_scene` with separate modality/provider labels.
 
 ## Setup
 
@@ -97,6 +104,8 @@ Copy secrets into the **repo-root** `.env` (preferred) or `mrs/apps/genblaze-med
 | `GENBLAZE_FLUX_THEN_SCENE` | default **off** — set `1` so successful `/api/generate` stills also run image→scene→MRS (returns both assets) |
 | `SCENE_SPEC_SCRIPT_PATH` | optional; default resolves `<repo>/mrs/packages/renderer-core/scripts/render-scene.mjs`, then the Docker layout `/app/renderer-core/scripts/render-scene.mjs` |
 | `VALIDATE_SCENE_SPEC_SCRIPT_PATH` | optional; default resolves `<repo>/mrs/packages/renderer-core/scripts/validate-scene-spec.mjs`, then the Docker layout `/app/renderer-core/scripts/validate-scene-spec.mjs` |
+| `SCENE_SPEC_SCRIPT_PATH` | optional; default `…/render-scene.mjs` |
+| `VALIDATE_SCENE_SPEC_SCRIPT_PATH` | optional; default `…/validate-scene-spec.mjs` |
 
 Seedance-only knobs are also listed in [`env.seedance.example`](./env.seedance.example) (not auto-loaded — copy into your real `.env`).
 
@@ -125,6 +134,7 @@ Get a free NIM key: [build.nvidia.com](https://build.nvidia.com/).
 | Health `rt4d_note` | Describes the procedural path; **`rt4d.available`** is authoritative for whether this running image has Node + script (not a “Node missing from Docker” claim — root Dockerfile includes it) |
 
 Monorepo summary: [`mrs/README.md`](../../README.md) → Operator changelog.
+| Deployed Render service | Declared, **not yet verified on Render**. Treat `/health.rt4d.available` on the live URL as the only evidence; a service on an older image still reports `false` until redeployed |
 
 ### Enable locally
 
@@ -182,6 +192,44 @@ RT4D needs two things inside the container: a `node` binary and the
   32×32/1-sample `render-scene` render (from a minimal SceneSpecification), so a
   broken Node layer or a missing scene-spec import fails the build instead of
   surfacing as a runtime 503/502.
+  and `RT4D_SCRIPT_PATH=/app/renderer-core/scripts/render-still.mjs`.
+- A 64×64/1-sample render runs at build time, so a broken Node layer or a
+  missing import fails the build instead of surfacing as a runtime 502.
+
+**Build context must be the repo root.** `mrs/packages/renderer-core` sits
+outside `mrs/apps/genblaze-media`, so the app-local Dockerfile cannot copy it.
+On Render that means: Root Directory empty, Dockerfile Path `./Dockerfile`.
+
+Verify a build locally before deploying:
+
+
+```bash
+# from the repo root
+docker build -t genblaze-rt4d .
+docker run --rm -e GENBLAZE_IMAGE_BACKEND=rt4d -p 8000:8000 genblaze-rt4d
+curl -s localhost:8000/health | python -m json.tool   # expect rt4d.available true
+curl -s -X POST localhost:8000/api/generate \
+  -H 'content-type: application/json' \
+  -d '{"prompt":"cyan tesseract lattice","embed":false}'
+```
+
+Sizing: the render is a single-threaded CPU path trace, and Render's free plan
+is a shared 0.1 CPU, so a render there is far slower than on a dev machine and
+must still finish inside the platform request timeout. `render.yaml` therefore
+pins `RT4D_RENDER_WIDTH/HEIGHT=256` and `RT4D_SAMPLES=8`. Those numbers are a
+conservative starting point, not a measured budget — time a render on the
+target plan before raising them.
+### Docker / Render follow-up (Node not yet in the image)
+
+- `COPY --from=node:22-bookworm-slim /usr/local/bin/node /usr/local/bin/node` —
+  the binary only. `npm install` is deliberately skipped: `render-still.mjs`
+  imports node builtins plus `src/render/rt4d/**`, so nothing in the render path
+  resolves to a package in `node_modules`. `package.json` is still copied
+  because its `"type": "module"` is what makes the `.js` sources load as ESM.
+- `COPY mrs/packages/renderer-core/{package.json,src,scripts} ./renderer-core/`
+  and `RT4D_SCRIPT_PATH=/app/renderer-core/scripts/render-still.mjs`.
+- A 64×64/1-sample render runs at build time, so a broken Node layer or a
+  missing import fails the build instead of surfacing as a runtime 502.
 
 **Build context must be the repo root.** `mrs/packages/renderer-core` sits
 outside `mrs/apps/genblaze-media`, so the app-local Dockerfile cannot copy it.
@@ -194,6 +242,7 @@ Verify a build locally before deploying:
 docker build -t genblaze-rt4d .
 docker run --rm -e GENBLAZE_IMAGE_BACKEND=rt4d -p 8000:8000 genblaze-rt4d
 curl -s localhost:8000/health | python -m json.tool   # expect rt4d.available AND scene_spec.available true
+curl -s localhost:8000/health | python -m json.tool   # expect rt4d.available true
 curl -s -X POST localhost:8000/api/generate \
   -H 'content-type: application/json' \
   -d '{"prompt":"cyan tesseract lattice","embed":false}'
@@ -342,6 +391,8 @@ With **valid** B2 keys (no NVIDIA): `/health` reports `b2_configured` without li
 | POST | `/api/generate-video` | Selected Cosmos or Seedance backend → B2; 503 if disabled or its credential is missing |
 | POST | `/api/image-to-scene` | Image → SceneSpecification → optional MRS full-frame path trace (`render` default **true**, `quality` default **draft**). Scene interpretation — **not** reconstruction |
 | POST | `/api/render-scene` | SceneSpecification JSON → RT4D still (`quality` default **draft**; pass `final` for RT4D_* profile) |
+| POST | `/api/image-to-scene` | Image → SceneSpecification → optional MRS full-frame path trace (`render` default **true**). Scene interpretation — **not** reconstruction |
+| POST | `/api/render-scene` | SceneSpecification JSON → RT4D still |
 | GET | `/api/assets` | Local recent index (capped); optional `?modality=image\|video` |
 | GET | `/media/stills` · `/media/nvidia` · `/media/nim-cosmos` | 302 into SPA hash anchors |
 | GET | `/` | Single-page UI (stills; Cosmos section hidden unless video enabled) |

@@ -108,6 +108,14 @@ def _run_scene_cli(
     spec_out, applied_output = apply_quality_to_output(
         spec, settings, resolved_quality
     )
+    # Apply render size defaults from settings when spec omits output dims.
+    spec_out = dict(spec)
+    output = dict(spec_out.get("output") or {})
+    output.setdefault("width", settings.rt4d_width)
+    output.setdefault("height", settings.rt4d_height)
+    output.setdefault("samples", settings.rt4d_samples)
+    output.setdefault("maxDepth", settings.rt4d_max_depth)
+    spec_out["output"] = output
     spec_path.write_text(json.dumps(spec_out), encoding="utf-8")
 
     argv = [
@@ -363,6 +371,7 @@ def render_scene_clip(
             provenance = _run_scene_cli(
                 settings, spec, out_png, frame=i, quality=quality
             )
+            provenance = _run_scene_cli(settings, spec, out_png, frame=i)
             png = out_png.read_bytes()
             sha = hashlib.sha256(png).hexdigest()
             frames_meta.append(

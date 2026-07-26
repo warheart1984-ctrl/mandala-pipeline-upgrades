@@ -1,5 +1,5 @@
 # Default Dockerfile for Render (hackathon App URL).
-# Builds Genblaze media: prompt â†’ FLUX â†’ B2, plus the RT4D renderer backend.
+# Builds Genblaze media: prompt → FLUX → B2, plus the RT4D renderer backend.
 #
 # Build context MUST be the repo root: the RT4D backend needs
 # mrs/packages/renderer-core, which is outside mrs/apps/genblaze-media.
@@ -61,7 +61,7 @@ RUN node --version \
  && rm -f /tmp/smoke.png
 
 # Scene-spec smoke: a tiny render-scene run exercises render-scene.mjs, its
-# scene-spec import graph, capability validation, and the shared PNG encoder â€”
+# scene-spec import graph, capability validation, and the shared PNG encoder —
 # so a broken scene-spec layer fails the build instead of a runtime 503/502.
 RUN printf '%s' '{"schemaVersion":"1.0","kind":"SceneSpecification","id":"docker-scene-smoke","entities":[{"id":"e","geometry":{"kind":"surface","surfaceId":"tesseract"}}]}' > /tmp/scene-smoke.json \
  && node /app/renderer-core/scripts/render-scene.mjs -- \
