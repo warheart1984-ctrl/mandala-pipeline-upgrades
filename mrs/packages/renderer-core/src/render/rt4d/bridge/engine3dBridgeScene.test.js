@@ -56,6 +56,40 @@ describe("engine3dBridgeScene adapter", () => {
     assert.equal(mapped.status, "partial");
     assert.equal(mapped.hyperspheres.length, 2);
     assert.equal(mapped.hyperspheres[0].radius, 0.5);
+    assert.equal(mapped.truncated, false);
+    assert.equal(mapped.skippedInvalid, 0);
+  });
+
+  it("invalid centers skip without setting truncated", () => {
+    const scene = {
+      ...tinyScene,
+      primitives: [
+        { kind: "hypersphere", id: "ok", center: [0, 0, 0, 0], radius: 0.2 },
+        { kind: "hypersphere", id: "bad-short", center: [1, 2], radius: 0.2 },
+        { kind: "hypersphere", id: "bad-missing", radius: 0.2 },
+        null,
+      ],
+    };
+    const mapped = bridgeSceneToHypersphereDescriptors(scene);
+    assert.equal(mapped.hyperspheres.length, 1);
+    assert.equal(mapped.truncated, false);
+    assert.equal(mapped.skippedInvalid, 3);
+  });
+
+  it("sets truncated when maxPrimitives cap is hit", () => {
+    const primitives = Array.from({ length: 5 }, (_, i) => ({
+      kind: "hypersphere",
+      id: `p${i}`,
+      center: [i, 0, 0, 0],
+      radius: 0.1,
+    }));
+    const mapped = bridgeSceneToHypersphereDescriptors(
+      { ...tinyScene, primitives },
+      { maxPrimitives: 3 },
+    );
+    assert.equal(mapped.hyperspheres.length, 3);
+    assert.equal(mapped.truncated, true);
+    assert.equal(mapped.skippedInvalid, 0);
   });
 
   it("headless receipt is deterministic", () => {

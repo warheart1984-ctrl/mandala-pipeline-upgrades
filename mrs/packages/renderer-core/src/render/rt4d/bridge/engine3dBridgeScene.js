@@ -72,9 +72,18 @@ export function bridgeSceneToHypersphereDescriptors(scene, opts = {}) {
   const max = opts.maxPrimitives ?? MAX_PRIMITIVES_FOR_RT4D;
   const prims = Array.isArray(scene?.primitives) ? scene.primitives : [];
   const out = [];
-  for (let i = 0; i < prims.length && out.length < max; i++) {
+  let skippedInvalid = 0;
+  let capReached = false;
+  for (let i = 0; i < prims.length; i++) {
+    if (out.length >= max) {
+      capReached = true;
+      break;
+    }
     const p = prims[i];
-    if (!p || !Array.isArray(p.center) || p.center.length < 3) continue;
+    if (!p || !Array.isArray(p.center) || p.center.length < 3) {
+      skippedInvalid += 1;
+      continue;
+    }
     const r = typeof p.radius === "number" && p.radius > 0 ? p.radius : 0.1;
     out.push({
       id: String(p.id ?? `p${i}`),
@@ -93,7 +102,10 @@ export function bridgeSceneToHypersphereDescriptors(scene, opts = {}) {
     status: "partial",
     note: "Hypersphere approximations only; triangle meshes declared unsupported",
     hyperspheres: out,
-    truncated: prims.length > out.length,
+    /** True only when MAX / maxPrimitives cap stopped further mapping. */
+    truncated: capReached,
+    /** Primitives skipped for missing/short center (not a cap hit). */
+    skippedInvalid,
   };
 }
 
