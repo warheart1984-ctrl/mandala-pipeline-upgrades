@@ -31,6 +31,11 @@ from app.pipeline import (
     _utc_now,
     build_backend,
 )
+from app.render_quality import (
+    apply_quality_to_output,
+    quality_presets,
+    resolve_quality,
+)
 from app.rt4d_provider import RT4DRenderError, _find_node
 
 logger = logging.getLogger(__name__)
@@ -59,6 +64,13 @@ def scene_spec_availability(settings: Settings) -> dict[str, Any]:
         "script_path": script_path,
         "script_found": script_found,
         "timeout_seconds": settings.rt4d_timeout_seconds,
+        "quality_default": resolve_quality(settings),
+        "quality_presets": quality_presets(settings),
+        "quality_note": (
+            "draft (default) caps output at the draft preset for fast CPU "
+            "stills — smaller and noisier than final. quality=final keeps "
+            "the RT4D_* profile."
+        ),
         "note": (
             "Deterministic SceneSpecification → RT4D still. "
             "NOT text-to-image. Clip endpoint returns frame PNGs (no MP4)."
@@ -73,6 +85,7 @@ def _run_scene_cli(
     *,
     frame: int | None = None,
     time: float | None = None,
+    quality: str | None = None,
 ) -> dict[str, Any]:
     """Invoke render-scene.mjs; return provenance dict.
 
@@ -87,14 +100,14 @@ def _run_scene_cli(
         raise RuntimeError(SCENE_SPEC_SETUP_HELP)
 
     spec_path = out_png.parent / "spec.json"
-    # Apply render size defaults from settings when spec omits output dims.
-    spec_out = dict(spec)
-    output = dict(spec_out.get("output") or {})
-    output.setdefault("width", settings.rt4d_width)
-    output.setdefault("height", settings.rt4d_height)
-    output.setdefault("samples", settings.rt4d_samples)
-    output.setdefault("maxDepth", settings.rt4d_max_depth)
-    spec_out["output"] = output
+    # Apply the quality preset before the subprocess. Draft (default) caps
+    # output at the draft preset — overwrite, not setdefault — so NIM/heuristic
+    # specs asking for 448/20/5 cannot force a multi-minute CPU render on the
+    # default path. Final fills only missing fields from the RT4D_* profile.
+    resolved_quality = resolve_quality(settings, quality)
+    spec_out, applied_output = apply_quality_to_output(
+        spec, settings, resolved_quality
+    )
     spec_path.write_text(json.dumps(spec_out), encoding="utf-8")
 
     argv = [
@@ -151,6 +164,11 @@ def _run_scene_cli(
                 break
             except json.JSONDecodeError:
                 continue
+    provenance = {
+        **provenance,
+        "quality": resolved_quality,
+        "output": applied_output,
+    }
     return provenance
 
 
@@ -187,11 +205,12 @@ def render_scene_spec(
     frame: int | None = None,
     time: float | None = None,
     storage_kind: str = "scene-spec",
+    quality: str | None = None,
 ) -> GenerateResult:
     """Render one still from a SceneSpecification and persist via Genblaze paths.
 
     ``storage_kind`` selects the B2/local key segment (e.g. ``scene-spec`` or
-    ``image-to-scene``).
+    ``image-to-scene``). ``quality`` is ``draft`` (default) or ``final``.
     """
     if not isinstance(spec, dict):
         raise ValueError("spec must be a JSON object")
@@ -211,7 +230,7 @@ def render_scene_spec(
     out_png = work / "render.png"
     try:
         provenance = _run_scene_cli(
-            settings, spec, out_png, frame=frame, time=time
+            settings, spec, out_png, frame=frame, time=time, quality=quality
         )
         if not out_png.is_file():
             raise RT4DRenderError("Scene-spec render produced no output file")
@@ -316,6 +335,7 @@ def render_scene_clip(
     spec: dict[str, Any],
     *,
     max_frames: int = 24,
+    quality: str | None = None,
 ) -> dict[str, Any]:
     """Sample animation timeline → PNG frame sequence (+ zip). No MP4 encoding.
 
@@ -340,7 +360,9 @@ def render_scene_clip(
     try:
         for i in range(frame_count):
             out_png = work / f"frame_{i:04d}.png"
-            provenance = _run_scene_cli(settings, spec, out_png, frame=i)
+            provenance = _run_scene_cli(
+                settings, spec, out_png, frame=i, quality=quality
+            )
             png = out_png.read_bytes()
             sha = hashlib.sha256(png).hexdigest()
             frames_meta.append(

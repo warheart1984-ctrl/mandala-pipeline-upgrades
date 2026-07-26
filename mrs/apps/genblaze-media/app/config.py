@@ -184,6 +184,13 @@ class Settings:
     rt4d_samples: int = 20
     rt4d_max_depth: int = 5
     rt4d_timeout_seconds: float = 180.0
+    # Scene-spec render quality: "draft" (hackathon default — smaller/noisier,
+    # renders in ~tens of seconds on CPU) or "final" (RT4D_* profile above).
+    render_quality_default: str = "draft"
+    rt4d_draft_width: int = 256
+    rt4d_draft_height: int = 256
+    rt4d_draft_samples: int = 4
+    rt4d_draft_max_depth: int = 3
     # Image → SceneSpecification (NIM vision + heuristic fallback)
     image_to_scene_model: str = "meta/llama-3.2-11b-vision-instruct"
     image_to_scene_chat_url: str = "https://integrate.api.nvidia.com/v1/chat/completions"
@@ -352,6 +359,17 @@ def get_settings() -> Settings:
     rt4d_height = _clamp_int("RT4D_RENDER_HEIGHT", 448, 16, 1024)
     rt4d_samples = _clamp_int("RT4D_SAMPLES", 20, 1, 512)
     rt4d_max_depth = _clamp_int("RT4D_MAX_DEPTH", 5, 1, 12)
+    # Draft preset (hackathon default path): small/low-sample stills so judges
+    # are not waiting minutes. GENBLAZE_RENDER_QUALITY_DEFAULT=final restores
+    # the RT4D_* profile as the default; per-request `quality` always wins.
+    quality_raw = (
+        os.getenv("GENBLAZE_RENDER_QUALITY_DEFAULT") or "draft"
+    ).strip().lower()
+    render_quality_default = "final" if quality_raw in {"final", "high"} else "draft"
+    rt4d_draft_width = _clamp_int("RT4D_DRAFT_WIDTH", 256, 16, 1024)
+    rt4d_draft_height = _clamp_int("RT4D_DRAFT_HEIGHT", 256, 16, 1024)
+    rt4d_draft_samples = _clamp_int("RT4D_DRAFT_SAMPLES", 4, 1, 512)
+    rt4d_draft_max_depth = _clamp_int("RT4D_DRAFT_MAX_DEPTH", 3, 1, 12)
     try:
         rt4d_timeout = float((os.getenv("RT4D_TIMEOUT") or "180").strip() or "180")
     except ValueError:
@@ -440,6 +458,11 @@ def get_settings() -> Settings:
         rt4d_samples=rt4d_samples,
         rt4d_max_depth=rt4d_max_depth,
         rt4d_timeout_seconds=rt4d_timeout,
+        render_quality_default=render_quality_default,
+        rt4d_draft_width=rt4d_draft_width,
+        rt4d_draft_height=rt4d_draft_height,
+        rt4d_draft_samples=rt4d_draft_samples,
+        rt4d_draft_max_depth=rt4d_draft_max_depth,
         image_to_scene_model=image_to_scene_model,
         image_to_scene_chat_url=image_to_scene_chat_url,
         image_to_scene_timeout_seconds=image_to_scene_timeout,

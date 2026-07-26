@@ -50,6 +50,7 @@ from app.scene_spec_provider import (
     render_scene_spec,
     scene_spec_availability,
 )
+from app.render_quality import DRAFT_QUALITY, resolve_quality
 from app.preview_cache import (
     get_preview_path,
     is_run_id,
@@ -181,7 +182,15 @@ class GenerateRequest(BaseModel):
         description=(
             "After a successful FLUX/RT4D still, also run image→SceneSpecification→MRS "
             "full-frame render. Returns both assets; does not replace the FLUX still. "
-            "Also enabled by GENBLAZE_FLUX_THEN_SCENE=1."
+            "Also enabled by GENBLAZE_FLUX_THEN_SCENE=1. Uses draft quality by default."
+        ),
+    )
+    quality: str = Field(
+        default=DRAFT_QUALITY,
+        description=(
+            "Render quality for then_scene MRS still: 'draft'/'fast' (default, "
+            "smaller/noisier, typically tens of seconds) or 'final'/'high' (RT4D_* "
+            "profile, slower). Ignored when then_scene is false."
         ),
     )
 
@@ -226,6 +235,14 @@ class ImageToSceneRequest(BaseModel):
         default=False,
         description="Skip NIM vision; build heuristic SceneSpecification only.",
     )
+    quality: str = Field(
+        default=DRAFT_QUALITY,
+        description=(
+            "Render quality: 'draft'/'fast' (hackathon default — 256×256, 4 samples, "
+            "depth 3; smaller/noisier, typically tens of seconds on CPU) or "
+            "'final'/'high' (RT4D_* profile, typically slower)."
+        ),
+    )
 
 
 class RenderSceneRequest(BaseModel):
@@ -234,6 +251,14 @@ class RenderSceneRequest(BaseModel):
     spec: dict[str, Any] = Field(..., description="SceneSpecification JSON object")
     frame: int | None = Field(default=None, ge=0, le=240)
     time: float | None = Field(default=None, ge=0)
+    quality: str = Field(
+        default=DRAFT_QUALITY,
+        description=(
+            "Render quality: 'draft'/'fast' (default) or 'final'/'high'. "
+            "Draft caps output so NIM/heuristic 448/20/5 specs cannot force a "
+            "multi-minute CPU render on the default path."
+        ),
+    )
 
 
 class RenderClipRequest(BaseModel):
@@ -241,6 +266,10 @@ class RenderClipRequest(BaseModel):
 
     spec: dict[str, Any] = Field(..., description="SceneSpecification with animation")
     max_frames: int = Field(default=24, ge=1, le=120)
+    quality: str = Field(
+        default=DRAFT_QUALITY,
+        description="Per-frame render quality: 'draft'/'fast' (default) or 'final'/'high'.",
+    )
 
 
 @app.get("/health")
@@ -334,14 +363,18 @@ def health() -> dict:
         "scene_spec": scene_spec_availability(settings),
         "scene_spec_note": (
             "POST /api/render-scene accepts a SceneSpecification JSON and renders "
-            "a deterministic RT4D still. POST /api/render-clip returns a PNG frame "
-            "zip when animation is present — MP4 encoding is not available in-image."
+            "a deterministic RT4D still. Default quality is draft (fast/noisier); "
+            "pass quality=final for the RT4D_* profile. POST /api/render-clip returns "
+            "a PNG frame zip when animation is present — MP4 encoding is not available "
+            "in-image."
         ),
         "image_to_scene": image_to_scene_availability(settings),
         "image_to_scene_note": (
             "POST /api/image-to-scene: image → SceneSpecification → optional MRS "
             "path-traced full frame. Scene interpretation only — NOT reconstruction. "
-            "Heuristic fallback always available; NIM vision when NVIDIA_API_KEY set."
+            "Default quality is draft (typically tens of seconds on CPU; noisier/"
+            "smaller). Heuristic fallback always available; NIM vision when "
+            "NVIDIA_API_KEY set."
         ),
         "flux_then_scene": settings.flux_then_scene,
         "fal_image_fallback": False,
@@ -447,6 +480,7 @@ def _run_generate_common(body: GenerateRequest, *, video: bool) -> dict:
                 render=True,
                 frame=None,
                 force_heuristic=False,
+                quality=body.quality,
             )
             public["then_scene"] = scene_payload
             public["dual_path_note"] = (
@@ -505,6 +539,7 @@ def _image_to_scene_pipeline(
     render: bool = True,
     frame: int | None = None,
     force_heuristic: bool = False,
+    quality: str | None = None,
 ) -> dict[str, Any]:
     """Resolve image → interpret → optional MRS full-frame render."""
     try:
@@ -526,11 +561,13 @@ def _image_to_scene_pipeline(
         image_bytes,
         force_heuristic=force_heuristic,
     )
+    resolved_quality = resolve_quality(settings, quality)
     payload: dict[str, Any] = {
         **interpreted,
         "resolve": resolve_meta,
         "analysis_mode": interpreted.get("analysis_mode"),
         "note": interpreted.get("note") or IMAGE_TO_SCENE_DISCLAIMER,
+        "quality": resolved_quality,
     }
 
     if not render:
@@ -542,6 +579,7 @@ def _image_to_scene_pipeline(
             interpreted["spec"],
             frame=frame,
             storage_kind="image-to-scene",
+            quality=resolved_quality,
         )
     except ValueError as exc:
         err_payload = exc.args[0] if exc.args else str(exc)
@@ -611,6 +649,7 @@ def api_image_to_scene(body: ImageToSceneRequest) -> dict:
         render=body.render,
         frame=body.frame,
         force_heuristic=body.force_heuristic,
+        quality=body.quality,
     )
 
 
@@ -645,7 +684,11 @@ def api_render_scene(body: RenderSceneRequest) -> dict:
     settings = get_settings()
     try:
         result = render_scene_spec(
-            settings, body.spec, frame=body.frame, time=body.time
+            settings,
+            body.spec,
+            frame=body.frame,
+            time=body.time,
+            quality=body.quality,
         )
     except ValueError as exc:
         payload = exc.args[0] if exc.args else str(exc)
@@ -697,7 +740,7 @@ def api_render_clip(body: RenderClipRequest) -> dict:
     settings = get_settings()
     try:
         result = render_scene_clip(
-            settings, body.spec, max_frames=body.max_frames
+            settings, body.spec, max_frames=body.max_frames, quality=body.quality
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
