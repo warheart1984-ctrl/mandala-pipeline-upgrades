@@ -10,7 +10,7 @@ Thin **FastAPI** service: user prompt → **Genblaze** (`genblaze-nvidia` + `gen
 | Image → SceneSpecification | **Prepared** — `POST /api/image-to-scene` interprets a still (NIM vision or heuristic) into SceneSpecification, then MRS path-traces a full frame. **Not** geometric reconstruction / photogrammetry |
 | Operator deploy | **Prepared** — Dockerfile + `render.yaml` (Render free web) |
 | Live NIM generate | **Requires** `NVIDIA_API_KEY` at runtime (default backend) |
-| NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared** — defaults **on** when `NVIDIA_API_KEY` is set and `GENBLAZE_VIDEO_ENABLED` is unset; pin `0` for stills-only (Render blueprint does). Cosmos catalog access is key-dependent; docs **declared** not enforced |
+| NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared but off by default** (stills-only demo) — API/pipeline intact; set `GENBLAZE_VIDEO_ENABLED=1` to re-enable UI + API. Cosmos catalog access is key-dependent; docs **declared** not enforced |
 | Seedance 2.0 video (fal) | **Prepared** opt-in path (`GENBLAZE_VIDEO_BACKEND=seedance` + `FAL_KEY`); **fal API is billed** — not Dreamina/Jimeng free credits; default `720p`; watermark/1080p **not guaranteed**; temporal layers **declared** only |
 | CROS (`/cros` page) | **Docs only** — static reference UI; this app does **not** implement or import CROS |
 | B2 persistence | **Tests** path via `genblaze-s3` / dual-exported `B2_APP_KEY` |
@@ -68,7 +68,7 @@ Copy secrets into the **repo-root** `.env` (preferred) or `mrs/apps/genblaze-med
 | `GENBLAZE_IMAGE_MODEL` | optional; default `black-forest-labs/flux.1-schnell` |
 | `GENBLAZE_VIDEO_BACKEND` | optional; `nvidia` (default) or `seedance` |
 | `GENBLAZE_VIDEO_MODEL` | optional; default `nvidia/cosmos-1.0-7b-diffusion-text2world`; fallback `nvidia/cosmos-1.0-12b-diffusion-text2world` when available on the key |
-| `GENBLAZE_VIDEO_ENABLED` | unset → **on** when `NVIDIA_API_KEY` present, else off; explicit `0`/`1` overrides. Render blueprint pins `0` for stills-only judge demo |
+| `GENBLAZE_VIDEO_ENABLED` | unset → **off** (stills-only demo default, even with `NVIDIA_API_KEY` set); set `1` to re-enable video UI + API. Render blueprint also pins `0` |
 | `FAL_KEY` / `SEEDANCE_API_KEY` | fal.ai credential required only when `GENBLAZE_VIDEO_BACKEND=seedance`; **fal API usage is billed** (Dreamina/Jimeng consumer free credits are a separate product surface) |
 | `SEEDANCE_MODEL` | optional; default `bytedance/seedance-2.0/text-to-video` |
 | `SEEDANCE_RESOLUTION` / `SEEDANCE_DURATION` / `SEEDANCE_ASPECT_RATIO` | Seedance request settings; defaults `720p` / `5` / `16:9` (`1080p` not claimed) |
@@ -238,7 +238,7 @@ npm run genblaze:media
 
 If `NVIDIA_API_KEY` is missing, `/health` still boots and reports setup help; `POST /api/generate` returns **503** with instructions (unless `GENBLAZE_DRY_RUN=1`).
 
-**Judge demo:** pin `GENBLAZE_VIDEO_ENABLED=0` (Render blueprint already does). Demo FLUX stills → B2 only. With a local NVIDIA key and the flag unset, the Cosmos video section defaults **on** per CMM-NIM-Cosmos — disable explicitly for stills-only.
+**Judge demo:** stills-only is the **default** — video is off when `GENBLAZE_VIDEO_ENABLED` is unset, even with an NVIDIA key. Demo FLUX stills → B2 only. The video API/pipeline stays in place; set `GENBLAZE_VIDEO_ENABLED=1` to bring the Cosmos video UI + API back later.
 
 ## Deploy (App URL)
 
@@ -363,7 +363,7 @@ invariants, the seven-artifact lineage chain, and the two conformance profiles
 
 ## NIM Cosmos Video Path (CMM-NIM-Cosmos)
 
-Parallel Genblaze/NIM text-to-video path (`app/pipeline_video.py`) on the same site as FLUX stills. **No Story Forge lineage.** When `GENBLAZE_VIDEO_ENABLED` is unset, video defaults **on** if `NVIDIA_API_KEY` is present (plan default). Pin `0` for stills-only. Constitutional docs under `docs/constitutional/` are **declared**, not runtime-enforced (JCR/CEL/Arena/Sovereign IDE are not hosted here).
+Parallel Genblaze/NIM text-to-video path (`app/pipeline_video.py`) on the same site as FLUX stills. **No Story Forge lineage.** Video is **off by default** — when `GENBLAZE_VIDEO_ENABLED` is unset the path is disabled even with `NVIDIA_API_KEY` set (stills-only demo default). Set `GENBLAZE_VIDEO_ENABLED=1` to re-enable. Constitutional docs under `docs/constitutional/` are **declared**, not runtime-enforced (JCR/CEL/Arena/Sovereign IDE are not hosted here).
 
 | Concern | Honest status |
 | --- | --- |

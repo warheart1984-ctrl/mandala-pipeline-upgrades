@@ -304,12 +304,12 @@ def get_settings() -> Settings:
         or os.getenv("NVIDIA_NIM_API_KEY")
         or ""
     ).strip() or None
-    # CMM-NIM-Cosmos: unset GENBLAZE_VIDEO_ENABLED defaults ON when an NVIDIA
-    # key is present. Explicit 0/false/off disables. Render blueprint pins "0"
-    # for the stills-only judge demo.
+    # Demo default (stills-only): unset GENBLAZE_VIDEO_ENABLED defaults OFF,
+    # even when an NVIDIA key is present. The Cosmos/Seedance API and pipeline
+    # stay intact — set GENBLAZE_VIDEO_ENABLED=1 to re-enable video UI + API.
     video_flag = os.getenv("GENBLAZE_VIDEO_ENABLED")
     if video_flag is None or not str(video_flag).strip():
-        video_enabled = bool(nvidia_key)
+        video_enabled = False
     else:
         video_enabled = str(video_flag).strip().lower() not in {
             "0",
