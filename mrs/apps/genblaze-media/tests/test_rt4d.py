@@ -319,6 +319,8 @@ def test_rt4d_cli_nonzero_exit_returns_502_not_setup(tmp_path, monkeypatch):
     assert RT4D_SETUP_HELP not in detail
     assert "redeploy" not in detail.lower()
     assert "CLI failed" in detail or "exit 1" in detail
+    # Operator needs the renderer's own stderr, not setup boilerplate.
+    assert "trace: boom" in detail
 
 
 def test_rt4d_cli_timeout_returns_502_not_setup(tmp_path, monkeypatch):
@@ -350,6 +352,96 @@ def test_rt4d_render_error_is_not_runtime_error():
     err = RT4DRenderError("CLI failed")
     assert isinstance(err, Exception)
     assert not isinstance(err, RuntimeError)
+
+
+def test_rt4d_missing_script_returns_503(tmp_path, monkeypatch):
+    """Node present but render-still.mjs absent is a real setup gap → 503."""
+    settings = _settings(rt4d_script_path=str(tmp_path / "absent" / "render-still.mjs"))
+    monkeypatch.setattr("app.rt4d_provider._find_node", lambda _p: "node")
+    monkeypatch.setattr("app.main.get_settings", lambda: settings)
+
+    from app import main as main_mod
+    from app.index_store import AssetIndex
+
+    main_mod._index = AssetIndex(tmp_path / "recent.json")
+    client = TestClient(app)
+    r = client.post("/api/generate", json={"prompt": "anything", "embed": False})
+    assert r.status_code == 503, r.text
+    assert r.json()["detail"] == RT4D_SETUP_HELP
+
+
+def test_rt4d_node_vanishes_at_exec_returns_503(tmp_path, monkeypatch):
+    """FileNotFoundError on exec means the node binary is gone → setup, not render."""
+    script = tmp_path / "render-still.mjs"
+    script.write_text("// stub\n", encoding="utf-8")
+    settings = _settings(rt4d_script_path=str(script))
+
+    def fake_run(*_a, **_k):
+        raise FileNotFoundError(2, "No such file or directory: 'node'")
+
+    monkeypatch.setattr("app.rt4d_provider.subprocess.run", fake_run)
+    monkeypatch.setattr("app.rt4d_provider._find_node", lambda _p: "node")
+    monkeypatch.setattr("app.main.get_settings", lambda: settings)
+
+    from app import main as main_mod
+    from app.index_store import AssetIndex
+
+    main_mod._index = AssetIndex(tmp_path / "recent.json")
+    client = TestClient(app)
+    r = client.post("/api/generate", json={"prompt": "anything", "embed": False})
+    assert r.status_code == 503, r.text
+    assert r.json()["detail"] == RT4D_SETUP_HELP
+
+
+def test_rt4d_exit_zero_without_png_returns_502_not_setup(tmp_path, monkeypatch):
+    """Exit 0 but no PNG means the render failed, not that the CLI is missing."""
+    script = tmp_path / "render-still.mjs"
+    script.write_text("// stub\n", encoding="utf-8")
+    settings = _settings(rt4d_script_path=str(script))
+
+    def fake_run(_argv, **_kwargs):
+        # Successful-looking invocation that never writes --output.
+        return MagicMock(
+            returncode=0,
+            stdout=json.dumps({"kind": "deterministic-procedural-4d-render"}) + "\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr("app.rt4d_provider.subprocess.run", fake_run)
+    monkeypatch.setattr("app.rt4d_provider._find_node", lambda _p: "node")
+    monkeypatch.setattr("app.main.get_settings", lambda: settings)
+
+    from app import main as main_mod
+    from app.index_store import AssetIndex
+
+    main_mod._index = AssetIndex(tmp_path / "recent.json")
+    client = TestClient(app)
+    r = client.post("/api/generate", json={"prompt": "anything", "embed": False})
+    assert r.status_code == 502, r.text
+    detail = r.json()["detail"]
+    assert RT4D_SETUP_HELP not in detail
+    assert "redeploy" not in detail.lower()
+    assert "no output file" in detail
+
+
+def test_rt4d_render_failures_raise_render_error_directly(tmp_path, monkeypatch):
+    """Provider-level: nonzero exit raises RT4DRenderError, never RuntimeError."""
+    script = tmp_path / "render-still.mjs"
+    script.write_text("// stub\n", encoding="utf-8")
+    settings = _settings(rt4d_script_path=str(script))
+
+    monkeypatch.setattr(
+        "app.rt4d_provider.subprocess.run",
+        lambda _argv, **_k: MagicMock(returncode=3, stdout="", stderr="segfault\n"),
+    )
+    monkeypatch.setattr("app.rt4d_provider._find_node", lambda _p: "node")
+
+    with pytest.raises(RT4DRenderError) as excinfo:
+        generate_image_rt4d(settings, "anything")
+    message = str(excinfo.value)
+    assert "exit 3" in message
+    assert "segfault" in message
+    assert RT4D_SETUP_HELP not in message
 
 
 @pytest.mark.skipif(

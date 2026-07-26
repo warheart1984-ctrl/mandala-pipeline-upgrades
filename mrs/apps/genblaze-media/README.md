@@ -143,19 +143,10 @@ must still finish inside the platform request timeout. `render.yaml` therefore
 pins `RT4D_RENDER_WIDTH/HEIGHT=256` and `RT4D_SAMPLES=8`. Those numbers are a
 conservative starting point, not a measured budget — time a render on the
 target plan before raising them.
-### Docker / Render follow-up (Node not yet in the image)
 
-The root / app Dockerfiles install Python only. To make `rt4d` work on Render you must add Node to the image (example, not applied in this change):
-
-```dockerfile
-# Example follow-up — do NOT claim this is already deployed:
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm \
- && rm -rf /var/lib/apt/lists/*
-# Also COPY mrs/packages/renderer-core into the image (or a multi-stage build)
-# and set RT4D_SCRIPT_PATH accordingly.
-```
-
-Until that lands, `/health.rt4d.available` will be `false` on the deployed image even when `GENBLAZE_IMAGE_BACKEND=rt4d` is set. Local monorepo runs work today.
+A live Render service still reports `/health.rt4d.available=false` until it is
+**redeployed from the repo-root Dockerfile** (older images and the app-local
+image have no Node). Do not treat dashboard env alone as proof.
 
 ## Run locally
 
@@ -191,10 +182,12 @@ If `NVIDIA_API_KEY` is missing, `/health` still boots and reports setup help; `P
 ### Render (preferred free path)
 
 1. Push this repo (or connect the Git remote) to Render.
-2. New **Web Service** → Docker → set **Root Directory** to `mrs/apps/genblaze-media` (or use the Blueprint `render.yaml` from that folder).
-3. Set env vars (names above; values only in the dashboard — never commit).
+2. New **Web Service** → Docker:
+   - **NVIDIA stills only:** Root Directory `mrs/apps/genblaze-media` (app-local Dockerfile; no RT4D).
+   - **RT4D / Node bundled:** Root Directory **empty**, Dockerfile Path `./Dockerfile` (repo root). The app-local context cannot reach `mrs/packages/renderer-core`.
+3. Set env vars (names above; values only in the dashboard — never commit). For RT4D set `GENBLAZE_IMAGE_BACKEND=rt4d`.
 4. Deploy. Service binds `0.0.0.0:$PORT` via the Dockerfile `CMD`.
-5. Open the public `https://….onrender.com/` URL for judges; hit `/health` first (ensure `B2_PROBE_ON_HEALTH=0` so health checks do not ListObjects).
+5. Open the public `https://….onrender.com/` URL for judges; hit `/health` first (ensure `B2_PROBE_ON_HEALTH=0` so health checks do not ListObjects). For RT4D, require `rt4d.available: true` before claiming it works.
 
 **Redeploy required:** code fixes do **not** apply live until you redeploy. After redeploy, confirm `/health` shows `nvidia_timeouts.nvcf_poll_seconds: 300`, `image_ingest_routes: true`, and inspect `nvidia_nim_status` / `nvidia_warmup`.
 
