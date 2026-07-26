@@ -7,6 +7,7 @@ Thin **FastAPI** service: user prompt → **Genblaze** (`genblaze-nvidia` + `gen
 | Product story | **Declared:** provenanced *concept* stills for MRS / 4D scene authoring |
 | Genblaze 4D render | **Not claimed** — Genblaze's NVIDIA path generates 2D (NIM FLUX); MRS remains the 4D renderer |
 | RT4D image backend | **Prepared** — `GENBLAZE_IMAGE_BACKEND=rt4d` shells out to renderer-core `render-still.mjs` for deterministic procedural 4D stills (NOT text-to-image). Requires Node; the **repo-root** Dockerfile bundles Node 22 + renderer-core; the app-local one cannot. Live Render RT4D is only verified after Manual Deploy + `/health.rt4d.available: true` |
+| Image → SceneSpecification | **Prepared** — `POST /api/image-to-scene` interprets a still (NIM vision or heuristic) into SceneSpecification, then MRS path-traces a full frame. **Not** geometric reconstruction / photogrammetry |
 | Operator deploy | **Prepared** — Dockerfile + `render.yaml` (Render free web) |
 | Live NIM generate | **Requires** `NVIDIA_API_KEY` at runtime (default backend) |
 | NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared** — defaults **on** when `NVIDIA_API_KEY` is set and `GENBLAZE_VIDEO_ENABLED` is unset; pin `0` for stills-only (Render blueprint does). Cosmos catalog access is key-dependent; docs **declared** not enforced |
@@ -21,6 +22,14 @@ Operators type a prompt for a concept image. The **default** service calls NVIDI
 Optionally, set `GENBLAZE_IMAGE_BACKEND=rt4d` to skip NVIDIA entirely and produce a **deterministic procedural 4D still** via the MRS `renderer-core` RT4D path tracer (keyword → scene archetype + palette; seed → camera/placement). That path is **not** text-to-image and does **not** claim photorealism or semantic image synthesis. Same prompt (same seed) → byte-identical PNG. It cannot 504 on an upstream generative API because there is none.
 
 This does **not** mean Genblaze's NVIDIA path renders 4D scenes.
+
+### Image → MRS scene (hackathon D path)
+
+`POST /api/image-to-scene` accepts an uploaded still (`image_base64`), an ingest `id`, or a prior generate `run_id`, emits a **SceneSpecification** (NVIDIA NIM multimodal when `NVIDIA_API_KEY` is set; otherwise or on failure a **heuristic** builder), validates via Node SoT (`validate-scene-spec.mjs`), and by default path-traces a **full MRS frame** under `{prefix}/image-to-scene/{run_id}/`.
+
+Honest copy: **scene interpretation + path-traced full frame**. Responses include `analysis_mode` / `note` stating this is **not** geometric reconstruction. Phase 3 depth/mesh/pose recovery is **declared roadmap only** (see `docs/4d-engine/v2/scene-spec/IMAGE_TO_SCENE_RFC.md`).
+
+Dual FLUX + MRS: set `GENBLAZE_FLUX_THEN_SCENE=1` or pass `"then_scene": true` on `POST /api/generate`. The FLUX concept still is **kept**; the MRS frame is returned alongside under `then_scene` with separate modality/provider labels.
 
 ## Setup
 
@@ -69,6 +78,12 @@ Copy secrets into the **repo-root** `.env` (preferred) or `mrs/apps/genblaze-med
 | `RT4D_RENDER_WIDTH` / `RT4D_RENDER_HEIGHT` | optional; default `448` / `448` (clamped 16–1024) |
 | `RT4D_SAMPLES` / `RT4D_MAX_DEPTH` | optional; default `20` / `5` |
 | `RT4D_TIMEOUT` | optional; default `180` seconds (clamped 10–600) |
+| `GENBLAZE_IMAGE_TO_SCENE_MODEL` | optional; default `meta/llama-3.2-11b-vision-instruct` (NIM vision-capable slug) |
+| `GENBLAZE_IMAGE_TO_SCENE_CHAT_URL` | optional; default `https://integrate.api.nvidia.com/v1/chat/completions` |
+| `GENBLAZE_IMAGE_TO_SCENE_TIMEOUT` | optional; default `120` seconds |
+| `GENBLAZE_FLUX_THEN_SCENE` | default **off** — set `1` so successful `/api/generate` stills also run image→scene→MRS (returns both assets) |
+| `SCENE_SPEC_SCRIPT_PATH` | optional; default `…/render-scene.mjs` |
+| `VALIDATE_SCENE_SPEC_SCRIPT_PATH` | optional; default `…/validate-scene-spec.mjs` |
 
 Seedance-only knobs are also listed in [`env.seedance.example`](./env.seedance.example) (not auto-loaded — copy into your real `.env`).
 
@@ -110,6 +125,16 @@ set RT4D_SAMPLES=12
 uvicorn app.main:app --host 127.0.0.1 --port 8787
 curl -s http://127.0.0.1:8787/health | findstr /i rt4d
 curl -s -X POST http://127.0.0.1:8787/api/generate -H "content-type: application/json" -d "{\"prompt\":\"cyan tesseract lattice\",\"embed\":false}"
+```
+
+### Image → MRS scene (curl)
+
+```bash
+# Heuristic interpret + MRS full-frame render (no NIM vision required)
+curl -s -X POST http://127.0.0.1:8787/api/image-to-scene -H "content-type: application/json" -d "{\"image_base64\":\"<base64 or data-url>\",\"render\":true,\"force_heuristic\":true}"
+
+# Dual FLUX concept + MRS frame (keeps both)
+curl -s -X POST http://127.0.0.1:8787/api/generate -H "content-type: application/json" -d "{\"prompt\":\"neon lattice\",\"embed\":false,\"then_scene\":true}"
 ```
 
 Or keep NVIDIA as primary and opt into fallback:
@@ -287,9 +312,11 @@ With **valid** B2 keys (no NVIDIA): `/health` reports `b2_configured` without li
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| GET | `/health` | Boots always; NVIDIA/B2/RT4D flags; ListObjects probe only if `B2_PROBE_ON_HEALTH=1` |
-| POST | `/api/generate` | Live Genblaze FLUX→B2 (default), or RT4D when `GENBLAZE_IMAGE_BACKEND=rt4d`; **503** if setup missing; RT4D CLI failure → **502** |
+| GET | `/health` | Boots always; NVIDIA/B2/RT4D flags; `image_to_scene` probe; ListObjects probe only if `B2_PROBE_ON_HEALTH=1` |
+| POST | `/api/generate` | Live Genblaze FLUX→B2 (default), or RT4D when `GENBLAZE_IMAGE_BACKEND=rt4d`; optional `then_scene` / `GENBLAZE_FLUX_THEN_SCENE` dual MRS frame; **503** if setup missing; RT4D CLI failure → **502** |
 | POST | `/api/generate-video` | Selected Cosmos or Seedance backend → B2; 503 if disabled or its credential is missing |
+| POST | `/api/image-to-scene` | Image → SceneSpecification → optional MRS full-frame path trace (`render` default **true**). Scene interpretation — **not** reconstruction |
+| POST | `/api/render-scene` | SceneSpecification JSON → RT4D still |
 | GET | `/api/assets` | Local recent index (capped); optional `?modality=image\|video` |
 | GET | `/media/stills` · `/media/nvidia` · `/media/nim-cosmos` | 302 into SPA hash anchors |
 | GET | `/` | Single-page UI (stills; Cosmos section hidden unless video enabled) |
