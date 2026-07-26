@@ -61,7 +61,13 @@ export {
   createReplayEvidenceInvariant,
 } from "./invariants/Engine3DInvariants.js";
 
-export type { ReplayRecord } from "./replay/ReplayRecord.js";
+export type {
+  ReplayRecord,
+  ReplayRecordDraft,
+  ReplayRecordInputs,
+  ReplayBodySnapshot,
+  ReplayBodyLike,
+} from "./replay/ReplayRecord.js";
 export type { ReplayTimeline } from "./replay/ReplayTimeline.js";
 export {
   InMemoryReplayTimeline,
@@ -89,3 +95,32 @@ export type {
   MandalaMapping,
 } from "./mandala/MandalaMapping.js";
 export { DefaultMandalaMapping } from "./mandala/MandalaMapping.js";
+
+export type {
+  BridgePrimitiveKind,
+  BridgePrimitiveSource,
+  Vec4Tuple,
+  BridgePrimitive,
+  BridgeCameraDescriptor,
+  BridgeLatticeDescriptor,
+  BridgeMappingNotes,
+  Engine3DBridgeScene,
+  SceneBridgeEvidence,
+  SceneBridgeCaptureResult,
+  SceneBridgeCaptureOptions,
+  SceneBridgeCaptureInput,
+  Engine3DFrameRenderRequest,
+  Engine3DFrameRenderReceipt,
+} from "./scene/index.js";
+export {
+  ENGINE3D_BRIDGE_SCENE_SCHEMA,
+  Engine3DSceneBridge,
+  captureEngine3DScene,
+  snapshotWorldForHash,
+  DEFAULT_BRIDGE_CAMERA,
+  canonicalStringify,
+  fnv1a32Hex,
+  hashCanonical,
+  renderEngine3dFrame,
+  ENGINE3D_FRAME_RECEIPT_MODE,
+} from "./scene/index.js";
