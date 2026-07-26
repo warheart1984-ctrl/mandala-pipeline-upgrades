@@ -1,5 +1,5 @@
 # Default Dockerfile for Render (hackathon App URL).
-# Builds Genblaze media: prompt → FLUX → B2, plus the RT4D renderer backend.
+# Builds Genblaze media: prompt â†’ FLUX â†’ B2, plus the RT4D renderer backend.
 #
 # Build context MUST be the repo root: the RT4D backend needs
 # mrs/packages/renderer-core, which is outside mrs/apps/genblaze-media.
@@ -61,13 +61,21 @@ RUN node --version \
  && rm -f /tmp/smoke.png
 
 # Scene-spec smoke: a tiny render-scene run exercises render-scene.mjs, its
-# scene-spec import graph, capability validation, and the shared PNG encoder —
+# scene-spec import graph, capability validation, and the shared PNG encoder â€”
 # so a broken scene-spec layer fails the build instead of a runtime 503/502.
 RUN printf '%s' '{"schemaVersion":"1.0","kind":"SceneSpecification","id":"docker-scene-smoke","entities":[{"id":"e","geometry":{"kind":"surface","surfaceId":"tesseract"}}]}' > /tmp/scene-smoke.json \
  && node /app/renderer-core/scripts/render-scene.mjs -- \
       --spec /tmp/scene-smoke.json --width 32 --height 32 --samples 1 \
       --output /tmp/scene-smoke.png > /dev/null \
  && rm -f /tmp/scene-smoke.png /tmp/scene-smoke.json
+
+# engine3d demo smoke (partial): proves math3d/bridge/EngineHost import graph.
+# Runtime first-boot also runs this via docker-entrypoint.sh (marker /app/data/.engine3d-first-run).
+RUN node /app/renderer-core/scripts/engine3d-demo.mjs 4 > /tmp/engine3d-smoke.json \
+ && rm -f /tmp/engine3d-smoke.json
+
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 RUN mkdir -p /app/data \
  && useradd --create-home --uid 10001 appuser \
@@ -76,4 +84,5 @@ USER appuser
 
 EXPOSE 8000
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -218,8 +218,8 @@ export function renderSceneFromSpec(spec, frameSel = {}) {
       for (let s = 0; s < samples; s++) {
         const u1 = rng();
         const u2 = rng();
-        const u3 = rng();
-        const ray = camera.generateRay(x, y, u1, u2, u3);
+        // Central 4D slice — see render-still.mjs for why u3/u4 stay fixed.
+        const ray = camera.generateRay(x, y, u1, u2, 0.5, 0.5);
         const hit = scene.intersect(ray);
         const L = hit
           ? tracer.trace(ray, scene)
