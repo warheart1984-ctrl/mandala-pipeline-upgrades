@@ -402,6 +402,8 @@ export type {
   FaceExpression,
   FacePoseFrame,
   LoadedFaceRig,
+  FaceAssetKind,
+  ResolvedHumanFacePath,
 } from "./face/index.js";
 export {
   DEFAULT_FACE_BONES,
@@ -413,6 +415,13 @@ export {
   validateFaceRig,
   neutralFacePose,
   facePoseFromTimeline,
+  resolveHumanFacePath,
+  resolveFixtureHumanFacePath,
+  getOperatorAssetsRoot,
+  resolveOperatorAssetsBaseDir,
+  detectFaceAssetKind,
+  normalizeHumanFaceName,
+  defaultFaceNeutralGlbPath,
 } from "./face/index.js";
 
 export {

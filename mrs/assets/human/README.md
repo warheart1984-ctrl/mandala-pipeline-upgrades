@@ -2,12 +2,23 @@
 
 | File | Role | Status |
 |------|------|--------|
-| `HumanFaceNeutral.glb` | Neutral face mesh | **Fixture** in-repo (low tris) unless replaced |
-| `HumanFaceRigged.glb` | Bones + blendshapes | **Fixture** in-repo unless replaced |
+| `HumanFaceNeutral.glb` | Neutral face mesh | **Fixture** in-repo (low tris) |
+| `HumanFaceRigged.glb` | Bones + blendshapes | **Fixture** in-repo |
 
-## Operator upgrade
+## Operator override (preferred)
 
-Overwrite these same filenames with licensed production assets — no API changes.
+Engine3D prefers operator drop-ins over these fixtures at runtime:
+
+1. `${OPERATOR_ASSETS_ROOT}/human/HumanFaceRigged.glb` (default root: `./operator-assets` at **repo root**)
+2. Fallback: this directory (`mrs/assets/human/`)
+
+```bash
+# From repo root — copies into operator-assets/human/ and validates rigged GLBs
+npm run operator:face-install -- path/to/HumanFaceRigged.glb
+npm run operator:face-install -- path/to/HumanFaceNeutral.glb
+```
+
+When an operator file is present, structure stills report `face_asset: "operator"`. Fixtures remain the canonical CI baseline. Do not commit production GLBs (`operator-assets/**/*.glb` is gitignored).
 
 Full workflow: [ENGINE3D_FACERIG_OPERATOR_GUIDE_v1.0](../../../docs/4d-engine/engine3d/ENGINE3D_FACERIG_OPERATOR_GUIDE_v1.0.md) · [topology checklist](../../../docs/4d-engine/engine3d/ENGINE3D_FACE_TOPOLOGY_CHECKLIST_v1.0.md) · [Blender export preset](../../../docs/4d-engine/engine3d/ENGINE3D_FACE_BLENDER_EXPORT_PRESET_v1.0.md)
 
@@ -24,7 +35,7 @@ See [ENGINE3D_FACE_STRUCTURE_SPEC_v1.0](../../../docs/4d-engine/engine3d/ENGINE3
 
 - Engine3D owns face geometry.
 - In-repo GLBs are **fixtures** for CI/demos — not a 20k–40k production sculpt.
-- Operators may overwrite these filenames with licensed production assets without API changes.
+- Operators drop licensed production assets under `operator-assets/human/` (same filenames) without API changes.
 
 ## Regenerate fixtures
 

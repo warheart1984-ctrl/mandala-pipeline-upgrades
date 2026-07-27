@@ -5,9 +5,10 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { existsSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { tmpdir } from "node:os";
 import {
   applyFacePose,
   defaultFaceRigConfig,
@@ -15,13 +16,13 @@ import {
   defaultFaceRiggedGlbPath,
   DefaultWorld3D,
   DefaultWorldMesh,
+  detectFaceAssetKind,
   facePoseFromTimeline,
   loadFaceRig,
+  resolveHumanFacePath,
   validateFaceRig,
   renderEngine3dStill,
 } from "../../src/index.js";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 
 const FIXTURE = defaultFaceRiggedGlbPath();
 
@@ -125,6 +126,45 @@ describe("face rig fixture", () => {
       assert.ok(existsSync(result.beautyPath));
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("operator OPERATOR_ASSETS_ROOT override reports face_asset operator", () => {
+    const prev = process.env.OPERATOR_ASSETS_ROOT;
+    const opRoot = mkdtempSync(join(tmpdir(), "e3d-op-assets-"));
+    const humanDir = join(opRoot, "human");
+    mkdirSync(humanDir, { recursive: true });
+    const opGlb = join(humanDir, "HumanFaceRigged.glb");
+    copyFileSync(FIXTURE, opGlb);
+    process.env.OPERATOR_ASSETS_ROOT = opRoot;
+    const stillDir = mkdtempSync(join(tmpdir(), "e3d-face-op-"));
+    try {
+      const resolved = resolveHumanFacePath("HumanFaceRigged");
+      assert.equal(resolved.face_asset, "operator");
+      assert.equal(resolved.path, opGlb);
+      assert.equal(detectFaceAssetKind(resolved.path), "operator");
+
+      const loaded = loadFaceRig(defaultFaceRigConfig(resolved.path));
+      assert.equal(loaded.assetKind, "operator");
+
+      const result = renderEngine3dStill({
+        outDir: stillDir,
+        width: 64,
+        height: 48,
+        preferFaceFixture: true,
+      });
+      assert.equal(result.structureRecord.face_rig, true);
+      assert.equal(result.structureRecord.face_asset, "operator");
+      assert.equal(result.structureRecord.face_rig_detail?.asset_kind, "operator");
+      assert.ok(
+        result.structureRecord.face_rig_detail?.mesh_path.includes("HumanFaceRigged.glb"),
+      );
+      assert.ok(result.structureRecord.face_pose);
+    } finally {
+      if (prev === undefined) delete process.env.OPERATOR_ASSETS_ROOT;
+      else process.env.OPERATOR_ASSETS_ROOT = prev;
+      rmSync(opRoot, { recursive: true, force: true });
+      rmSync(stillDir, { recursive: true, force: true });
     }
   });
 

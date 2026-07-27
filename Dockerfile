@@ -75,8 +75,14 @@ COPY --from=engine3d-build /build/package.json ./engine3d-core/package.json
 COPY --from=engine3d-build /build/dist ./engine3d-core/dist
 COPY --from=engine3d-build /build/scripts ./engine3d-core/scripts
 COPY mrs/packages/engine3d-core/src ./engine3d-core/src
-# Face fixture GLBs (synthetic; not production anatomy)
+# Face fixture GLBs (synthetic; not production anatomy).
+# Optional operator overrides: do NOT COPY production GLBs into the image.
+# Mount a volume at /operator-assets (or set OPERATOR_ASSETS_ROOT) with:
+#   /operator-assets/human/HumanFaceRigged.glb
+#   /operator-assets/human/HumanFaceNeutral.glb
+# Runtime prefers OPERATOR_ASSETS_ROOT/human/*.glb over /app/assets/human fixtures.
 COPY mrs/assets ./assets
+# ENV OPERATOR_ASSETS_ROOT=/operator-assets
 
 RUN node --version \
  && node /app/renderer-core/scripts/render-still.mjs \
