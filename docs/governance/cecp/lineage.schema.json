@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mandala-rendering.local/governance/cecp/lineage.schema.json",
+  "title": "CECP Omega lineage record",
+  "description": "Lean machine-readable handoff for a CECP trail. Status: declared shape; not CI-validated unless a consumer is added.",
+  "type": "object",
+  "required": ["trailId", "protocol", "stages"],
+  "additionalProperties": false,
+  "properties": {
+    "trailId": { "type": "string", "minLength": 1 },
+    "feature": { "type": "string" },
+    "protocol": {
+      "type": "string",
+      "const": "docs/governance/CECP_OMEGA_PROTOCOL.md"
+    },
+    "overallStatus": {
+      "type": "string",
+      "enum": ["enforced", "partial", "declared", "skeleton"]
+    },
+    "lineage": {
+      "type": "string",
+      "description": "Human lineage label",
+      "default": "Architecture → Build → Implementation → Review → Inspection → Acceptance"
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/stage" }
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "accepted_with_gaps",
+            "accepted",
+            "rejected",
+            "deferred"
+          ]
+        },
+        "inspectorVerdict": {
+          "type": "string",
+          "enum": ["PASS", "PASS_WITH_GAPS", "FAIL"]
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "stage": {
+      "type": "object",
+      "required": ["stage", "artifact"],
+      "additionalProperties": false,
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": [
+            "architect",
+            "builder",
+            "implementor",
+            "reviewer",
+            "inspector",
+            "acceptance"
+          ]
+        },
+        "predecessor": {
+          "type": ["string", "null"],
+          "description": "Prior stage name or null for architect"
+        },
+        "artifact": {
+          "type": "string",
+          "description": "Relative path under the trail directory"
+        },
+        "intent": { "type": "string" },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "statusTags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["enforced", "partial", "declared", "skeleton"]
+          }
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["PASS", "PASS_WITH_GAPS", "FAIL", "N/A"]
+        },
+        "handoff": { "type": "string" }
+      }
+    }
+  }
+}

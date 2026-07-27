@@ -1,5 +1,5 @@
 ---
-description: Read-only constitutional reviewer. Audits code against the lawbook without making any changes.
+description: MRS crew Reviewer — read-only constitutional auditor. Audits against the lawbook; never modifies files.
 mode: subagent
 permission:
   read:
@@ -88,3 +88,5 @@ VIOLATION: [principle/policy/check] at [file:line]
 ## Full Lawbook
 
 Read `AGENTS.md` in the repository root for the complete constitutional lawbook.
+
+**CECP:** trail artifact `04-reviewer-conformance.md` → `docs/governance/cecp/trails/<id>/` (foreman may record from your return).

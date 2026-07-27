@@ -207,10 +207,19 @@ class Settings:
     polish_model: str | None = None
     polish_default_strength: float = 0.45
     polish_backend: str = "auto"
+    # --- Prompt → SceneSpecification / Engine3DWorldDocument (out-of-process) ---
+    prompt_scene_bridge_enabled: bool = True
+    prompt_scene_bridge_script_path: str | None = None
+    prompt_scene_bridge_python: str | None = None
+    prompt_scene_infinity_src: str | None = None
+    prompt_scene_bridge_timeout_seconds: float = 90.0
+    # Opt-in: expand Engine3D generator stub via engine3d-core Node CLI
+    prompt_scene_expand_world: bool = False
     # --- Engine3D structure still (soft-raster beauty+AOVs) ---
     engine3d_still_enabled: bool = True
     engine3d_still_script_path: str | None = None
     engine3d_still_timeout_seconds: float = 120.0
+    worlddocument_rt4d_script_path: str | None = None
     # --- Engine3D short cinematic sequence (soft-raster orbit) ---
     engine3d_sequence_enabled: bool = True
     engine3d_sequence_script_path: str | None = None
@@ -230,6 +239,14 @@ class Settings:
         from app.engine3d_still_provider import engine3d_still_default_script_path
 
         return self.engine3d_still_script_path or str(engine3d_still_default_script_path())
+
+    @property
+    def resolved_worlddocument_rt4d_script(self) -> str:
+        from app.engine3d_still_provider import worlddocument_rt4d_default_script_path
+
+        return self.worlddocument_rt4d_script_path or str(
+            worlddocument_rt4d_default_script_path()
+        )
 
     @property
     def resolved_engine3d_sequence_script(self) -> str:
@@ -466,12 +483,42 @@ def get_settings() -> Settings:
     else:
         polish_backend = "auto"
 
+    # --- Prompt → scene bridge (out-of-process Infinity narrative lane) ---
+    # Default ON when run_bridge.py exists; operators can pin ENABLED=0.
+    prompt_scene_env = (os.getenv("PROMPT_SCENE_BRIDGE_ENABLED") or "1").strip().lower()
+    prompt_scene_bridge_enabled = prompt_scene_env not in {"0", "false", "no", "off"}
+    prompt_scene_bridge_script_override = (
+        os.getenv("PROMPT_SCENE_BRIDGE_SCRIPT") or ""
+    ).strip() or None
+    prompt_scene_bridge_python = (
+        os.getenv("PROMPT_SCENE_BRIDGE_PYTHON") or ""
+    ).strip() or None
+    prompt_scene_infinity_src = (
+        os.getenv("INFINITY_STORY_SRC")
+        or os.getenv("PROMPT_SCENE_INFINITY_SRC")
+        or ""
+    ).strip() or None
+    try:
+        prompt_scene_bridge_timeout = float(
+            (os.getenv("PROMPT_SCENE_BRIDGE_TIMEOUT") or "90").strip() or "90"
+        )
+    except ValueError:
+        prompt_scene_bridge_timeout = 90.0
+    prompt_scene_bridge_timeout = max(10.0, min(300.0, prompt_scene_bridge_timeout))
+    expand_world_env = (
+        os.getenv("PROMPT_SCENE_EXPAND_WORLD") or "0"
+    ).strip().lower()
+    prompt_scene_expand_world = expand_world_env in {"1", "true", "yes", "on"}
+
     # --- Engine3D structure still ---
     # Default ON when script/node exist; operators can pin ENGINE3D_STILL_ENABLED=0.
     engine3d_still_env = (os.getenv("ENGINE3D_STILL_ENABLED") or "1").strip().lower()
     engine3d_still_enabled = engine3d_still_env not in {"0", "false", "no", "off"}
     engine3d_still_script_override = (
         os.getenv("ENGINE3D_STILL_SCRIPT_PATH") or ""
+    ).strip() or None
+    worlddocument_rt4d_script_override = (
+        os.getenv("WORLDDOCUMENT_RT4D_SCRIPT_PATH") or ""
     ).strip() or None
     try:
         engine3d_still_timeout = float(
@@ -581,9 +628,16 @@ def get_settings() -> Settings:
         polish_model=polish_model,
         polish_default_strength=polish_strength,
         polish_backend=polish_backend,
+        prompt_scene_bridge_enabled=prompt_scene_bridge_enabled,
+        prompt_scene_bridge_script_path=prompt_scene_bridge_script_override,
+        prompt_scene_bridge_python=prompt_scene_bridge_python,
+        prompt_scene_infinity_src=prompt_scene_infinity_src,
+        prompt_scene_bridge_timeout_seconds=prompt_scene_bridge_timeout,
+        prompt_scene_expand_world=prompt_scene_expand_world,
         engine3d_still_enabled=engine3d_still_enabled,
         engine3d_still_script_path=engine3d_still_script_override,
         engine3d_still_timeout_seconds=engine3d_still_timeout,
+        worlddocument_rt4d_script_path=worlddocument_rt4d_script_override,
         engine3d_sequence_enabled=engine3d_sequence_enabled,
         engine3d_sequence_script_path=engine3d_sequence_script_override,
         engine3d_sequence_timeout_seconds=engine3d_sequence_timeout,
