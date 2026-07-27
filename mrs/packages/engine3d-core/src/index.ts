@@ -184,6 +184,14 @@ export type { BodyRegistry } from "./world/BodyRegistry.js";
 export { DefaultBodyRegistry } from "./world/BodyRegistry.js";
 export type { World3D } from "./world/World3D.js";
 export { DefaultWorld3D } from "./world/World3D.js";
+export { World3DFace } from "./world/World3DFace.js";
+export {
+  skinMaterial,
+  eyeMaterial,
+  mouthMaterial,
+  DEFAULT_FACE_MATERIALS,
+  bindDefaultFaceMaterials,
+} from "./materials/FaceMaterials.js";
 
 export type { PhysicsEngine } from "./physics/PhysicsEngine.js";
 export { SimplePhysicsEngine } from "./physics/PhysicsEngine.js";
@@ -280,6 +288,8 @@ export type {
   Engine3dStillRequest,
   Engine3dStillResult,
   Engine3dStructureRecord,
+  FaceRigDetailEvidence,
+  FacePoseEvidence,
   StructureSource,
   EvidenceRecordV12,
   EvidenceRecordV20,
@@ -320,6 +330,7 @@ export {
   hashCanonical,
   renderEngine3dFrame,
   renderEngine3dStill,
+  defaultFaceRiggedGlbPath,
   ENGINE3D_FRAME_RECEIPT_MODE,
   ENGINE3D_STRUCTURE_RECORD_SCHEMA,
   EvidenceBuilderV12,
@@ -381,8 +392,28 @@ export {
   evaluateProperty,
   evaluateCameraEye,
   defaultOrbitTimeline,
+  defaultFaceSmileTimeline,
+  faceTimelineExample,
   slerp,
 } from "./timeline/index.js";
+
+export type {
+  FaceRigConfig,
+  FaceExpression,
+  FacePoseFrame,
+  LoadedFaceRig,
+} from "./face/index.js";
+export {
+  DEFAULT_FACE_BONES,
+  DEFAULT_FACE_BLENDSHAPES,
+  defaultFaceRigConfig,
+  emptyFacePose,
+  loadFaceRig,
+  applyFacePose,
+  validateFaceRig,
+  neutralFacePose,
+  facePoseFromTimeline,
+} from "./face/index.js";
 
 export {
   Engine3DCinematicRuntime,

@@ -11,11 +11,12 @@ FROM node:22-bookworm-slim AS engine3d-build
 WORKDIR /build
 COPY mrs/packages/engine3d-core/package.json ./
 COPY mrs/packages/engine3d-core/tsconfig.json ./
+COPY mrs/packages/engine3d-core/tsconfig.build.json ./
 COPY mrs/packages/engine3d-core/src ./src
-COPY mrs/packages/engine3d-core/test ./test
 COPY mrs/packages/engine3d-core/scripts ./scripts
-RUN npm install typescript@5.9.2 \
- && npx tsc -p tsconfig.json
+# src uses node:* APIs; tests are excluded via tsconfig.build.json (image only needs dist/src).
+RUN npm install typescript@5.9.2 @types/node@22 \
+ && npx tsc -p tsconfig.build.json
 
 # Node binary stage (glibc-aligned with bookworm).
 FROM node:22-bookworm-slim AS nodebin
@@ -74,6 +75,8 @@ COPY --from=engine3d-build /build/package.json ./engine3d-core/package.json
 COPY --from=engine3d-build /build/dist ./engine3d-core/dist
 COPY --from=engine3d-build /build/scripts ./engine3d-core/scripts
 COPY mrs/packages/engine3d-core/src ./engine3d-core/src
+# Face fixture GLBs (synthetic; not production anatomy)
+COPY mrs/assets ./assets
 
 RUN node --version \
  && node /app/renderer-core/scripts/render-still.mjs \

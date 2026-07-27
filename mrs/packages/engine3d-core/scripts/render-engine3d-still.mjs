@@ -78,7 +78,7 @@ async function main() {
     worldDoc = JSON.parse(readFileSync(args.world, "utf8"));
   }
 
-  const { renderEngine3dStill } = await loadApi();
+  const { renderEngine3dStill, defaultFaceRiggedGlbPath } = await loadApi();
 
   const cameraPartial = worldDoc?.camera
     ? {
@@ -92,15 +92,23 @@ async function main() {
       }
     : undefined;
 
+  let humanGlb =
+    typeof args["human-glb"] === "string" ? args["human-glb"] : undefined;
+  if (!humanGlb && args["no-face-fixture"] !== true) {
+    const fixture = defaultFaceRiggedGlbPath();
+    if (existsSync(fixture)) humanGlb = fixture;
+  }
+
   const result = renderEngine3dStill({
     outDir,
     width,
     height,
-    worldId: worldDoc?.id || (typeof args.world === "string" ? args.world : "demo-portrait"),
+    worldId: worldDoc?.id || (typeof args.world === "string" ? args.world : undefined),
     cameraId: cameraPartial?.id,
     camera: cameraPartial,
-    humanGlb: typeof args["human-glb"] === "string" ? args["human-glb"] : undefined,
+    humanGlb,
     poseId: typeof args["pose-id"] === "string" ? args["pose-id"] : undefined,
+    preferFaceFixture: args["no-face-fixture"] !== true,
     aov,
   });
 
