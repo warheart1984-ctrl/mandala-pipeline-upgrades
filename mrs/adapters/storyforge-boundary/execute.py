@@ -33,6 +33,11 @@ def _is_hq_quality(render: dict[str, Any]) -> bool:
     return q in {"final", "high", "hq", "cinematic"}
 
 
+def _is_cinematic_quality(render: dict[str, Any]) -> bool:
+    """Opt-in denser stills; must not alter draft CI clamps."""
+    return str(render.get("quality") or "draft").lower() == "cinematic"
+
+
 def _resolve_dims(
     render: dict[str, Any],
     *,
@@ -42,6 +47,14 @@ def _resolve_dims(
 ) -> tuple[int, int]:
     w = int(render["width"])
     h = int(render["height"])
+    if _is_cinematic_quality(render):
+        # Cinematic: floor toward larger plates; still hard-capped.
+        floor_w, floor_h = max(hq_default[0], 512), max(hq_default[1], 512)
+        if w < floor_w:
+            w = floor_w
+        if h < floor_h:
+            h = floor_h
+        return min(w, hard_cap), min(h, hard_cap)
     if _is_hq_quality(render):
         if w < 256 and h < 256:
             w, h = hq_default
@@ -128,12 +141,21 @@ def execute_scene_spec(
     prov_path = out_root / f"{req_id}-scene-spec.provenance.json"
     spec_path = out_root / f"{req_id}-scene-spec.json"
 
-    # Clamp for smoke-friendly defaults when quality=draft; HQ keeps request dims
+    # Clamp for smoke-friendly defaults when quality=draft; HQ/cinematic floors
     if not _is_hq_quality(render):
         width = min(width, 128)
         height = min(height, 96)
         samples = min(samples, 2)
         max_depth = min(max_depth, 3)
+    elif _is_cinematic_quality(render):
+        # Opt-in cinematic: cleaner RT4D stills. Floor 16 spp @ ≥512 —
+        # 32 spp @ 512²×~357 spheres exceeded 600s on CPU hosts (evidence:
+        # output/cecp-cinematic-quality scene timeout). Request may raise to 64.
+        # Adaptive sampling + aces tonemap + firefly clamp via qualityOpts.
+        width = min(max(width, 512), 768)
+        height = min(max(height, 512), 768)
+        samples = min(max(samples, 24), 64)
+        max_depth = max(max_depth, 6)
     else:
         width = min(max(width, 256), 768)
         height = min(max(height, 256), 768)
@@ -151,6 +173,16 @@ def execute_scene_spec(
             "seed": int(seed),
         }
     )
+    if _is_cinematic_quality(render):
+        qopts = dict(output.get("qualityOpts") or {})
+        qopts.setdefault("adaptiveSampling", True)
+        qopts.setdefault("tonemap", "aces-lite")
+        qopts.setdefault("fireflyMax", 14)
+        qopts.setdefault("varianceThreshold", 0.0008)
+        qopts.setdefault("minSampleFraction", 0.55)
+        output["qualityOpts"] = qopts
+        if "exposure" not in output:
+            output["exposure"] = 1.55
     spec_out["output"] = output
     spec_path.write_text(json.dumps(spec_out), encoding="utf-8")
 
@@ -241,7 +273,12 @@ def execute_proton_raster(
             raise ExecuteError(
                 "render-proton-splat.mjs not found (set PROTON_SPLAT_SCRIPT)"
             )
-        width, height = _resolve_dims(render)
+        cinematic = _is_cinematic_quality(render)
+        width, height = _resolve_dims(
+            render,
+            hq_default=(768, 768) if cinematic else (512, 512),
+            hard_cap=768,
+        )
         still_dir = out_root / f"{req_id}-proton-hq"
         still_dir.mkdir(parents=True, exist_ok=True)
         argv = [
@@ -262,6 +299,9 @@ def execute_proton_raster(
             str(int(seed)),
             "--lighting-punch",
         ]
+        if cinematic:
+            # Proton preset already supersamples at high; keep explicit for evidence.
+            argv.extend(["--supersample", "2"])
         proc = runner(argv, cwd=splat.parent)
         if proc.returncode != 0:
             raise ExecuteError(
@@ -418,8 +458,12 @@ def execute_engine3d_world(
         still_dir = out_root / f"{req_id}-engine3d-still"
         still_dir.mkdir(parents=True, exist_ok=True)
         render = req["payload"]["render"]
+        cinematic = _is_cinematic_quality(render)
         width, height = _resolve_dims(
-            render, draft_cap=(128, 96), hq_default=(256, 256), hard_cap=512
+            render,
+            draft_cap=(128, 96),
+            hq_default=(512, 512) if cinematic else (256, 256),
+            hard_cap=512,
         )
         argv = [
             node,

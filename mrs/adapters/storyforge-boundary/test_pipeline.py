@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -143,6 +144,70 @@ def test_execute_proton_hq_mocked(tmp_path, monkeypatch):
     assert "normal-png" in roles
     assert "star-demo" in deep["mappedTo"]
     assert deep["statusTag"] == "enforced"
+
+
+def test_execute_scene_cinematic_floors_mocked(tmp_path, monkeypatch):
+    """Cinematic quality must floor samples≥24 and dims≥512; draft stays untouched."""
+    data = json.loads(FIXTURE_EXEC.read_text(encoding="utf-8"))
+    data["payload"]["render"]["quality"] = "cinematic"
+    data["payload"]["render"]["width"] = 256
+    data["payload"]["render"]["height"] = 256
+    data["payload"]["render"]["samples"] = 4
+    data["payload"]["render"]["maxDepth"] = 4
+
+    captured: dict[str, Any] = {}
+
+    def fake_run(argv, **kwargs):
+        for i, a in enumerate(argv):
+            if a == "--width" and i + 1 < len(argv):
+                captured["width"] = int(argv[i + 1])
+            if a == "--height" and i + 1 < len(argv):
+                captured["height"] = int(argv[i + 1])
+            if a == "--samples" and i + 1 < len(argv):
+                captured["samples"] = int(argv[i + 1])
+            if a == "--output" and i + 1 < len(argv):
+                out = Path(argv[i + 1])
+                out.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x55" * 16)
+            if a == "--provenance" and i + 1 < len(argv):
+                Path(argv[i + 1]).write_text("{}", encoding="utf-8")
+        return subprocess.CompletedProcess(argv, 0, stdout="{}", stderr="")
+
+    monkeypatch.setenv("SCENE_SPEC_SCRIPT_PATH", str(tmp_path / "render-scene.mjs"))
+    (tmp_path / "render-scene.mjs").write_text("// stub\n", encoding="utf-8")
+    monkeypatch.setenv("RT4D_NODE_PATH", str(tmp_path / "node.exe"))
+    (tmp_path / "node.exe").write_text("stub", encoding="utf-8")
+
+    deep = execute_scene_spec(data, out_dir=tmp_path, run_fn=fake_run)
+    assert deep["statusTag"] == "enforced"
+    assert captured["width"] >= 512
+    assert captured["height"] >= 512
+    assert captured["samples"] >= 24
+    assert deep["sceneSpecification"]["output"]["maxDepth"] >= 6
+    assert deep["sceneSpecification"]["output"]["qualityOpts"]["adaptiveSampling"] is True
+
+    # Draft must still clamp (CI safety)
+    draft = json.loads(FIXTURE_EXEC.read_text(encoding="utf-8"))
+    draft["payload"]["render"]["quality"] = "draft"
+    draft["payload"]["render"]["width"] = 512
+    draft["payload"]["render"]["height"] = 512
+    draft["payload"]["render"]["samples"] = 64
+    captured.clear()
+
+    def fake_draft(argv, **kwargs):
+        for i, a in enumerate(argv):
+            if a == "--width" and i + 1 < len(argv):
+                captured["width"] = int(argv[i + 1])
+            if a == "--samples" and i + 1 < len(argv):
+                captured["samples"] = int(argv[i + 1])
+            if a == "--output" and i + 1 < len(argv):
+                Path(argv[i + 1]).write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x66" * 8)
+            if a == "--provenance" and i + 1 < len(argv):
+                Path(argv[i + 1]).write_text("{}", encoding="utf-8")
+        return subprocess.CompletedProcess(argv, 0, stdout="{}", stderr="")
+
+    execute_scene_spec(draft, out_dir=tmp_path, run_fn=fake_draft)
+    assert captured["width"] <= 128
+    assert captured["samples"] <= 2
 
 
 def test_execute_missing_script_errors(tmp_path, monkeypatch):

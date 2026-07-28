@@ -1,29 +1,30 @@
-{
-  "schemaVersion": "1.0",
-  "requestId": "rr-cecp-proton-hq",
-  "intentId": "intent-cecp-full-run-proton",
-  "worldId": "world-mythar-ascension-cinematic",
-  "timelineId": "timeline-cecp-full-run",
-  "timeSeconds": 0,
-  "parameters": {
-    "purpose": "storyforge-4d-full-run",
-    "cinematicPrompt": "Mythar plains under a 4D lattice star — cyan core, amber arms, soft depth",
-    "stage": "RenderRequest→proton-HQ"
-  },
-  "provenance": {
-    "promptSpecHash": "sha256:cecpfullrunprompt000000000000001",
-    "renderIntentHash": "sha256:cecpfullrunintent000000000000001",
-    "source": "fixture-sf-output"
-  },
-  "payload": {
-    "route": "proton-raster",
-    "render": {
-      "width": 512,
-      "height": 512,
-      "samples": 4,
-      "maxDepth": 4,
-      "seed": 42,
-      "quality": "high"
-    }
-  }
-}
+{
+  "schemaVersion": "1.0",
+  "requestId": "rr-cecp-proton-cinematic",
+  "intentId": "intent-cecp-cinematic-quality-proton",
+  "worldId": "world-mythar-ascension-cinematic",
+  "timelineId": "timeline-cecp-cinematic-quality",
+  "timeSeconds": 0,
+  "parameters": {
+    "purpose": "cinematic-render-quality",
+    "cinematicPrompt": "Mythar plains under a 4D lattice star — cyan core, amber arms, soft depth",
+    "stage": "RenderRequest→proton-HQ",
+    "qualityLadder": "cinematic"
+  },
+  "provenance": {
+    "promptSpecHash": "sha256:cecpcinematicprompt0000000000001",
+    "renderIntentHash": "sha256:cecpcinematicintent0000000000001",
+    "source": "fixture-sf-output"
+  },
+  "payload": {
+    "route": "proton-raster",
+    "render": {
+      "width": 768,
+      "height": 768,
+      "samples": 4,
+      "maxDepth": 4,
+      "seed": 42,
+      "quality": "cinematic"
+    }
+  }
+}

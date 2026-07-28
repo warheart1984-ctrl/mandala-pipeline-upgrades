@@ -8,6 +8,8 @@ intake→pixels stage: proton HQ, scene-spec RT4D, optional Engine3D still.
 Usage:
   python mrs/adapters/storyforge-boundary/demo_full_run.py
   python mrs/adapters/storyforge-boundary/demo_full_run.py --out-dir output/cecp-full-run
+  python mrs/adapters/storyforge-boundary/demo_full_run.py --quality cinematic \\
+      --out-dir output/cecp-cinematic-quality
 
 Writes under --out-dir:
   proton/beauty.png (+ depth.png, normal.png)
@@ -42,6 +44,89 @@ FIXTURES = {
     "scene": _DIR / "fixtures" / "sample-render-request-cinematic-scene.json",
     "engine3d": _DIR / "fixtures" / "sample-render-request-cinematic-engine3d.json",
 }
+
+# Opt-in quality ladder overrides (fixtures already carry cinematic defaults;
+# draft/high patch downward for smoke / prior HQ behavior).
+QUALITY_OVERRIDES: dict[str, dict[str, Any]] = {
+    "draft": {
+        "quality": "draft",
+        "width": 64,
+        "height": 48,
+        "samples": 2,
+        "maxDepth": 3,
+    },
+    "high": {
+        "quality": "high",
+        "width": 384,
+        "height": 384,
+        "samples": 6,
+        "maxDepth": 5,
+    },
+    "cinematic": {
+        "quality": "cinematic",
+        # Feasible CPU default after 32spp timeout: 512² × 24 + adaptive.
+        "width": 512,
+        "height": 512,
+        "samples": 24,
+        "maxDepth": 6,
+    },
+}
+
+
+def _apply_quality(request: dict[str, Any], quality: str, route_name: str) -> dict[str, Any]:
+    """Return a shallow-copied request with render quality ladder applied."""
+    body = dict(request)
+    body["payload"] = dict(body.get("payload") or {})
+    render = dict(body["payload"].get("render") or {})
+    ov = QUALITY_OVERRIDES.get(quality) or QUALITY_OVERRIDES["cinematic"]
+    render["quality"] = ov["quality"]
+
+    if quality == "draft":
+        render["width"] = ov["width"]
+        render["height"] = ov["height"]
+        render["samples"] = ov["samples"]
+        render["maxDepth"] = ov["maxDepth"]
+    elif quality == "high":
+        if route_name == "proton":
+            render["width"] = 512
+            render["height"] = 512
+            render["samples"] = 4
+        elif route_name == "engine3d":
+            render["width"] = 256
+            render["height"] = 256
+        else:
+            render["width"] = ov["width"]
+            render["height"] = ov["height"]
+            render["samples"] = ov["samples"]
+            render["maxDepth"] = ov["maxDepth"]
+    else:
+        # cinematic — route-specific plate sizes
+        if route_name == "proton":
+            render["width"] = max(int(render.get("width") or 0), 768)
+            render["height"] = max(int(render.get("height") or 0), 768)
+        elif route_name == "engine3d":
+            render["width"] = max(int(render.get("width") or 0), 512)
+            render["height"] = max(int(render.get("height") or 0), 512)
+        else:
+            render["width"] = max(int(render.get("width") or 0), int(ov["width"]))
+            render["height"] = max(int(render.get("height") or 0), int(ov["height"]))
+            render["samples"] = max(int(render.get("samples") or 0), int(ov["samples"]))
+            render["maxDepth"] = max(int(render.get("maxDepth") or 0), int(ov["maxDepth"]))
+            spec = body["payload"].get("sceneSpecification")
+            if isinstance(spec, dict):
+                spec = dict(spec)
+                out = dict(spec.get("output") or {})
+                out["width"] = render["width"]
+                out["height"] = render["height"]
+                out["samples"] = render["samples"]
+                out["maxDepth"] = render["maxDepth"]
+                if "exposure" not in out:
+                    out["exposure"] = 1.55
+                spec["output"] = out
+                body["payload"]["sceneSpecification"] = spec
+
+    body["payload"]["render"] = render
+    return body
 
 
 def _copy_role_pngs(result: dict[str, Any], dest_dir: Path, prefix: str) -> list[str]:
@@ -118,7 +203,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--out-dir",
         default=None,
-        help="Output root (default: <repo>/output/cecp-full-run)",
+        help="Output root (default: <repo>/output/cecp-full-run or cecp-cinematic-quality)",
+    )
+    p.add_argument(
+        "--quality",
+        choices=("draft", "high", "cinematic"),
+        default="high",
+        help=(
+            "Quality ladder (opt-in cinematic): draft=CI smoke; "
+            "high=prior HQ default; cinematic=denser RT4D / larger plates"
+        ),
     )
     p.add_argument(
         "--skip-engine3d",
@@ -137,8 +231,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = p.parse_args(argv)
 
-    out_root = Path(args.out_dir) if args.out_dir else (default_output_dir() / "cecp-full-run")
+    if args.out_dir:
+        out_root = Path(args.out_dir)
+    elif args.quality == "cinematic":
+        out_root = default_output_dir() / "cecp-cinematic-quality"
+    elif args.quality == "draft":
+        out_root = default_output_dir() / "cecp-draft-run"
+    else:
+        out_root = default_output_dir() / "cecp-full-run"
     out_root.mkdir(parents=True, exist_ok=True)
+
+    # Cinematic RT4D lattice can exceed the 120s default on CPU hosts.
+    if args.quality == "cinematic" and "MRS_RENDER_TIMEOUT_SECONDS" not in os.environ:
+        os.environ["MRS_RENDER_TIMEOUT_SECONDS"] = "900"
 
     wanted = {s.strip() for s in args.routes.split(",") if s.strip()}
     if args.skip_engine3d:
@@ -156,6 +261,7 @@ def main(argv: list[str] | None = None) -> int:
             errors.append(f"missing fixture {fixture}")
             continue
         raw = json.loads(fixture.read_text(encoding="utf-8"))
+        raw = _apply_quality(raw, args.quality, name)
         sub = out_root / name
         sub.mkdir(parents=True, exist_ok=True)
         result = route_render_request(raw, execute=True, out_dir=sub)
@@ -171,11 +277,13 @@ def main(argv: list[str] | None = None) -> int:
     genblaze: dict[str, Any] | None = None
     if args.genblaze_smoke:
         scene_req = json.loads(FIXTURES["scene"].read_text(encoding="utf-8"))
+        scene_req = _apply_quality(scene_req, "draft", "scene")
         genblaze = _try_genblaze_smoke(out_root, scene_req)
 
     evidence = {
         "kind": "cecp-storyforge-4d-full-run",
         "status": "enforced" if not errors else "partial",
+        "quality": args.quality,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "outDir": str(out_root.resolve()),
         "routes": sorted(wanted),
@@ -204,6 +312,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     print("=== CECP StoryForge->4D full run ===")
+    print(f"quality: {args.quality}")
     print(f"outDir: {out_root.resolve()}")
     print(f"evidence: {evidence_path.resolve()}")
     print("PNGs:")
@@ -216,11 +325,15 @@ def main(argv: list[str] | None = None) -> int:
     if genblaze is not None:
         print(f"genblazeSmoke: ok={genblaze.get('ok')} skipped={genblaze.get('skipped')}")
 
-    # Require proton beauty for success; scene preferred
+    # Require proton beauty for success when proton route was requested
+    proton_wanted = "proton" in wanted
     proton_ok = any(p.replace("\\", "/").endswith("/proton/beauty.png") for p in png_abs)
     if not proton_ok:
         proton_ok = any("proton" in p.replace("\\", "/") and p.lower().endswith(".png") for p in png_abs)
-    return 0 if proton_ok and not any("proton:" in e for e in errors) else 1
+    if proton_wanted:
+        return 0 if proton_ok and not any("proton:" in e for e in errors) else 1
+    # Non-proton runs: succeed if any beauty PNG and no hard errors
+    return 0 if png_abs and not errors else 1
 
 
 if __name__ == "__main__":

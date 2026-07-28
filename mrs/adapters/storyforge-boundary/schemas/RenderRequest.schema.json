@@ -82,9 +82,9 @@
             "seed": { "type": "integer" },
             "quality": {
               "type": "string",
-              "enum": ["draft", "final", "high"],
+              "enum": ["draft", "final", "high", "cinematic"],
               "default": "draft",
-              "description": "draft=smoke dims; final|high unlock denser HQ proton / larger stills"
+              "description": "draft=smoke dims; final|high=HQ; cinematic=opt-in denser RT4D samples / larger stills (not CI default)"
             }
           }
         },
