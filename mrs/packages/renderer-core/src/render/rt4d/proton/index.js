@@ -4,6 +4,8 @@
  * STATUS: **enforced** (six CPU mods + PNG)
  * Declared roadmap: MaterialMap4D, SpatialLayout4D, ForceField4D,
  * ProtonDynamics, SemanticTagging, ToneMap, Scene→Camera4D, anisotropic Σ, GPU.
+ * HQ quality / tonemap / supersample: **enforced** (trail proton-hq-2026-07).
+ * Bloom: **declared** stub.
  */
 
 export {
@@ -50,3 +52,12 @@ export {
   encodeNormalPng,
   writeTriptychAovs,
 } from "./aovEncode.js";
+
+/** HQ quality / post — STATUS enforced (bloom declared) */
+export {
+  resolveQualityPreset,
+  QUALITY_PRESET_TABLE,
+} from "./qualityPreset.js";
+export { applyTonemap } from "./tonemap.js";
+export { renderDims, downsampleBox } from "./supersample.js";
+export { applyBloom } from "./bloom.js";

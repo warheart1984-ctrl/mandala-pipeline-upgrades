@@ -35,6 +35,8 @@ const SUPPORT_SIGMA = 3;
  *   clearColor?: [number, number, number, number],
  *   protonsHash?: string,
  *   cir?: import("./types.js").CirOverlay,
+ *   sigmaScale?: number,
+ *   opacityScale?: number,
  * }} opts
  * @returns {ProtonRaster}
  */
@@ -74,18 +76,30 @@ export function rasterizeProtons(projected, opts) {
     beauty[idx + 3] = clear[3] != null ? Number(clear[3]) : 1;
   }
 
+  const sigmaScale =
+    typeof opts.sigmaScale === "number" && opts.sigmaScale > 0
+      ? opts.sigmaScale
+      : 1;
+  const opacityScale =
+    typeof opts.opacityScale === "number" && opts.opacityScale > 0
+      ? opts.opacityScale
+      : 1;
+
   const sorted = projected.protons.slice().sort((a, b) =>
     String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0,
   );
 
   for (const fp of sorted) {
-    const sigma = Math.max(0.5, Number(fp.sigma) || 0.5);
+    const sigma = Math.max(0.5, (Number(fp.sigma) || 0.5) * sigmaScale);
     const cx = Number(fp.x);
     const cy = Number(fp.y);
     if (!Number.isFinite(cx) || !Number.isFinite(cy)) continue;
     const opacity = Math.min(
       1,
-      Math.max(0, typeof fp.density === "number" ? fp.density : 1),
+      Math.max(
+        0,
+        (typeof fp.density === "number" ? fp.density : 1) * opacityScale,
+      ),
     );
     const cr = Number(fp.color?.[0]) || 0;
     const cg = Number(fp.color?.[1]) || 0;

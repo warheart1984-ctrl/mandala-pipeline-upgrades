@@ -33,6 +33,27 @@
           "docs/governance/cecp/trails/proton-raster-2026-07/06-engineer-standards.md"
         ],
         "timestamp": "2026-07-27T00:00:00Z"
+      },
+      {
+        "module": "ProtonHqQuality",
+        "trailId": "proton-hq-2026-07",
+        "trail": "docs/governance/cecp/trails/proton-hq-2026-07/",
+        "inspectorVerdict": "PASS_WITH_GAPS",
+        "verdict": "PASS_WITH_GAPS",
+        "promotionEligibility": "PROMOTE_WITH_GAPS",
+        "esfrRunStatus": "complete",
+        "gaps": [
+          "visual-density-vs-architect-aspiration",
+          "bloom-declared",
+          "ci-proton-hq-suite-partial",
+          "armCount-hard-cap-16",
+          "no-gpu"
+        ],
+        "evidence": [
+          "docs/governance/cecp/trails/proton-hq-2026-07/05-inspector-acceptance.md",
+          "docs/governance/cecp/trails/proton-hq-2026-07/06-engineer-standards.md"
+        ],
+        "timestamp": "2026-07-27T00:00:00Z"
       }
     ],
     "invariants": [

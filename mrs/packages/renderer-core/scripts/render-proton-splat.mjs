@@ -34,14 +34,18 @@ Usage:
   node scripts/render-proton-splat.mjs --help
   node scripts/render-proton-splat.mjs --demo [--width N] [--height N] [--output <png>] [--provenance <json>]
   node scripts/render-proton-splat.mjs --scene-spec <path.json> [--width N] [--height N] [--output <png>]
-  node scripts/render-proton-splat.mjs --star-demo [--width 256|512] [--height N] [--out-dir <dir>] [--aov depth,normal] [--seed N]
+  node scripts/render-proton-splat.mjs --star-demo [--quality default|high] [--width 256|512|768] [--height N]
+       [--supersample N] [--tonemap none|reinhard|aces-lite] [--exposure F] [--lighting-punch]
+       [--out-dir <dir>] [--aov depth,normal] [--seed N]
   node scripts/render-proton-splat.mjs --lattice-demo [--width N] [--height N] [--out-dir <dir>] [--aov depth,normal]
 
 Mods: Scene→ProtonField → Lighting4D → 4DProjection → ProtonRaster → Depth/Normal → PNG
 CIR is a thin IntentRecord overlay (intentId required). Soft splat ≠ triangle soft-raster.
 
 Judge-wow dense star path (--star-demo): create4dStarWorld → worldDocumentToRt4dPrimitives
-  → fromWorldDocumentRt4d → runProtonPipelineFromField → beauty/depth/normal under --out-dir.
+  → fromWorldDocumentRt4d → enrichJudgeWowField → runProtonPipelineFromField
+  → beauty/depth/normal under --out-dir. HQ: --quality high (tonemap/supersample/enrich).
+  --bloom is refused (declared, not shipped).
 `;
 
 /**
@@ -56,6 +60,9 @@ function parseArgs(argv) {
     else if (a === "--demo") out.demo = true;
     else if (a === "--star-demo") out["star-demo"] = true;
     else if (a === "--lattice-demo") out["lattice-demo"] = true;
+    else if (a === "--lighting-punch") out["lighting-punch"] = true;
+    else if (a === "--bloom") out.bloom = true;
+    else if (a === "--depth-cue") out["depth-cue"] = true;
     else if (a.startsWith("--") && i + 1 < argv.length && !argv[i + 1].startsWith("--")) {
       out[a.slice(2)] = argv[++i];
     } else if (a.startsWith("--")) {
@@ -66,7 +73,7 @@ function parseArgs(argv) {
 }
 
 /**
- * Clamp judge-wow resolution; allow 8+ for unit demos, prefer 256–512 for wow.
+ * Clamp resolution; HQ band allows up to 768 (architect), hard cap 1024.
  * @param {unknown} raw
  * @param {number} fallback
  */
@@ -126,7 +133,45 @@ async function runWorldDemo(args, proton, cir, width, height) {
     defaultCamera4D,
     encodeDepthPng,
     encodeNormalPng,
+    resolveQualityPreset,
   } = proton;
+
+  if (args.bloom) {
+    throw new Error(
+      "bloom: declared — not shipped this trail (refuse --bloom). STATUS: declared",
+    );
+  }
+  if (args["depth-cue"]) {
+    throw new Error(
+      "depth-cue: declared — not shipped this trail (refuse --depth-cue)",
+    );
+  }
+
+  const qualityRaw =
+    typeof args.quality === "string" ? String(args.quality) : "default";
+  /** @type {Record<string, unknown>} */
+  const overrides = {};
+  if (args.width != null) overrides.width = width;
+  if (args.height != null) overrides.height = height;
+  if (args.supersample != null) {
+    overrides.supersample = Math.max(
+      1,
+      parseInt(String(args.supersample), 10) || 1,
+    );
+  }
+  if (typeof args.tonemap === "string") overrides.tonemap = String(args.tonemap);
+  if (args.exposure != null) {
+    const e = Number(args.exposure);
+    if (Number.isFinite(e)) overrides.exposure = e;
+  }
+  if (args["lighting-punch"]) overrides.lightingPunch = true;
+
+  const preset = resolveQualityPreset(qualityRaw, overrides);
+  // CLI width/height already resolved against preset defaults in run()
+  const outW = width;
+  const outH = height;
+  const lightingPunch =
+    args["lighting-punch"] === true || preset.lightingPunch === true;
 
   const seed = parseInt(String(args.seed ?? "42"), 10) >>> 0;
   let world;
@@ -138,7 +183,7 @@ async function runWorldDemo(args, proton, cir, width, height) {
     const { worldDocumentToRt4dPrimitives } = await loadEngine3d(
       "scene/WorldDocumentRt4d.js",
     );
-    // Dense wow plate: 16 arms × 3 samples + core + halo (halo capped in enrich)
+    // armCount capped at 16 by create4dStarWorld; denser look via enrich knobs
     const doc = create4dStarWorld({
       seed,
       armCount: 16,
@@ -167,23 +212,37 @@ async function runWorldDemo(args, proton, cir, width, height) {
     intentId: cir.id,
     worldId: world.id,
   });
-  const field = enrichJudgeWowField(field0);
+  const field = enrichJudgeWowField(field0, {
+    densityBoost: preset.densityBoost,
+    radiusScale: preset.radiusScale,
+    colorGain: preset.colorGain,
+    maxRadius: preset.maxRadius,
+    lightingPunch,
+  });
   const camera = defaultCamera4D({
-    width,
-    height,
+    width: outW,
+    height: outH,
     origin: [0, 0, -3.2, 0.15],
     params: { d4: 4, d3: 4, scale: 95, nearW: 0.05 },
   });
-  // Mild / skipped lighting — enrich supplies chromatic colors; Reinhard wash hides them
+  // Lighting punch = enrich core boost only (skipLighting true). Avoids Reinhard
+  // lighting wash that hides chromatic arm colors (Architect decision 6).
   const result = runProtonPipelineFromField(field, {
     intentId: cir.id,
     worldId: world.id,
-    width,
-    height,
+    width: outW,
+    height: outH,
     cir,
     camera,
     skipLighting: true,
     mod1Status: "worlddocument-rt4d",
+    supersample: preset.supersample,
+    tonemap: preset.tonemap,
+    exposure: preset.exposure,
+    gamma: preset.gamma,
+    sigmaScale: preset.sigmaScale,
+    opacityScale: preset.opacityScale,
+    qualityId: preset.id,
   });
 
   const outDir =
@@ -213,6 +272,13 @@ async function runWorldDemo(args, proton, cir, width, height) {
     seed,
     worldId: world.id,
     intentId: cir.id,
+    qualityId: preset.id,
+    tonemap: preset.tonemap,
+    exposure: preset.exposure,
+    supersample: preset.supersample,
+    lightingPunch,
+    lightingPunchMode: "enrich-only",
+    bloom: false,
     beautyPath: aovPaths.beautyPath,
     depthPath: aovPaths.depthPath,
     normalPath: aovPaths.normalPath,
@@ -227,6 +293,7 @@ async function runWorldDemo(args, proton, cir, width, height) {
         ok: true,
         status: "enforced",
         mode,
+        qualityId: preset.id,
         outDir,
         evidencePath,
         evidence,
@@ -251,10 +318,25 @@ async function run(args) {
     writeTriptychAovs,
     encodeDepthPng,
     encodeNormalPng,
+    resolveQualityPreset,
   } = proton;
 
-  const width = parseDim(args.width, 256);
-  const height = parseDim(args.height, 256);
+  const qualityRaw =
+    typeof args.quality === "string" ? String(args.quality) : "default";
+  let presetWidth = 256;
+  let presetHeight = 256;
+  if (args["star-demo"] || args["lattice-demo"]) {
+    try {
+      const p = resolveQualityPreset(qualityRaw);
+      presetWidth = p.width;
+      presetHeight = p.height;
+    } catch {
+      /* unknown quality handled in runWorldDemo */
+    }
+  }
+
+  const width = parseDim(args.width, presetWidth);
+  const height = parseDim(args.height, args.width != null ? width : presetHeight);
 
   const cir = mintCir({
     seed: args.seed ?? "proton-cecp-1",

@@ -31,6 +31,8 @@ import {
   assertNormalFieldInvariants,
 } from "./normalField.js";
 import { rasterToImage } from "./rasterToImage.js";
+import { applyTonemap } from "./tonemap.js";
+import { renderDims, downsampleBox } from "./supersample.js";
 
 /**
  * @param {unknown} color
@@ -160,6 +162,7 @@ export function protonFieldFromWorldDocumentRt4d(worldDocument, opts = {}) {
  *   densityBoost?: number,
  *   colorGain?: number,
  *   maxRadius?: number,
+ *   lightingPunch?: boolean,
  * }} [opts]
  * @returns {import("./sceneToProtonField.js").ProtonField}
  */
@@ -183,6 +186,7 @@ export function enrichJudgeWowField(field, opts = {}) {
     typeof opts.maxRadius === "number" && opts.maxRadius > 0
       ? opts.maxRadius
       : 0.72;
+  const lightingPunch = opts.lightingPunch === true;
 
   /**
    * Deterministic vivid RGB from proton id (when material colors are near-white/gray).
@@ -230,7 +234,9 @@ export function enrichJudgeWowField(field, opts = {}) {
     const g0 = Number(c[1]) || 0;
     const b0 = Number(c[2]) || 0;
     const chroma = Math.max(r0, g0, b0) - Math.min(r0, g0, b0);
-    const nearGray = chroma < 0.12 || (r0 + g0 + b0) / 3 > 0.92;
+    // Pale / near-white materials (e.g. [0.85,0.9,1]) must remap — otherwise
+    // colorGain clips all channels to 1 and washes the plate to white.
+    const nearGray = chroma < 0.18 || (r0 + g0 + b0) / 3 > 0.88;
     const base = nearGray ? vividFromId(id) : [r0, g0, b0];
     const boosted = [
       Math.min(1, base[0] * colorGain),
@@ -238,19 +244,30 @@ export function enrichJudgeWowField(field, opts = {}) {
       Math.min(1, base[2] * colorGain),
     ];
     if (isCore) {
-      boosted[0] = Math.min(1, Math.max(boosted[0], 0.95));
-      boosted[1] = Math.min(1, Math.max(boosted[1], 0.92));
-      boosted[2] = Math.min(1, Math.max(boosted[2], 0.85));
+      // Punch core brightness without fully erasing chroma from vivid remap.
+      boosted[0] = Math.min(1, Math.max(boosted[0], lightingPunch ? 0.88 : 0.95));
+      boosted[1] = Math.min(1, Math.max(boosted[1], lightingPunch ? 0.82 : 0.92));
+      boosted[2] = Math.min(1, Math.max(boosted[2], lightingPunch ? 0.75 : 0.85));
+      if (lightingPunch) {
+        boosted[0] = Math.min(1, boosted[0] * 1.05);
+        boosted[1] = Math.min(1, boosted[1] * 1.03);
+        boosted[2] = Math.min(1, boosted[2] * 1.02);
+      }
     }
+    const densityMul = lightingPunch && isCore ? densityBoost * 1.12 : densityBoost;
     return {
       ...p,
       radius,
       density: Math.min(
         1,
-        Math.max(0.65, (Number(p.density) || 1) * densityBoost),
+        Math.max(0.65, (Number(p.density) || 1) * densityMul),
       ),
       color: /** @type {[number, number, number]} */ (boosted),
-      metadata: { ...p.metadata, judgeWowEnriched: true },
+      metadata: {
+        ...p.metadata,
+        judgeWowEnriched: true,
+        ...(lightingPunch ? { lightingPunch: true } : {}),
+      },
     };
   });
   protons.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -277,6 +294,13 @@ export function enrichJudgeWowField(field, opts = {}) {
  *   cir?: import("./types.js").CirOverlay,
  *   skipLighting?: boolean,
  *   mod1Status?: string,
+ *   supersample?: number,
+ *   tonemap?: "none"|"reinhard"|"aces-lite",
+ *   exposure?: number,
+ *   gamma?: number,
+ *   sigmaScale?: number,
+ *   opacityScale?: number,
+ *   qualityId?: string,
  * }} opts
  */
 export function runProtonPipelineFromField(field0, opts) {
@@ -286,8 +310,32 @@ export function runProtonPipelineFromField(field0, opts) {
   if (!field0 || !Array.isArray(field0.protons)) {
     throw new Error("runProtonPipelineFromField: ProtonField required");
   }
-  const width = opts.width ?? 256;
-  const height = opts.height ?? 256;
+  const outW = opts.width ?? 256;
+  const outH = opts.height ?? 256;
+  const ss = Math.max(1, Math.floor(Number(opts.supersample) || 1));
+  const dims = renderDims(outW, outH, ss);
+  const renderW = dims.width;
+  const renderH = dims.height;
+  const tonemapMode =
+    opts.tonemap === "reinhard" ||
+    opts.tonemap === "aces-lite" ||
+    opts.tonemap === "none"
+      ? opts.tonemap
+      : "none";
+  const exposure =
+    typeof opts.exposure === "number" && Number.isFinite(opts.exposure)
+      ? opts.exposure
+      : 1;
+  const gamma =
+    typeof opts.gamma === "number" && opts.gamma > 0 ? opts.gamma : 2.2;
+  const sigmaScale =
+    typeof opts.sigmaScale === "number" && opts.sigmaScale > 0
+      ? opts.sigmaScale
+      : 1;
+  const opacityScale =
+    typeof opts.opacityScale === "number" && opts.opacityScale > 0
+      ? opts.opacityScale
+      : 1;
 
   const inv1 = assertProtonFieldInvariants(field0);
   if (!inv1.ok) {
@@ -300,12 +348,12 @@ export function runProtonPipelineFromField(field0, opts) {
 
   const camera = defaultCamera4D({
     ...(opts.camera ?? {}),
-    width,
-    height,
+    width: renderW,
+    height: renderH,
     params: {
       ...(opts.camera?.params ?? {}),
-      width,
-      height,
+      width: renderW,
+      height: renderH,
     },
   });
   const projected = projectProtonField(field, camera);
@@ -313,14 +361,90 @@ export function runProtonPipelineFromField(field0, opts) {
     throw new Error("Mod2 silent loss detected");
   }
 
-  const raster = rasterizeProtons(projected, {
+  const rasterHi = rasterizeProtons(projected, {
     intentId: opts.intentId,
     worldId: opts.worldId,
-    width,
-    height,
+    width: renderW,
+    height: renderH,
     protonsHash: field.fieldHash,
     cir: opts.cir,
+    sigmaScale,
+    opacityScale,
   });
+
+  // Tonemap float beauty BEFORE 8-bit encode (and before / with supersample downsample).
+  const tonemapped = applyTonemap(rasterHi.beauty, {
+    mode: tonemapMode,
+    exposure,
+    gamma,
+  });
+  let beauty =
+    tonemapped instanceof Float32Array
+      ? tonemapped
+      : Float32Array.from(tonemapped);
+  let depthSum = rasterHi.depthSum;
+  let depthWeight = rasterHi.depthWeight;
+  let normalSum = rasterHi.normalSum;
+  let width = renderW;
+  let height = renderH;
+
+  if (ss > 1) {
+    beauty = downsampleBox(beauty, renderW, renderH, outW, outH, 4);
+    depthSum = downsampleBox(depthSum, renderW, renderH, outW, outH, 1);
+    depthWeight = downsampleBox(depthWeight, renderW, renderH, outW, outH, 1);
+    normalSum = downsampleBox(normalSum, renderW, renderH, outW, outH, 3);
+    width = outW;
+    height = outH;
+  }
+
+  const n = width * height;
+  const rgba = new Uint8ClampedArray(n * 4);
+  for (let i = 0; i < n; i++) {
+    const idx = i * 4;
+    rgba[idx] = Math.min(255, Math.max(0, Math.round(beauty[idx] * 255)));
+    rgba[idx + 1] = Math.min(
+      255,
+      Math.max(0, Math.round(beauty[idx + 1] * 255)),
+    );
+    rgba[idx + 2] = Math.min(
+      255,
+      Math.max(0, Math.round(beauty[idx + 2] * 255)),
+    );
+    rgba[idx + 3] = Math.min(
+      255,
+      Math.max(0, Math.round(beauty[idx + 3] * 255)),
+    );
+  }
+  const frameSha256 = createHash("sha256")
+    .update(Buffer.from(rgba))
+    .digest("hex");
+
+  /** @type {import("./rasterizeProtons.js").ProtonRaster} */
+  const raster = {
+    width,
+    height,
+    beauty,
+    depthSum,
+    depthWeight,
+    normalSum,
+    rgba,
+    evidence: {
+      ...rasterHi.evidence,
+      width,
+      height,
+      renderWidth: renderW,
+      renderHeight: renderH,
+      supersample: ss,
+      tonemap: tonemapMode,
+      exposure,
+      gamma,
+      sigmaScale,
+      opacityScale,
+      ...(opts.qualityId ? { qualityId: opts.qualityId } : {}),
+      frameSha256,
+    },
+    status: "enforced",
+  };
 
   const depth = depthFromRaster(raster);
   const inv4 = assertDepthFieldInvariants(depth);
@@ -354,6 +478,8 @@ export function runProtonPipelineFromField(field0, opts) {
         depthField: "enforced",
         normalField: "enforced",
         rasterToImage: "enforced",
+        tonemap: tonemapMode === "none" && exposure === 1 ? "identity" : "enforced",
+        supersample: ss > 1 ? "enforced" : "identity",
       },
     },
     legacyProtons: field.protons.map(protonToLegacy),
