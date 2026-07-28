@@ -147,9 +147,13 @@
           "type": "string",
           "description": "Optional Wave 3 CECP Actor Mode (docs/governance/cecp/CECP_ACTOR_MODES.md), e.g. navigator, librarian. Distinct from cognitiveProfile."
         },
+        "softwareCreationMode": {
+          "type": "string",
+          "description": "Optional Wave 4 Software-Creation Mode (docs/governance/cecp/SOFTWARE_CREATION_MODES.md), e.g. pipeline-conductor, boundary-guardian. Distinct from cognitiveProfile and actorMode."
+        },
         "lens": {
           "type": "string",
-          "description": "Optional mode/lens alias recorded on trail (crew or Actor Mode)"
+          "description": "Optional mode/lens alias recorded on trail (crew, Actor, or Software-Creation Mode)"
         },
         "statusTags": {
           "type": "object",

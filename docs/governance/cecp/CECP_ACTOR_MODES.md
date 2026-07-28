@@ -4,14 +4,16 @@
 > Not pipeline stages. Not new agents. Not CI-enforced. Not runtime-enforced.
 >
 > **Roster:** 10 Actor Modes (this file) + 20 crew modes (`CREW_MODES.md` waves 1–2)
-> = **30 modes total**. Profiles (Tier I/II) remain in `COGNITIVE_ECOLOGY.md`
-> and are **not** replaced by Actor Modes.
+> + 30 Software-Creation Modes (`SOFTWARE_CREATION_MODES.md`) = **60 modes total**.
+> Profiles (Tier I/II) remain in `COGNITIVE_ECOLOGY.md`
+> and are **not** replaced by Actor Modes or Software-Creation Modes.
 >
 > **Precedence:** role bans > Constitution > Evidence > Profile lens > Mode lens
 > (crew Mode **or** Actor Mode — both are Mode-layer flavors).
 >
 > Foreman: `.cursor/skills/mrs-crew/SKILL.md`  
 > Index hub: `docs/governance/cecp/CREW_MODES.md`  
+> Software-Creation Modes: `docs/governance/cecp/SOFTWARE_CREATION_MODES.md`  
 > Profiles: `docs/governance/cecp/COGNITIVE_ECOLOGY.md`
 
 ---
@@ -107,7 +109,7 @@ Founding docs and civilizational stories with symbolic clarity — **must** Driv
 1. **“\<ActorMode\> \<Role\>”** — e.g. Navigator Architect, Librarian Inspector, Anchor ESFR  
 2. **“Actor \<ActorMode\>”** / **“\<ActorMode\> actor mode”** — foreman applies to current/next stage  
 3. **Compose** — `Scientist Inspector + Librarian`, `Architect + Systems Architect + Architect-Shadow`, `Sage + Navigator Implementor`  
-4. Prefer **one primary Mode** (crew **or** Actor) per stage; optional Sage; optional Profile stack  
+4. Prefer **one primary Mode** (crew **or** Actor **or** Software-Creation) per stage; optional Sage; optional Profile stack  
 
 Trail: `actorMode: navigator` or `lens: architect-shadow` (kebab or Title Case OK if consistent in the trail).
 
@@ -115,7 +117,7 @@ Trail: `actorMode: navigator` or `lens: architect-shadow` (kebab or Title Case O
 
 ## 6. Explicit non-goals
 
-- Do not delete waves 1–2 or Tier I/II Profiles  
+- Do not delete waves 1–2, Wave 4 Software-Creation Modes, or Tier I/II Profiles  
 - Do not treat Actor Modes as Profiles or as CECP stages  
 - Do not claim runtime enforcement or measured cognitive metrics  
 - Do not let Mythweaver / Frontier / Catalyst override Evidence or bans  

@@ -9,8 +9,9 @@
 > This document does **not** amend the constitutional charter.
 >
 > **Related:** Roles = CECP stages (`CECP_OMEGA_PROTOCOL.md`).
-> Modes = optional lenses (`CREW_MODES.md` waves 1–2 + `CECP_ACTOR_MODES.md` Wave 3).
-> Profiles = this file (Tier I/II — not dropped by Actor Modes).
+> Modes = optional lenses (`CREW_MODES.md` waves 1–2 + `CECP_ACTOR_MODES.md`
+> Wave 3 + `SOFTWARE_CREATION_MODES.md` Wave 4).
+> Profiles = this file (Tier I/II — not dropped by Actor or Software-Creation Modes).
 > Foreman: `.cursor/skills/mrs-crew/SKILL.md`.
 
 ---
@@ -21,15 +22,16 @@
 |-------|----------|----------------|--------|
 | **Role** | What am I responsible for? | CECP stages Architect → … → ESFR | **partial** |
 | **Profile** | How should I think? | This document (Cognitive Ecology) Tier I/II | **partial** (docs/skills) |
-| **Mode** | Optional named lens flavor | `CREW_MODES.md` (20) + Actor Modes (`CECP_ACTOR_MODES.md`, 10) = **30** | **partial** |
+| **Mode** | Optional named lens flavor | `CREW_MODES.md` (20) + Actor Modes (10) + Software-Creation Modes (`SOFTWARE_CREATION_MODES.md`, 30) = **60** | **partial** |
 | **Constitution** | What am I permitted to do? | Charter / `AGENTS.md` / policies | **enforced** where tests/CI prove |
 | **Evidence** | What can I justify? | Trails, tests, probes | per claim |
 | **CECP** | How is my work validated? | Stage artifacts 01–06 | **partial** |
 | **Stewardship** | How is quality preserved over time? | Trails, registries, maturity scorecards | **partial** / **declared** |
 
-**Profiles** are the higher-order cognitive layer. **Modes** (crew + Actor) remain
-named lenses; where names overlap, Modes map to Profiles (see §6) or are
-explicitly distinguished (see §6.1 Strategist). Modes are **not** deleted and
+**Profiles** are the higher-order cognitive layer. **Modes** (crew + Actor +
+Software-Creation) remain named lenses; where names overlap, Modes map to
+Profiles (see §6) or are explicitly distinguished (see §6.1 Strategist;
+§6.2 Integrator / Optimizer / Synthesizer). Modes are **not** deleted and
 are **not** new CECP stages.
 
 **Hard rule:** Profiles never grant write authority a Role lacks. Profile never
@@ -43,7 +45,8 @@ overrides role bans or Constitution.
 role bans  >  Constitution  >  Evidence  >  Profile lens  >  Mode lens
 ```
 
-(Mode lens = wave 1–2 crew Mode **or** Wave 3 Actor Mode.)
+(Mode lens = wave 1–2 crew Mode **or** Wave 3 Actor Mode **or** Wave 4
+Software-Creation Mode.)
 
 | Rank | Layer | Wins when… |
 |------|-------|------------|
@@ -51,7 +54,7 @@ role bans  >  Constitution  >  Evidence  >  Profile lens  >  Mode lens
 | 2 | Constitution | Protected paths, P1–P5, policy denies |
 | 3 | Evidence | Claim tags must match tests/code/trails (Drive-G-1) |
 | 4 | Profile lens | How the role thinks / which cognitive output to emphasize |
-| 5 | Mode lens | Optional flavor from the 30-mode suite |
+| 5 | Mode lens | Optional flavor from the 60-mode suite |
 
 Sage **Profile** and Sage **Mode** share a name: both elevate rigor; neither
 creates stage 07. If both are active, apply Profile framing first, then Mode
@@ -242,6 +245,37 @@ are **Mode-layer**, not Profiles. They do **not** replace Tier I/II.
 
 Never treat the shared name as identity across layers.
 
+### 6.2 Software-Creation Modes (Wave 4) ↔ Profiles
+
+Full index: `docs/governance/cecp/SOFTWARE_CREATION_MODES.md`. Pure cognition;
+all actors may activate; **no authority changes**. Mode-layer — not Profiles.
+
+| SC Mode | Maps toward Profile(s) | Distinction notes |
+|---------|------------------------|-------------------|
+| Compiler | Systems Architect, Scientist | Typed surfaces ≠ Architecture Blueprint alone |
+| Integrator *(Mode)* | **Integrator *(Profile)* — distinct**, Systems Architect | Runnable wired path ≠ idea-integration report |
+| Optimizer *(Mode)* | **Optimizer *(Profile)* — distinct**, Scientist | Measured software knobs ≠ general betterment plan |
+| Synthesizer *(Mode)* | **Synthesizer *(Profile)* — distinct**, Diplomat | Shippable software model ≠ cognitive synthesis model |
+| Pipeline-Conductor | Strategist (Profile), Integrator | Path order during software ship |
+| Boundary-Guardian | Guardian, Constitutional, Diplomat | Adapter ownership |
+| Testwright | Scientist, Skeptic | Contract tests + smoke |
+| Constructor | Accelerator, Integrator | E2E assemble |
+| Render-Physicist | Scientist, Optimizer | MRS render-path rigor |
+| Forge | Accelerator, Steward | Docker/CI ship surfaces |
+
+#### Integrator / Optimizer / Synthesizer — Mode vs Profile (mandatory)
+
+| Name | Profile (Tier I/II) | Wave-4 Software-Creation Mode |
+|------|---------------------|-------------------------------|
+| **Integrator** | Ideas → one system model (Integration Report) | Modules → one *runnable* path |
+| **Optimizer** | How can this become better? (Optimization Plan) | Measured perf/cost/latency in code/ops |
+| **Synthesizer** | Viewpoints → coherent cognitive model | Viewpoints → shippable software model |
+
+**Strategist** remains Profile vs Wave-3 Actor Mode only (not a Wave-4 name) — see §6.1.
+
+Invoke: `Integrator Profile Architect` vs `Integrator-mode Implementor` /
+`SC Integrator Builder`. Same pattern for Optimizer and Synthesizer.
+
 ---
 
 ## 7. Profile × Role composition
@@ -258,24 +292,32 @@ Profiles compose with CECP **Roles**. Examples (declared patterns — not enforc
 | Implementor + Scientist + Optimizer + Skeptic | Code with tests, perf, and refuse paths |
 | Architect + Architect-Shadow + Navigator | ADR with negative-space check + pathfinding |
 | Inspector + Scientist + Librarian | Evidence probes + archival indexing |
+| Architect + Pipeline-Conductor + Blueprint | Software path ADR with executable manifest |
+| Implementor + Constructor + Testwright | E2E assemble with contract tests |
+| Reviewer + Boundary-Guardian + Interface-Diplomat | SF↔MRS seam honesty |
+| ESFR + Conformance + Runtime-Sage | Ship gate with runtime-vs-declared honesty |
 
 **Invoke (foreman / user):**
 
 ```text
 <Profile> <Role>
 <Role> + <Profile> [+ <Profile>…]
-<Mode> <Role>                    # wave 1–2 or Actor Mode
+<Mode> <Role>                    # wave 1–2, Actor Mode, or Software-Creation Mode
 Actor <ActorMode> <Role>         # Wave 3 explicit
+SC <SoftwareCreationMode> <Role> # Wave 4 explicit
 Sage Architect + Scientist       # Profile + optional Mode/Profile stack
 ```
 
 Examples: `Scientist Inspector`, `Architect + Systems Architect + Sage`,
 `Trickster Implementor` (Mode → Skeptic-ish framing),
 `ESFR + Guardian + Steward`, `Navigator Architect`,
-`Librarian Inspector + Scientist`, `Anchor ESFR`.
+`Librarian Inspector + Scientist`, `Anchor ESFR`,
+`Pipeline-Conductor Architect`, `Boundary-Guardian Reviewer`,
+`Testwright Inspector`, `Constructor Implementor`.
 
 Record on trail: `cognitive-profile:` (primary) and optional `cognitive-switches:` /
-`lens:` / `mode:` / `actorMode:` (see `lineage.schema.json`, `EVIDENCE_TRAIL_TEMPLATE.md`).
+`lens:` / `mode:` / `actorMode:` / `softwareCreationMode:` (see `lineage.schema.json`,
+`EVIDENCE_TRAIL_TEMPLATE.md`).
 
 ---
 
@@ -381,8 +423,9 @@ Cognitive Ecology does **not**:
 - Replace ESFR / Inspector verdicts with profile self-scores
 - Runtime-enforce profile or Actor Mode switching
 - Amend `constitution/CHARTER.md`, `engine/constitution/*`, or `AGENTS.md`
-- Delete or deprecate the 20-mode suite or Wave 3 Actor Modes
+- Delete or deprecate the 20-mode suite, Wave 3 Actor Modes, or Wave 4 Software-Creation Modes
 - Collapse Strategist **Mode** into Strategist **Profile** (or vice versa)
+- Collapse Integrator / Optimizer / Synthesizer **Mode** into same-named **Profiles**
 
 ---
 
@@ -390,11 +433,11 @@ Cognitive Ecology does **not**:
 
 1. Assign **Role** (required) for the stage  
 2. Optionally assign primary **Profile** (+ secondary profiles)  
-3. Optionally assign **Mode** lens — wave 1–2 **or** Actor Mode (`CECP_ACTOR_MODES.md`)  
+3. Optionally assign **Mode** lens — wave 1–2 **or** Actor Mode **or** Software-Creation Mode  
 4. Remind precedence: bans > Constitution > evidence > profile > mode  
-5. Point agents at this file + `CREW_MODES.md` (+ Actor Modes / `SAGE_MODE.md` as needed)  
-6. Record `cognitive-profile` / switches / `lens` / `mode` / `actorMode` on the trail  
-7. Never invent stage 07; never collapse Strategist Mode into Strategist Profile  
+5. Point agents at this file + `CREW_MODES.md` (+ Actor / Software-Creation / `SAGE_MODE.md` as needed)  
+6. Record `cognitive-profile` / switches / `lens` / `mode` / `actorMode` / `softwareCreationMode` on the trail  
+7. Never invent stage 07; never collapse Mode names into Profile twins  
 
 ---
 

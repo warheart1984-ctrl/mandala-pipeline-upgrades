@@ -4,8 +4,10 @@
 > Modes are **flavors**, not pipeline stages, not new agents, and not CI-enforced.
 > CHEA / CCR / CDGF remain **declared** (`docs/governance/CONSTITUTIONAL_LAYER_STACK.md`).
 >
-> **Roster:** **30 modes** — waves 1–2 (20) + Wave 3 Actor Modes (10).
+> **Roster:** **60 modes** — waves 1–2 (20) + Wave 3 Actor Modes (10) +
+> Wave 4 Software-Creation Modes (30).
 > Waves 1–2: this file. Wave 3: `docs/governance/cecp/CECP_ACTOR_MODES.md`.
+> Wave 4: `docs/governance/cecp/SOFTWARE_CREATION_MODES.md`.
 > Sage detail: `docs/governance/cecp/SAGE_MODE.md`  
 > Foreman: `.cursor/skills/mrs-crew/SKILL.md` · `.cursor/skills/mrs-crew/SAGE.md`
 >
@@ -13,8 +15,10 @@
 > `docs/governance/cecp/COGNITIVE_ECOLOGY.md` (**partial** — docs/skills only).
 > Modes remain named lenses; where names overlap they **map** to Profiles
 > (Sage→Sage, Diplomat→Diplomat, Visionary→Visionary, Trickster→Skeptic-ish,
-> etc.) — Modes are **not** deleted. Actor Modes may also overlap Profiles
-> (e.g. Strategist **Mode** ≠ Strategist **Profile** — see Wave 3 doc).
+> etc.) — Modes are **not** deleted. Actor Modes and Software-Creation Modes
+> may also overlap Profiles (e.g. Strategist **Mode** ≠ Strategist **Profile**;
+> Integrator / Optimizer / Synthesizer **Mode** ≠ same-named **Profile** —
+> see Wave 3 / Wave 4 docs).
 > Precedence: **role bans > Constitution > Evidence > Profile lens > Mode lens**.
 
 ---
@@ -30,6 +34,7 @@
 | Compose | Modes may stack with Sage and/or a Cognitive Ecology Profile |
 | Profiles | Higher-order cognitive layer — `COGNITIVE_ECOLOGY.md`; Modes may alias/map |
 | Actor Modes | Wave 3 — `CECP_ACTOR_MODES.md` (Navigator…Mythweaver); additive |
+| Software-Creation Modes | Wave 4 — `SOFTWARE_CREATION_MODES.md` (Compiler…Constructor); additive; pure cognition; no authority changes |
 | Capability | **partial** / skill-declared |
 
 ---
@@ -39,11 +44,12 @@
 1. **“\<Mode\> \<Role\>”** — e.g. Trickster Implementor, Artisan Architect, Sentinel Reviewer  
 2. **“\<Mode\> mode”** — e.g. Monk mode, Oracle mode (foreman applies to current/next stage)  
 3. **Actor Mode** — e.g. Navigator Architect, Librarian Inspector — see `CECP_ACTOR_MODES.md`  
-4. **Foreman picks** a mode per stage on hard, math, demo, or governance work  
-5. **Compose with Sage** — “Sage + Cartographer Inspector” (Sage first for rigor sections, then mode lens)
+4. **Software-Creation Mode** — e.g. Pipeline-Conductor Architect, Testwright Inspector — see `SOFTWARE_CREATION_MODES.md`  
+5. **Foreman picks** a mode per stage on hard, math, demo, software-creation, or governance work  
+6. **Compose with Sage** — “Sage + Cartographer Inspector” (Sage first for rigor sections, then mode lens)
 
 Spellings: **Physicist** (not “Phystist”). Trail metadata may record `mode: sage`,
-`lens: <name>`, and/or `actorMode: <name>`.
+`lens: <name>`, `actorMode: <name>`, and/or `softwareCreationMode: <name>`.
 
 ---
 
@@ -101,6 +107,48 @@ Canonical detail: **`docs/governance/cecp/CECP_ACTOR_MODES.md`** (**partial**).
 | 30 | **Mythweaver** | Symbolic founding narrative — Drive-G-1 anti-overclaim |
 
 Waves 1–2 remain fully in force. Actor Modes are additive Mode-layer lenses.
+
+---
+
+## Wave 4 — Software-Creation Modes (30)
+
+Canonical detail: **`docs/governance/cecp/SOFTWARE_CREATION_MODES.md`** (**partial**).
+Pure cognition — all actors may activate; **no authority changes**.
+
+| # | SC Mode | One-line |
+|---|---------|----------|
+| 31 | **Compiler** | Intent → contracts → typed surfaces; fail-fast |
+| 32 | **Refactorer** | Structure improve; preserve observables |
+| 33 | **Debugger** | Minimal repro; evidence-backed root cause |
+| 34 | **Architect-Kernel** | Kernel invariants / feature core boundaries |
+| 35 | **Integrator** | Wire modules to one runnable path (**≠** Profile) |
+| 36 | **Sandbox** | Isolated reversible experiments |
+| 37 | **Protocol** | Envelopes, versioned messages, wire contracts |
+| 38 | **Versioneer** | Semver honesty; dual-layout / migration notes |
+| 39 | **Synthesizer** | Shippable software-model synthesis (**≠** Profile) |
+| 40 | **Optimizer** | Measured perf/cost knobs (**≠** Profile) |
+| 41 | **Pattern-Weaver** | Reuse in-repo patterns with cites |
+| 42 | **Boundary-Guardian** | Adapter / ownership boundaries |
+| 43 | **Runtime-Sage** | What actually executes vs declared |
+| 44 | **Schema-Artist** | Schema elegance + validation clarity |
+| 45 | **Pipeline-Conductor** | Stage order, CLI/Docker path clarity |
+| 46 | **Modularist** | Package seams; dependency direction |
+| 47 | **Conformance** | Claims ↔ conformance / acceptance rows |
+| 48 | **Testwright** | Contract tests + honest mocks + smoke |
+| 49 | **Forge** | Build/pack/Docker/CI ship surfaces |
+| 50 | **Architect-Mirror** | ADR ↔ code reflection (**≠** Mirror Actor) |
+| 51 | **Runtime-Cartographer** | Live execution / process graphs |
+| 52 | **Dependency-Monk** | Minimal MIT-safe deps; anti-lock-in |
+| 53 | **Interface-Diplomat** | Multi-party API peace; honest tags |
+| 54 | **Code-Historian** | Implementation lineage / commit landmarks |
+| 55 | **Render-Physicist** | MRS render-path math/pipeline rigor |
+| 56 | **Algorithm-Poet** | Clear algorithmic narrative |
+| 57 | **System-Sentinel** | Ops/runtime guards; refuse/health |
+| 58 | **Blueprint** | Executable manifests / scaffolds |
+| 59 | **Runtime-Hermit** | Minimal pure runtime surface |
+| 60 | **Constructor** | Assemble E2E runnable artifacts |
+
+Waves 1–3 remain fully in force. Software-Creation Modes are additive Mode-layer lenses.
 
 ---
 
@@ -188,6 +236,12 @@ Propose new worlds, paradigms, or constitutional layers with explicit **Anti-ove
 | Anchor ESFR | Ship gate anti-drift |
 | Artisan-Logic Implementor | Kernel/tonemap elegance + math |
 | Mythweaver Architect | Founding narrative with honest tags |
+| Pipeline-Conductor Architect | CLI/Docker/path order for software ship |
+| Boundary-Guardian Reviewer | Adapter ownership; SF↔MRS seams |
+| Testwright Inspector | Contract tests + smoke evidence |
+| Constructor + Forge Implementor | E2E assemble + Docker/CI surfaces |
+| Render-Physicist Implementor | Proton/RT4D/Engine3D path rigor |
+| Integrator-mode Builder | Wire packages (**≠** Integrator Profile) |
 
 ---
 
@@ -195,9 +249,9 @@ Propose new worlds, paradigms, or constitutional layers with explicit **Anti-ove
 
 1. Keep pipeline order Architect → … → ESFR  
 2. Optionally assign a Cognitive Ecology **Profile** (`COGNITIVE_ECOLOGY.md`)  
-3. Pick at most one primary **Mode** per stage (wave 1–2 **or** Actor Mode; plus optional Sage)  
+3. Pick at most one primary **Mode** per stage (wave 1–2 **or** Actor Mode **or** Software-Creation Mode; plus optional Sage)  
 4. Remind bans + precedence (bans > Constitution > evidence > profile > mode) in the Task prompt  
-5. Point agents at this file, `CECP_ACTOR_MODES.md` when Actor Mode set, `COGNITIVE_ECOLOGY.md` when Profile set, and `SAGE_MODE.md` if Sage  
-6. Record `cognitive-profile:` / `lens:` / `mode:` / `actorMode:` / switches in trail metadata when used  
+5. Point agents at this file, `CECP_ACTOR_MODES.md` / `SOFTWARE_CREATION_MODES.md` when those modes set, `COGNITIVE_ECOLOGY.md` when Profile set, and `SAGE_MODE.md` if Sage  
+6. Record `cognitive-profile:` / `lens:` / `mode:` / `actorMode:` / `softwareCreationMode:` / switches in trail metadata when used  
 
-Do **not** invent thirty new agents or new stages.
+Do **not** invent sixty new agents or new stages.

@@ -29,6 +29,7 @@ ESFR package: `docs/governance/esfr/`.
 | `cognitive-switches` | (optional) logged Profile switches + evidence cites |
 | `mode` / `lens` | (optional) wave 1–2 crew Mode |
 | `actorMode` | (optional) Wave 3 Actor Mode (`CECP_ACTOR_MODES.md`) |
+| `softwareCreationMode` | (optional) Wave 4 Software-Creation Mode (`SOFTWARE_CREATION_MODES.md`) |
 
 ---
 
@@ -66,16 +67,18 @@ Cross-reference ledger (§9), and Risks to sovereignty / determinism. See
 (capability **partial**). Optional Sage applies similarly to stages 02–06.
 
 **Optional crew mode suite:** 20 lenses (Sage…Bard; Oracle…Visionary) plus
-Wave 3 Actor Modes (Navigator…Mythweaver) — **30** total — may apply to any
-stage role without adding stages — `docs/governance/cecp/CREW_MODES.md` +
-`docs/governance/cecp/CECP_ACTOR_MODES.md` (**partial**).
+Wave 3 Actor Modes (Navigator…Mythweaver) plus Wave 4 Software-Creation Modes
+(Compiler…Constructor) — **60** total — may apply to any stage role without
+adding stages — `docs/governance/cecp/CREW_MODES.md` +
+`docs/governance/cecp/CECP_ACTOR_MODES.md` +
+`docs/governance/cecp/SOFTWARE_CREATION_MODES.md` (**partial**).
 
 **Optional Cognitive Ecology Profile:** Tier I/II profiles
 (`docs/governance/cecp/COGNITIVE_ECOLOGY.md`, **partial** docs/skills) answer
 “how should I think?” alongside Role responsibility. Precedence:
 role bans > Constitution > Evidence > Profile > Mode. Record
-`cognitive-profile` / `cognitive-switches` / `actorMode` when used
-(see lineage schema).
+`cognitive-profile` / `cognitive-switches` / `actorMode` /
+`softwareCreationMode` when used (see lineage schema).
 
 ---
 
