@@ -11,6 +11,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { validate as validateDispatchContract } from "./contracts/gpuDispatchContract.js";
+import { checkGpuPrintSafeguard } from "./contracts/gpuPrintSafeguard.js";
 import { integrateDeterministicAssist } from "./modules/gpu/integrator/deterministicGpuIntegrator.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -116,6 +117,12 @@ export function resolveCapability(capabilityId) {
  * @param {object} request
  */
 export async function route(capabilityId, request = {}) {
+  // Constitutional safeguard — BEFORE dispatch (GPU × print / determinism)
+  const safeguard = checkGpuPrintSafeguard(capabilityId, request);
+  if (safeguard) {
+    return safeguard;
+  }
+
   if (
     request.asPrintSoT === true ||
     (request.authority === "authoritative" &&

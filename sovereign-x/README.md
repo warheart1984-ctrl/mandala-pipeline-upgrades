@@ -42,6 +42,16 @@ npm run sx:flux-image -- --image ./still.png --dry-run
 npm run sx:capabilities -- inspect-flux-image
 ```
 
+## Face Creation Assist
+
+See `docs/governance/cecp/trails/face-creation-assist-2026-07/`.
+
+```bash
+npm run sx:face-creation -- --prompt "hero face" --dry-run
+```
+
+FX-8350 CPU tuning (declared only): `docs/sx-router/specs/rt4d-amd-fx8350-tuning.md`.
+
 ## Roadmap trails
 
 - Phase 1 (Done / PR #83): `docs/governance/cecp/trails/vendor-gpu-integration-2026-07/`

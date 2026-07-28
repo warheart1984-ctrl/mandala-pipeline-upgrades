@@ -100,6 +100,10 @@ describe("GPU Integrator Promotion Suite (skeleton)", () => {
       asPrintSoT: true,
     });
     assert.equal(denied.ok, false);
-    assert.equal(denied.code, "GPU_PRINT_SOT_DENIED");
+    assert.ok(
+      denied.code === "GPU_PRINT_SAFEGUARD" ||
+        denied.code === "GPU_PRINT_SOT_DENIED",
+      `unexpected code ${denied.code}`,
+    );
   });
 });

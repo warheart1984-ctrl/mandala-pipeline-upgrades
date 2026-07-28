@@ -236,6 +236,10 @@ class Settings:
     engine3d_sequence_script_path: str | None = None
     engine3d_sequence_timeout_seconds: float = 180.0
     engine3d_sequence_max_frames: int = 24
+    # --- Face Creation Assist (Sovereign X Node CLI; default OFF) ---
+    face_creation_assist_enabled: bool = False
+    face_creation_assist_cli_path: str | None = None
+    face_creation_assist_timeout_seconds: float = 120.0
     # --- ChatGPT / Custom GPT plugin ---
     chatgpt_plugin_key: str | None = None
     public_base_url: str | None = None
@@ -611,6 +615,26 @@ def get_settings() -> Settings:
         engine3d_sequence_max_frames = 24
     engine3d_sequence_max_frames = max(2, min(120, engine3d_sequence_max_frames))
 
+    face_creation_env = (
+        os.getenv("FACE_CREATION_ASSIST_ENABLED") or "0"
+    ).strip().lower()
+    face_creation_assist_enabled = face_creation_env in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    face_creation_assist_cli_path = (
+        os.getenv("FACE_CREATION_ASSIST_CLI_PATH") or ""
+    ).strip() or None
+    try:
+        face_creation_assist_timeout = float(
+            (os.getenv("FACE_CREATION_ASSIST_TIMEOUT") or "120").strip() or "120"
+        )
+    except ValueError:
+        face_creation_assist_timeout = 120.0
+    face_creation_assist_timeout = max(15.0, min(600.0, face_creation_assist_timeout))
+
     chatgpt_plugin_key = (os.getenv("CHATGPT_PLUGIN_KEY") or "").strip() or None
     public_base_url = (os.getenv("GENBLAZE_PUBLIC_BASE_URL") or "").strip() or None
     cors_env = (os.getenv("GENBLAZE_CORS_ALLOW_ALL") or "").strip().lower()
@@ -713,6 +737,9 @@ def get_settings() -> Settings:
         engine3d_sequence_script_path=engine3d_sequence_script_override,
         engine3d_sequence_timeout_seconds=engine3d_sequence_timeout,
         engine3d_sequence_max_frames=engine3d_sequence_max_frames,
+        face_creation_assist_enabled=face_creation_assist_enabled,
+        face_creation_assist_cli_path=face_creation_assist_cli_path,
+        face_creation_assist_timeout_seconds=face_creation_assist_timeout,
         chatgpt_plugin_key=chatgpt_plugin_key,
         public_base_url=public_base_url,
         cors_allow_all=cors_allow_all,

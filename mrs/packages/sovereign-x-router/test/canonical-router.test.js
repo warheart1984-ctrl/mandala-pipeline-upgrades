@@ -98,7 +98,11 @@ describe("GpuAssistModule handlers", () => {
   it("denies GPU as print SoT", async () => {
     const r = await route("gpu.compute.nvidia.cuda", { asPrintSoT: true });
     assert.equal(r.ok, false);
-    assert.equal(r.code, "GPU_PRINT_SOT_DENIED");
+    // Safeguard fires before legacy GPU_PRINT_SOT_DENIED (same ban, earlier gate)
+    assert.ok(
+      r.code === "GPU_PRINT_SAFEGUARD" || r.code === "GPU_PRINT_SOT_DENIED",
+      `unexpected code ${r.code}`,
+    );
   });
 });
 

@@ -56,6 +56,10 @@ export {
 } from "../../../../sovereign-x/router/index.js";
 
 export { validate as validateGpuDispatchContractCanonical } from "../../../../sovereign-x/router/contracts/gpuDispatchContract.js";
+export {
+  assertGpuPrintSafeguard,
+  checkGpuPrintSafeguard,
+} from "../../../../sovereign-x/router/contracts/gpuPrintSafeguard.js";
 export { GpuAssistModule } from "../../../../sovereign-x/router/modules/gpu/gpuAssistModule.js";
 export { LookDevEngine } from "../../../../sovereign-x/router/modules/gpu/assist/lookDevEngine.js";
 export { extractFluxSceneSpec } from "../../../../sovereign-x/router/modules/gpu/assist/fluxSceneSpecExtractor.js";
@@ -69,6 +73,11 @@ export {
   loadImageBase64,
   resolveFluxEndpoint,
 } from "../../../../sovereign-x/skills/nvidia-gpu-assist/flux_generate.js";
+export {
+  runFaceCreationAssist,
+  sceneToCharacterSpec,
+  runCharacterBuilderPipeline,
+} from "../../../../sovereign-x/integrations/genblaze/modes/faceCreationAssist.js";
 
 // Aliases matching user API names
 export { routeLookDev as handleLookDev } from "./GpuAssistModule.js";

@@ -65,6 +65,11 @@ from app.face_polish_defaults import (
     resolve_face_polish_prompt,
     resolve_face_polish_strength,
 )
+from app.face_creation_assist_provider import (
+    FaceCreationAssistError,
+    face_creation_assist_availability,
+    run_face_creation_assist,
+)
 from app.lattice_polish_defaults import (
     LATTICE_POLISH_DEFAULT_PROMPT,
     looks_like_lattice_prompt,
@@ -378,6 +383,21 @@ class ImageAnalyzeRequest(BaseModel):
     id: str | None = Field(default=None, max_length=64)
     image_base64: str | None = Field(default=None, min_length=8)
     filename: str | None = Field(default=None, max_length=200)
+
+
+class FaceCreationAssistRequest(BaseModel):
+    """Opt-in Face Creation Assist → Sovereign X Node CLI (assistOnly)."""
+
+    prompt: str | None = Field(default=None, max_length=2000)
+    image_path: str | None = Field(
+        default=None,
+        max_length=1024,
+        description="Optional reference still path for lookdev-from-image",
+    )
+    dry_run: bool = Field(
+        default=True,
+        description="Default true — force FLUX stub (no live NIM). Set false for live assist.",
+    )
 
 
 class ImageToSceneRequest(BaseModel):
@@ -746,6 +766,12 @@ def health() -> dict:
         "engine3d_sequence_note": (
             "POST /api/engine3d-sequence renders a short Engine3D soft-raster "
             "orbit sequence (structure). NOT 8K farm; NOT per-frame polish."
+        ),
+        "face_creation_assist": face_creation_assist_availability(settings),
+        "face_creation_assist_note": (
+            "POST /api/face-creation-assist (opt-in FACE_CREATION_ASSIST_ENABLED=1) "
+            "shells to sovereign-x sx-face-creation CLI. assistOnly draft CharacterSpec; "
+            "never Digital Printer SoT."
         ),
         "prompt_scene": prompt_scene_availability(settings),
         "prompt_scene_note": (
@@ -1371,6 +1397,35 @@ def api_prompt_to_scene(body: PromptToSceneRequest) -> dict:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/api/face-creation-assist")
+def api_face_creation_assist(body: FaceCreationAssistRequest) -> dict:
+    """Opt-in Face Creation Assist (Sovereign X CLI shell).
+
+    assistOnly draft CharacterSpec / lookdev — never Digital Printer SoT.
+    Requires FACE_CREATION_ASSIST_ENABLED=1.
+    """
+    settings = get_settings()
+    avail = face_creation_assist_availability(settings)
+    if not avail.get("enabled"):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Face Creation Assist disabled. "
+                "Set FACE_CREATION_ASSIST_ENABLED=1 to opt in "
+                "(assistOnly; not print SoT)."
+            ),
+        )
+    try:
+        return run_face_creation_assist(
+            settings,
+            prompt=body.prompt,
+            image_path=body.image_path,
+            dry_run=body.dry_run,
+        )
+    except FaceCreationAssistError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.post("/api/engine3d-still")

@@ -65,16 +65,16 @@ describe("gpuDispatchContract.validate (determinismRequired)", () => {
     );
   });
 
-  it("route() redirects GPU + determinismRequired → cpu.rt4d.print", async () => {
+  it("route() denies GPU + determinismRequired via GPU print safeguard", async () => {
     const r = await route("gpu.compute.nvidia.cuda", {
       intentId: "det-override-1",
       determinismRequired: true,
       modality: "scene",
     });
-    assert.equal(r.ok, true);
-    assert.equal(r.capabilityId, "cpu.rt4d.print");
-    assert.equal(r.authority, "authoritative");
-    assert.equal(r.assistOnly, false);
+    assert.equal(r.ok, false);
+    assert.equal(r.code, "GPU_PRINT_SAFEGUARD");
+    assert.equal(r.assistOnly, true);
+    assert.match(String(r.message), /determinismRequired/);
   });
 
   it("route() keeps GPU assist when determinismRequired=false", async () => {
