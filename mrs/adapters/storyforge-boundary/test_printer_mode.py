@@ -70,6 +70,7 @@ def test_quality_profiles_resolve():
     assert fast["softPenumbra"] is False
     assert fast["penumbraLightSamples"] == 1
     assert fast["qualityStatusTag"] == "enforced"
+    assert fast["backend"] == "cpu"
 
     hq = normalize_print_request({"quality": "print_hq"})
     assert hq["denoise"] is True
@@ -91,6 +92,28 @@ def test_quality_profiles_resolve():
     # Explicit override wins over profile
     override = normalize_print_request({"quality": "print_fast", "samples": 12})
     assert override["samples"] == 12
+
+
+def test_backend_defaults_to_cpu():
+    p = normalize_print_request(None)
+    assert p["backend"] == "cpu"
+    p2 = normalize_print_request({"backend": "cpu", "quality": "print_hq"})
+    assert p2["backend"] == "cpu"
+    assert p2["samples"] == 24
+
+
+def test_backend_webgpu_denied_without_parity():
+    with pytest.raises(PrintError) as ei:
+        normalize_print_request({"backend": "webgpu"})
+    assert ei.value.state == PrintErrorState.SURFACE_INVALID
+    assert "webgpu" in str(ei.value).lower()
+
+
+def test_backend_cuda_hip_denied():
+    for b in ("cuda", "hip", "opencl"):
+        with pytest.raises(PrintError) as ei:
+            normalize_print_request({"backend": b})
+        assert ei.value.state == PrintErrorState.SURFACE_INVALID
 
 
 def test_surface_contract_timeout_and_profiles():

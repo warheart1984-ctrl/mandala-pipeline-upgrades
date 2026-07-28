@@ -66,10 +66,10 @@
 
 **Deliverable:** PrintRequest accepts `backend: "cpu"` only for now; other values denied with clear error (**declared** gate).
 
-- [ ] Failing test: `backend: "webgpu"` raises PrintError until parity flag exists
-- [ ] Implement normalize + deny in `print_request.py` / sovereignty or pipeline
-- [ ] Tests pass
-- [ ] Commit: `feat(printer): reject ungated gpu backends`
+- [x] Failing test: `backend: "webgpu"` raises PrintError until parity flag exists
+- [x] Implement normalize + deny in `print_request.py` / sovereignty or pipeline
+- [x] Tests pass
+- [x] Commit: `feat(printer): reject ungated gpu backends`
 
 **Verify:** `print_hq` default path unchanged.
 
