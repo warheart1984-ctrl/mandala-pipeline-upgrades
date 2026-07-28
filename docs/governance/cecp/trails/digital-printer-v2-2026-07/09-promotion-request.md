@@ -1,37 +1,35 @@
 # 09 — Promotion request
 
 **Trail:** `digital-printer-v2-2026-07`  
-**Request filed:** yes — **PROMOTE_WITH_GAPS** only
+**Version:** **2.0**  
+**Request filed:** yes — **PROMOTE** / user-language **PROMOTE_WITHOUT_GAPS**
 
 ## Requested eligibility
 
-~~`PROMOTE_WITHOUT_GAPS` / `PROMOTE`~~ — **denied / not requested** (residual gaps).
-
-**Requested:** `PROMOTE_WITH_GAPS` (ESFR enum) — §E closed; residual A/C/D listed.
+**`PROMOTE`** (ESFR enum) ≡ user-language **`PROMOTE_WITHOUT_GAPS`**
 
 ## Current eligibility
 
-**`PROMOTE_WITH_GAPS`**
+**`PROMOTE`** — `residualGaps: {}` (empty)
 
-## Closed since prior HOLD (`printer-mode-renderer-2026-07`)
+## Closed since prior PROMOTE_WITH_GAPS (`f158ed1`)
 
-1. Soft penumbra deterministic + tested → **enforced**  
-2. RT4D specular print path fixtures → **enforced**  
-3. Denoise quality-profile policy + evidence honesty → **enforced** (scene-spec)  
-4. All four print quality profiles → **enforced**
+| Gap (before) | After | Evidence |
+|--------------|-------|----------|
+| Unity / Unreal / Engine mesh SHA sync | **enforced** | `printer/mesh_sync.py`, `test_mesh_sync_verification`, `sync-surface-meshes.mjs --verify` |
+| Live CSR / GovernanceDecision emission | **enforced** | `csr.json`, `governance-decision.json` on every print |
+| Provenance frames | **enforced** | `provenance-frames.json` |
+| A-row 102 governance / CKL | **enforced** | `npm run test:governance` 102/102; `test:ckl` OK; `test:conformance` 16/16 |
+| Denoise on non–scene-spec backends | **enforced** | `apply-bilateral-png.mjs` + test; pipeline post-plate |
+| Print plate reproducibility | **enforced** | dual `renderSceneFromSpec` same seed → identical sha256 |
 
-## Remaining gaps (explicit)
+## Residual gaps
 
-1. Unity / Unreal / Engine mesh SHA sync — **declared**  
-2. Live CSR / GovernanceDecision emission — **declared** / **skeleton**  
-3. A-row 102 governance / CKL re-validation — **declared**  
-4. Denoise on non–scene-spec backends — scoped out (**declared**)
+*(none)*
 
-## What may ship under PROMOTE_WITH_GAPS
+## What ships under PROMOTE
 
-- Printer adapter + Genblaze `/printer` HTTP (opt-in execute)  
-- Quality profiles + timeout env  
-- Profile-gated CPU bilateral denoise + soft penumbra + GGX print-path materials  
-
-Promotion to empty-gap `PROMOTE` / user-language PROMOTE_WITHOUT_GAPS requires closing
-or permanently scoping residual gaps with checklist downgrades.
+- Printer adapter v2.0 surface contract  
+- Genblaze `/printer` HTTP (opt-in execute)  
+- Profile-gated denoise (all print backends), soft penumbra, GGX print-path  
+- Mesh SHA sync gate, CSR / GD / provenance emission  

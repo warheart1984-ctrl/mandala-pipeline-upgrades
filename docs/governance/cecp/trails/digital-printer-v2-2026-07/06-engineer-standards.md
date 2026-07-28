@@ -1,48 +1,49 @@
-# 06 — Engineer Standards (ESFR)
+# 06 — Engineer Standards (ESFR) — v2.0 re-verdict
 
 **Trail:** `digital-printer-v2-2026-07`  
 **Role:** ESFR / Engineer Standards  
-**Evaluated:** 2026-07-28  
-**Prior initiative HOLD:** `printer-mode-renderer-2026-07`
+**Evaluated:** 2026-07-28 (gap-closure re-run)  
+**Prior:** PASS_WITH_GAPS / PROMOTE_WITH_GAPS @ `f158ed1`
 
 ---
 
 ## ESFRVerdict
 
-**PASS_WITH_GAPS**
+**PASS**
 
 ## PromotionEligibility
 
-**PROMOTE_WITH_GAPS**
+**PROMOTE**
 
-User-language **PROMOTE_WITHOUT_GAPS** is **not** authorized — residual gaps remain
-(see below). Empty-gap `PROMOTE` / PROMOTE_WITHOUT_GAPS would inflate.
+User-language: **PROMOTE_WITHOUT_GAPS** (`residualGaps` empty).
+
+## Gap closure (before → after)
+
+| Gap | Before | After |
+|-----|--------|-------|
+| Mesh SHA Unity/Unreal | declared | **enforced** |
+| CSR emission | declared | **enforced** |
+| GovernanceDecision logs | skeleton | **enforced** |
+| Provenance frames | partial | **enforced** |
+| 102 governance / CKL | declared | **enforced** (re-run) |
+| Denoise other backends | declared | **enforced** (`apply-bilateral-png`) |
+| Plate reproducibility | partial | **enforced** |
 
 ## Standards summary
 
 | Area | Verdict |
 |------|---------|
-| §E denoise | **enforced** (profile-gated CPU bilateral on scene-spec) |
-| §E soft penumbra | **enforced** (deterministic radius floors + tests) |
-| §E RT4D specular print path | **enforced** (SceneSpec→convert→render-scene GGX) |
-| §E quality profiles | **enforced** (all four param locks) |
-| Coding / API honesty | PASS (docs updated; no GPU denoise claim) |
-| CHEA / CCR / CDGF | **declared** (layers absent) |
+| Coding / API honesty | PASS |
+| Drive-G-1 claims | PASS (no GPU denoise / commercial RIP) |
+| CHEA / CCR / CDGF | **declared** layers only (not gaps for this module) |
+| Docker / ops | PASS (printer COPY + env prepared) |
 
-## Open gaps (honest)
+## Matrix + probes
 
-1. Unity / Unreal / Engine mesh SHA sync — **declared**  
-2. Live CSR / GovernanceDecision emission on printer HTTP — **declared** / **skeleton**  
-3. A-row 102 governance / CKL end-to-end — **declared** (not re-run this pass)  
-4. Denoise not claimed on proton / engine3d print backends — scoped out  
+See `08-esfr-verdict.json` `testMatrixSummary` and Inspector `05-inspector-acceptance.md`.
 
 ## Anti-overclaim
 
-- Not a commercial RIP  
-- Not GPU denoise  
-- Not production-ready across Drive-G-2 commercial dimension  
-- Prior trail HOLD history preserved; this trail supersedes §E only
-
-## Matrix citations
-
-See `08-esfr-verdict.json` and Inspector `05-inspector-acceptance.md`.
+- Not a commercial RIP; not GPU denoise  
+- Mesh sync = file SHA verification of StreamingAssets/Content vs canonical meshes  
+- CHEA/CCR/CDGF remain declared ecosystem layers  

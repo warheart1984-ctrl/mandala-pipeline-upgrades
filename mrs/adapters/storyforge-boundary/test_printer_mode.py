@@ -102,6 +102,9 @@ def test_surface_contract_timeout_and_profiles():
     assert c["qualityTags"]["denoise"] == "enforced-when-profile-or-opt-in"
     assert c["qualityTags"]["softPenumbra"] == "enforced"
     assert c["qualityTags"]["rt4dSpecularGgx"] == "enforced"
+    assert c["qualityTags"]["meshShaSyncUnityUnreal"] == "enforced"
+    assert c["qualityTags"]["csrEmission"] == "enforced"
+    assert c["version"] == "2.0"
 
 
 def test_sovereignty_ok_on_fixture():
@@ -169,7 +172,26 @@ def test_evidence_completeness(tmp_path):
     assert ev["beautySha256"]
     assert (tmp_path / "evidence.json").is_file()
     assert (tmp_path / "lineage.json").is_file()
+    assert (tmp_path / "csr.json").is_file()
+    assert (tmp_path / "governance-decision.json").is_file()
+    assert (tmp_path / "provenance-frames.json").is_file()
+    assert ev["csr"]["intentId"] == rr["intentId"]
+    assert ev["governanceDecision"]["verdict"] == "allow"
+    assert ev["governanceDecision"]["attachProvenance"] is True
+    assert ev["provenanceFrames"]["frames"][0]["worldId"] == rr["worldId"]
     assert ev["printRequestSha256"] == sha256_json(pr)
+    assert ev["schemaVersion"] == "2.0"
+
+
+def test_mesh_sync_verification():
+    from printer.mesh_sync import verify_host_mesh_sync
+
+    report = verify_host_mesh_sync()
+    assert report["ok"] is True
+    assert report["statusTag"] == "enforced"
+    assert report["canonicalFileCount"] >= 1
+    assert report["hosts"]["unity"]["matched"] is True
+    assert report["hosts"]["unreal"]["matched"] is True
 
 
 def test_print_request_patch_sets_cinematic_quality_opts():
@@ -197,6 +219,7 @@ def test_evidence_denoise_enforced_when_requested(tmp_path):
     )
     assert ev["denoise"]["statusTag"] == "enforced"
     assert ev["softPenumbra"]["statusTag"] == "enforced"
+    assert ev["meshSync"]["statusTag"] == "enforced"
     assert "digital-printer-v2" in ev["trail"]
 
 
@@ -208,12 +231,17 @@ def test_dry_run_print_determinism(tmp_path):
     assert a["printState"] == "OK"
     assert a["evidence"]["printRequestSha256"] == b["evidence"]["printRequestSha256"]
     assert a["evidence"]["renderRequestSha256"] == b["evidence"]["renderRequestSha256"]
+    assert a["meshSync"]["ok"] is True
+    assert (tmp_path / "a" / "csr.json").is_file()
+    assert (tmp_path / "a" / "governance-decision.json").is_file()
 
 
 def test_execute_print_mocked(tmp_path, monkeypatch):
     """Same PrintRequest → same beauty hash under mocked execute."""
     rr = _base_rr()
-    pr = normalize_print_request({"width": 64, "height": 48, "samples": 4, "seed": 99})
+    pr = normalize_print_request(
+        {"width": 64, "height": 48, "samples": 4, "seed": 99, "denoise": False}
+    )
 
     png_bytes = b"\x89PNG\r\n\x1a\n" + b"\xab" * 64
 
@@ -250,3 +278,5 @@ def test_execute_print_mocked(tmp_path, monkeypatch):
     assert (tmp_path / "p1" / "beauty.png").is_file()
     assert (tmp_path / "p1" / "evidence.json").is_file()
     assert (tmp_path / "p1" / "lineage.json").is_file()
+    assert (tmp_path / "p1" / "csr.json").is_file()
+    assert r1["meshSync"]["ok"] is True

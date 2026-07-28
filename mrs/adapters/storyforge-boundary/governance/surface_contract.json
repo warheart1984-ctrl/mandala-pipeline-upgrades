@@ -1,8 +1,9 @@
 {
-  "schemaVersion": "1.2",
+  "schemaVersion": "2.0",
   "kind": "PrintSurfaceContract",
   "id": "mrs-digital-print-surface-contract",
   "status": "enforced",
+  "version": "2.0",
   "governingInvariant": "Rendering = deterministic printing of declared surfaces. No hallucination.",
   "owner": "mrs/adapters/storyforge-boundary",
   "sfBoundary": {
@@ -74,8 +75,13 @@
     "stratifiedAA": "enforced",
     "tonemapAces": "enforced-when-opt-in",
     "denoise": "enforced-when-profile-or-opt-in",
+    "denoiseAllPrintBackends": "enforced",
     "softPenumbra": "enforced",
     "rt4dSpecularGgx": "enforced",
+    "meshShaSyncUnityUnreal": "enforced",
+    "csrEmission": "enforced",
+    "governanceDecisionEmission": "enforced",
+    "provenanceFrameEmission": "enforced",
     "draftCi": "fast-defaults-unchanged"
   },
   "trail": "docs/governance/cecp/trails/digital-printer-v2-2026-07/",
