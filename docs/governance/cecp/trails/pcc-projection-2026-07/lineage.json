@@ -9,10 +9,18 @@
   "package": "mrs/packages/renderer-core/src/render/rt4d/projection/",
   "contract": "docs/4d-engine/projection/PROJECTION_CONTINUITY_CONTRACT.md",
   "sot": "mrs/packages/renderer-core/src/render/rt4d/output/projector.js",
+  "apertureNePrint": true,
   "tests": {
     "command": "pnpm --filter @mrs/renderer-core run test:projection",
-    "passed": 20,
+    "passed": 33,
     "failed": 0
+  },
+  "capabilityTags": {
+    "kernelPresetsAperture": "enforced",
+    "pathTracerBind": "partial",
+    "lensNorthStar": "partial",
+    "projectionGovernance": "partial",
+    "charterCklRuntime": "declared"
   },
   "modes": {
     "crew": ["Sage", "Physicist", "Cartographer", "Sentinel", "Researcher"],

@@ -49,6 +49,9 @@ describe("ProjCC continuity", () => {
       { x: 0, y: 0, width: 640, height: 480 },
     );
     assert.equal(frame.role, "observation_aperture");
+    assert.equal(frame.printSoT, false);
+    assert.equal(frame.authority, "observation");
+    assert.match(frame.banner, /assist\/preview only/i);
     assert.notEqual(frame.role, "print_sot");
     const dir = apertureSampleDirection(frame, 0.5, 0.5);
     assert.ok(Math.abs(Math.hypot(dir.x, dir.y, dir.z) - 1) < 1e-9);

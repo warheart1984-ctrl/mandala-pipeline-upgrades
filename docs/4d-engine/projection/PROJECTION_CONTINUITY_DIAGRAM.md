@@ -1,6 +1,10 @@
 # Projection Continuity — Diagram
 
-Status: **declared** documentation · SoT remains JS under `rt4d/`.
+Status: **partial** documentation · Math/print SoT = Projector4D under `rt4d/output/`.
+Aperture ≠ print.
+
+> **BANNER:** Governed observation aperture — assist/preview only; CPU RT4D print
+> remains SoT.
 
 ```text
                     Intent / Observation Mode preset
@@ -9,24 +13,25 @@ Status: **declared** documentation · SoT remains JS under `rt4d/`.
                      ┌─────────────────────────┐
                      │  P(θ, φ, τ, κ)  ProjCC  │
                      │  ProjectionKernel       │
+                     │  (continuity layer)     │
                      └────────────┬────────────┘
                                   │ ProjectionState
                                   ▼
                      ┌─────────────────────────┐
-                     │ Projector4D (SoT)       │
+                     │ Projector4D (math SoT)  │
                      │  π4→3: d4/(d4+w_eff)    │
                      │  π3→2: d3/(d3+z)        │
                      └────────────┬────────────┘
                                   │
               ┌───────────────────┼───────────────────┐
               ▼                   ▼                   ▼
-     ApertureFrame3D      PathTracer hooks     HyperCausticLens
-     (viewport aperture)  (**declared**)       Verifier (**declared**/
-                                               soft-skip OK)
+     ApertureFrame3D      PathTracer bind      HyperCausticLens
+     printSoT:false       observationProjection  tolerance north-star
+     authority:observation  (**partial**)         (**partial**)
               │
               ▼
         Host viewport / LiveLink
-        (≠ CPU RT4D print SoT)
+        (≠ CPU RT4D print SoT / Digital Printer)
 ```
 
 ## Continuity sketch

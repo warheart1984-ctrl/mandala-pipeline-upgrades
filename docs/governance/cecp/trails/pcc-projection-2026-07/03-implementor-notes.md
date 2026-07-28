@@ -16,6 +16,15 @@
 5. Hyper-Caustic verifier: factory + structural projection + north-star soft-skip.
 6. Path-tracer hooks explicitly `wiredIntoPathTracer4D: false`.
 
+## Gap-close (2026-07-28)
+
+1. **P0:** `resolveObservationPreset` filters `undefined` overrides; hooks only forward defined opts — orbit/soft_caustic no longer clobber to 0.
+2. PathTracer4D `bindObservationProjection` / `projectObservationPoint` with `printSoT:false`.
+3. Hyper-Caustic north-star: energy/caustic/temporal tolerance sweeps (no soft-skip default).
+4. Package `evaluateProjectionGovernance` (deny missing PCC metadata / attachProvenance).
+5. Kernel strength: differentiability, reversible snapshot, extreme-param graceful.
+6. Aperture/preset/kernel banners: aperture ≠ print; Projector4D remains math/print SoT.
+
 ## Tests
 
 ```bash

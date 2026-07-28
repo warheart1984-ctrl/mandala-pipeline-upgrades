@@ -2,12 +2,16 @@
 
 | Field | Value |
 | --- | --- |
-| Status | **declared** (ratified-as-declared until CI gates promote claims) |
+| Status | **partial** (docs; suite-enforced capabilities listed below) |
 | Contract id | `ProjCC-v0.1` |
 | Trail | `docs/governance/cecp/trails/pcc-projection-2026-07/` |
-| SoT modules | `mrs/packages/renderer-core/src/render/rt4d/projection/` + `output/projector.js` |
-| Drive-G-1 | This document is **ratified-as-declared**. No claim of **enforced** observation engine, FULL_PASS, or complete 4D observation until tests + runtime gates prove it. |
+| Math / print SoT | `mrs/packages/renderer-core/src/render/rt4d/output/projector.js` (**Projector4D**) |
+| Continuity layer | `mrs/packages/renderer-core/src/render/rt4d/projection/` (not a second SoT) |
+| Drive-G-1 | Continuity / aperture are **observation assist**. No claim that aperture is beauty print or Digital Printer SoT. Charter CKL gate for ProjCC remains **declared**. |
 | Naming note | Distinct from substrate **4D-PCC** (Physics Constitutional Contract) in `docs/4drs/substrate/CONSTITUTIONAL_CONTRACTS.md`. |
+
+> **BANNER:** Governed observation aperture — assist/preview only; CPU RT4D print
+> remains SoT. Aperture ≠ print.
 
 ## 1. Preamble (Drive-G-1)
 
@@ -18,13 +22,14 @@ parallel print path and not a replacement for CPU RT4D print sovereignty.
 | Claim | Allowed tag now |
 | --- | --- |
 | Contract text + diagrams | **declared** |
-| `ProjectionState` + kernel skeleton | **partial** when unit tests pass |
-| Continuous \(P(\theta,\varphi,\tau,\kappa)\) vs `Projector4D` closed form | **partial** when continuity + fidelity tests pass |
-| Observation mode presets | **partial** (preset objects + mapping tests) |
-| `ApertureFrame3D` viewport-as-aperture API | **partial** (API + tests; not host-UI enforced) |
-| Hyper-Caustic Lens verifier hooks | **declared** / soft-skip without reference dataset |
-| Path-tracer integration hooks | **declared** until wired into `PathTracer4D` |
-| Runtime CKL / policy gate on projection continuity | **not claimed** |
+| `ProjectionState` + `ProjectionKernel` | **enforced** (`test:projection`) |
+| Continuous \(P(\theta,\varphi,\tau,\kappa)\) vs `Projector4D` closed form | **enforced** (fidelity + continuity + strength) |
+| Observation mode presets (incl. orbit / soft_caustic) | **enforced** (incl. undefined-clobber regression) |
+| `ApertureFrame3D` viewport-as-aperture API | **enforced** (metadata `printSoT:false`) |
+| Hyper-Caustic Lens north-star (tolerance sweeps) | **partial** (real asserts; not PNG gallery FULL_PASS) |
+| Path-tracer `observationProjection` bind | **partial** (wired + tested; not full ray rewrite) |
+| Package projection governance filter | **partial** |
+| Charter CKL / `default.policies.json` ProjCC row | **declared** / **not claimed** as runtime enforced |
 
 ## 2. Purpose
 

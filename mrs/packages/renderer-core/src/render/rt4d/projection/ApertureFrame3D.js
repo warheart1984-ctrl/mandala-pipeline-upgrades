@@ -1,6 +1,12 @@
 /**
- * ApertureFrame3D — viewport-as-aperture API.
- * Status: partial (API + tests). Projection aperture ≠ CPU RT4D print SoT.
+ * ApertureFrame3D — viewport-as-aperture API (governed observation layer).
+ *
+ * BANNER: Governed observation aperture — assist/preview only; CPU RT4D print
+ * remains SoT. Projector4D (`rt4d/output/projector.js`) is the mathematical /
+ * print projection source of truth. Aperture ≠ print. Never route aperture
+ * frames into Digital Printer / print pipelines.
+ *
+ * Status: partial → suite-proven metadata + direction sampling (test-enforced).
  */
 
 import { createProjectionState } from "./ProjectionState.js";
@@ -23,9 +29,15 @@ import { applyViewOrientation } from "./continuityMath.js";
  * @property {ViewportRect} viewport
  * @property {number} nearHint
  * @property {number} focalHint
- * @property {string} role
- * @property {"partial"|"declared"} status
+ * @property {"observation_aperture"} role
+ * @property {false} printSoT
+ * @property {"observation"} authority
+ * @property {string} banner
+ * @property {"partial"|"enforced"|"declared"} status
  */
+
+export const APERTURE_SOT_BANNER =
+  "Governed observation aperture — assist/preview only; CPU RT4D print remains SoT.";
 
 /**
  * Build an aperture frame from ProjCC state + viewport rectangle.
@@ -61,8 +73,11 @@ export function createApertureFrame3D(stateInit, viewport) {
     }),
     nearHint,
     focalHint,
-    role: "observation_aperture",
-    status: /** @type {const} */ ("partial"),
+    role: /** @type {const} */ ("observation_aperture"),
+    printSoT: /** @type {const} */ (false),
+    authority: /** @type {const} */ ("observation"),
+    banner: APERTURE_SOT_BANNER,
+    status: /** @type {const} */ ("enforced"),
     projectionModeId: state.modeId,
     tau: state.tau,
     kappa: state.kappa,
@@ -71,6 +86,8 @@ export function createApertureFrame3D(stateInit, viewport) {
 
 /**
  * Map normalized viewport UV in [0,1]^2 to a ray direction in aperture space.
+ * Observation assist only — not a print primary-ray SoT.
+ *
  * @param {ApertureFrame3D} frame
  * @param {number} u
  * @param {number} v

@@ -1,11 +1,24 @@
 /**
  * Continuous P(θ, φ, τ, κ) math aligned with Projector4D closed forms.
- * Status: partial — unit-tested continuity + fidelity; not path-tracer enforced.
+ *
+ * SoT: Projector4D (`rt4d/output/projector.js`) — this module composes the same
+ * closed forms with observation params. Not a parallel print kernel.
+ * Aperture ≠ print.
+ *
+ * Status: partial→enforced for unit continuity / fidelity / safe extreme paths.
  */
 
 import { vec4 } from "../math/vec4.js";
 import { Projector4D } from "../output/projector.js";
 import { createProjectionState, toProjectorOptions } from "./ProjectionState.js";
+
+/** Soft clamps for graceful degradation (observation assist only). */
+export const EXTREME_PARAM_LIMITS = Object.freeze({
+  theta: Math.PI,
+  phi: Math.PI * 2,
+  tau: 1e3,
+  kappa: 1e3,
+});
 
 /**
  * Effective w after τ offset (observation slice).
@@ -56,8 +69,31 @@ export function applyViewOrientation(p3, theta, phi) {
  * @param {number} kappa
  */
 export function d4WithKappa(d4, kappa) {
-  // κ=0 → classic; small positive κ gently increases focal distance (declared).
+  // κ=0 → classic; small positive κ gently increases focal distance (observation).
   return d4 * (1 + 0.1 * kappa);
+}
+
+/**
+ * Clamp observation params into a finite safe envelope (does not alter SoT).
+ * @param {import("./ProjectionState.js").ProjectionStateInit|ReturnType<typeof createProjectionState>} state
+ */
+export function clampExtremeParams(state) {
+  const lim = EXTREME_PARAM_LIMITS;
+  const clamp = (v, limAbs) => {
+    if (!Number.isFinite(v)) return 0;
+    return Math.max(-limAbs, Math.min(limAbs, v));
+  };
+  const kappaRaw = state.kappa ?? 0;
+  const kappa = !Number.isFinite(kappaRaw)
+    ? 0
+    : Math.max(0, Math.min(lim.kappa, kappaRaw));
+  return {
+    ...state,
+    theta: clamp(state.theta ?? 0, lim.theta),
+    phi: clamp(state.phi ?? 0, lim.phi),
+    tau: clamp(state.tau ?? 0, lim.tau),
+    kappa,
+  };
 }
 
 /**
@@ -77,7 +113,7 @@ export function evaluateContinuousP(theta, phi, tau, kappa, base = {}) {
     kappa,
     d4: base.d4 ?? 4,
     d3: base.d3 ?? 4,
-    status: "partial",
+    status: base.status ?? "partial",
   });
 }
 
@@ -90,7 +126,12 @@ export function evaluateContinuousP(theta, phi, tau, kappa, base = {}) {
  */
 export function projectPointContinuous(point, state) {
   const d4 = d4WithKappa(state.d4, state.kappa);
-  const wFactor = wProjFactor(d4, point.w, state.tau);
+  const denom = d4 + effectiveW(point.w, state.tau);
+  // Near singularity: fall through to safe path without claiming print authority.
+  if (!(Math.abs(denom) > 1e-12)) {
+    return projectPointContinuousSafe(point, state);
+  }
+  const wFactor = d4 / denom;
   const raw3 = {
     x: point.x * wFactor,
     y: point.y * wFactor,
@@ -104,6 +145,49 @@ export function projectPointContinuous(point, state) {
   // Feed oriented 3D through the same 3D→2D closed form as Projector4D.
   const screen = projector.project3Dto2D(vec4(oriented.x, oriented.y, oriented.z, 0));
   return { p3: oriented, screen, wFactor };
+}
+
+/**
+ * Graceful projection: clamps extreme params and avoids non-finite screen samples.
+ * Observation assist only — printSoT remains false.
+ *
+ * @param {{x:number,y:number,z:number,w:number}} point
+ * @param {ReturnType<typeof createProjectionState>|import("./ProjectionState.js").ProjectionStateInit} stateInit
+ */
+export function projectPointContinuousSafe(point, stateInit) {
+  const clamped = clampExtremeParams(stateInit);
+  const state = createProjectionState({
+    ...clamped,
+    kappa: Math.max(0, clamped.kappa ?? 0),
+  });
+  let d4 = d4WithKappa(state.d4, state.kappa);
+  if (!(d4 > 1e-9)) d4 = 1e-9;
+  let denom = d4 + effectiveW(point.w, state.tau);
+  if (!(Math.abs(denom) > 1e-9)) {
+    denom = denom >= 0 ? 1e-9 : -1e-9;
+  }
+  const wFactor = d4 / denom;
+  const raw3 = {
+    x: point.x * wFactor,
+    y: point.y * wFactor,
+    z: point.z * wFactor,
+  };
+  const oriented = applyViewOrientation(raw3, state.theta, state.phi);
+  const projector = new Projector4D({
+    ...toProjectorOptions(state),
+    d4,
+  });
+  const screen = projector.project3Dto2D(vec4(oriented.x, oriented.y, oriented.z, 0));
+  const sx = Number.isFinite(screen.sx) ? screen.sx : 0;
+  const sy = Number.isFinite(screen.sy) ? screen.sy : 0;
+  return {
+    p3: oriented,
+    screen: { sx, sy },
+    wFactor,
+    degraded: true,
+    printSoT: false,
+    authority: "observation",
+  };
 }
 
 /**

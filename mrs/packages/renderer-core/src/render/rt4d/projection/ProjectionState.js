@@ -1,6 +1,11 @@
 /**
  * ProjectionState — frozen observation + projector parameters for ProjCC.
- * Status: partial (object contract + tests); not a runtime CKL gate.
+ *
+ * SoT: Projector4D (`rt4d/output/projector.js`) remains math/print SoT.
+ * This state drives the governed continuity / observation aperture layer only.
+ * Aperture ≠ print.
+ *
+ * Status: partial (object contract + tests); charter CKL gate not claimed.
  */
 
 /** @typedef {"declared"|"partial"|"enforced"|"skeleton"} CapabilityStatus */
