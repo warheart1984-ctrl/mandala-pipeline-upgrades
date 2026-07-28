@@ -55,6 +55,11 @@ Required headings:
 6. Acceptance criteria (testable)
 7. Handoff to Builder
 
+**Optional Architect Sage (Sage mode):** same stage-01 artifact — not a seventh
+crew stage. When `mode: sage`, also include Anti-overclaim, Sage counsel,
+Cross-reference ledger (§9), and Risks to sovereignty / determinism. See
+`.cursor/skills/mrs-architect/SKILL.md` and `SAGE.md` (capability **partial**).
+
 ---
 
 ## 02 — Builder (scaffold)

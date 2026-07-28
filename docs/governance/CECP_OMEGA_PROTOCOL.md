@@ -42,7 +42,7 @@ reference implementation** with replayable stage artifacts.
 
 | Stage | Role | Writes product code? | Required trail artifact(s) |
 |-------|------|----------------------|----------------------------|
-| 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface specification + constitutional boundary analysis |
+| 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface specification + constitutional boundary analysis. Optional **Architect Sage** (Sage mode): same stage/artifact; elevated design-only counsel — **not** a seventh stage. Skill capability **partial** / **declared** (see `.cursor/skills/mrs-architect/`); CHEA/CCR/CDGF remain **declared**. |
 | 2 | **Builder** | Stubs / scaffolds only | `02-builder-scaffold-manifest.md` — scaffold manifest, dependency graph, build-artifacts inventory |
 | 3 | **Implementor** | Yes | `03-implementor-notes.md` — production implementation notes + unit/integration test inventory |
 | 4 | **Reviewer** | No | `04-reviewer-conformance.md` — constitutional conformance, policy validation (lawbook / P1–P5) |
@@ -144,7 +144,7 @@ CECP Ω∞ does **not**:
 
 | CECP stage | Cursor skill | OpenCode agent | Protocol duty |
 |------------|--------------|----------------|---------------|
-| Architect | `mrs-architect` | `.opencode/agents/architect.md` | Write `01-architect-adr.md` into the trail |
+| Architect | `mrs-architect` (+ optional `SAGE.md`) | `.opencode/agents/architect.md` (`sage_mode: optional`) | Write `01-architect-adr.md` into the trail. Optional **Sage mode** = same stage; deeper design-only counsel — **not** stage 07. Capability **partial**. |
 | Builder | `mrs-builder` | `.opencode/agents/builder.md` | Write `02-builder-scaffold-manifest.md` |
 | Implementor | `mrs-implementor` | `.opencode/agents/implementor.md` | Write `03-implementor-notes.md` |
 | Reviewer | `mrs-reviewer` | `.opencode/agents/reviewer.md` | Write `04-reviewer-conformance.md` (read-only product code; trail write is allowed for evidence) |
