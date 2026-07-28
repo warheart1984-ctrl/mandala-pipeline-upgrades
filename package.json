@@ -46,7 +46,8 @@
     "test:all": "node scripts/test-all.mjs && npm run test:governance && npm run test:conformance",
     "check:types": "node scripts/check-package-types.mjs",
     "check:nvidia-gpu-host": "node scripts/check-nvidia-gpu-host.mjs",
-    "detect:gpu-backend": "python scripts/detect-gpu-backend.py"
+    "detect:gpu-backend": "python scripts/detect-gpu-backend.py",
+    "test:sovereign-x-router": "npm test --prefix mrs/packages/sovereign-x-router"
   },
   "dependencies": {
     "4d-renderer": "file:./4d-renderer",

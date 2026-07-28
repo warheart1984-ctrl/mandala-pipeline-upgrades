@@ -73,3 +73,15 @@ Applied skills to in-repo surfaces:
 `docs/governance/cecp/trails/vendor-skills-fixup-2026-07/`  
 (inventory `00-skill-inventory.md`, NIM `/health` ops checklist, check-only GPU host + detect scripts).
 
+## Sovereign X vendor router (2026-07-28)
+
+Machine-readable capability registration (NVIDIA + AMD skill IDs → upstream /
+`forbidden_for_print`) lives at:
+
+- Registry: `mrs/packages/sovereign-x-router/data/vendor-capability-registry.json`
+- Package: `@mrs/sovereign-x-router` (thin dispatch stubs; print SoT rejected)
+- CECP trail: `docs/governance/cecp/trails/sovereign-x-vendor-router-2026-07/`
+- Printer contract pointer: `mrs/adapters/storyforge-boundary/CONTRACT_DIGITAL_PRINT.md`
+
+Status: **declared**/**partial** registration — not CUDA/HIP print enforcement.
+

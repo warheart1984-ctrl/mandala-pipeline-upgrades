@@ -1,0 +1,20 @@
+{
+  "name": "@mrs/sovereign-x-router",
+  "version": "0.1.0",
+  "description": "Thin Sovereign X vendor capability registry + dispatch stubs (upstream-only; print SoT rejected)",
+  "type": "module",
+  "private": true,
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./registry": "./src/registry.js",
+    "./dispatch": "./src/dispatch.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

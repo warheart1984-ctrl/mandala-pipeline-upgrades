@@ -30,3 +30,8 @@
 ## Promotion stance
 
 See `06-engineer-standards.md` — expected **PASS_WITH_GAPS** / **PROMOTE_WITH_GAPS**.
+
+## Related trail (additive)
+
+Sovereign X multi-vendor capability router (does not replace this trail):  
+`docs/governance/cecp/trails/sovereign-x-vendor-router-2026-07/`

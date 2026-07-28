@@ -72,6 +72,13 @@ samples. GPU acceleration of the same math is a separate, parity-gated path
 **Genblaze NIM / FLUX** are creative assist only — never Digital Printer beauty
 SoT. See Genblaze README § “Digital Printer vs NIM”.
 
+**Sovereign X vendor router** (`@mrs/sovereign-x-router`) may register NVIDIA/AMD
+vendor-skill capabilities for **upstream** look-dev / SceneSpec / parity / AI
+assist only. Dispatch stubs **reject** GPU print-SoT capability IDs. Skills do
+not override this contract (mulberry32, deterministic sampling/encode/hash,
+evidence, sovereignty). Trail:
+`docs/governance/cecp/trails/sovereign-x-vendor-router-2026-07/`.
+
 ## Timeout
 
 `MRS_PRINT_TIMEOUT_SECONDS` (fallback `MRS_RENDER_TIMEOUT_SECONDS`, default 900) — **enforced** on printer HTTP + CLI.

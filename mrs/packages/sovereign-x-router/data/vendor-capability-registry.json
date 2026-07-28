@@ -1,0 +1,188 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "SovereignXVendorCapabilityRegistry",
+  "status": "declared",
+  "note": "Machine-readable NVIDIA/AMD vendor-skill capabilities for Sovereign X Router. Upstream-only until GPU print parity is proven. Drive-G-1: declared/partial ≠ enforced print SoT.",
+  "trail": "docs/governance/cecp/trails/sovereign-x-vendor-router-2026-07/",
+  "related": {
+    "digitalPrinterContract": "mrs/adapters/storyforge-boundary/CONTRACT_DIGITAL_PRINT.md",
+    "vendorSkillsInstallNote": "docs/superpowers/specs/2026-07-28-vendor-skills-install-note.md",
+    "vendorSkillsFixupTrail": "docs/governance/cecp/trails/vendor-skills-fixup-2026-07/",
+    "printParityHonesty": "mrs/packages/renderer-core/src/render/rt4d/compare/printParity.js"
+  },
+  "buildGroups": {
+    "A": "Multi-vendor GPU look-dev",
+    "B": "Multi-vendor SceneSpec assistants",
+    "C": "Multi-vendor GPU parity harness",
+    "D": "Multi-vendor AI services"
+  },
+  "capabilities": [
+    {
+      "id": "gpu.inference.nvidia.tao",
+      "vendor": "nvidia",
+      "skillNames": ["tao-setup-nvidia-gpu-host", "tao-run-inference-service"],
+      "lane": "upstream",
+      "printLane": "forbidden_for_print",
+      "status": "declared",
+      "buildGroups": ["D"],
+      "allowedUses": [
+        "GPU host prerequisite checks",
+        "Inference microservice ops patterns",
+        "Warmup/readiness discipline"
+      ],
+      "bannedUses": ["Digital Printer beauty SoT", "GPU print backend"]
+    },
+    {
+      "id": "gpu.compute.nvidia.cuda",
+      "vendor": "nvidia",
+      "skillNames": ["tilegym-cutile-python"],
+      "lane": "upstream",
+      "printLane": "forbidden_for_print",
+      "status": "declared",
+      "buildGroups": ["A", "C"],
+      "allowedUses": [
+        "CUDA kernel research prototypes",
+        "Look-dev / denoise prototypes (non-evidence)",
+        "Parity harness scaffolding"
+      ],
+      "bannedUses": ["GPU print SoT", "Deterministic plate SoT", "RT4D print integrator"]
+    },
+    {
+      "id": "gpu.optimize.nvidia.dynamo",
+      "vendor": "nvidia",
+      "skillNames": ["dynamo-troubleshoot"],
+      "lane": "upstream",
+      "printLane": "forbidden_for_print",
+      "status": "partial",
+      "buildGroups": ["D"],
+      "allowedUses": [
+        "Layered health debug patterns",
+        "Genblaze NIM ops checklist ordering"
+      ],
+      "bannedUses": ["Print evidence", "Beauty SoT"]
+    },
+    {
+      "id": "gpu.sim.nvidia.tilegym",
+      "vendor": "nvidia",
+      "skillNames": ["tilegym-cutile-python"],
+      "lane": "upstream",
+      "printLane": "forbidden_for_print",
+      "status": "declared",
+      "buildGroups": ["A", "C"],
+      "allowedUses": ["cuTile/CUDA research", "Kernel prototype look-dev"],
+      "bannedUses": ["Printer CUDA kernels as beauty SoT"]
+    },
+    {
+      "id": "ai.gen.nvidia.flux",
+      "vendor": "nvidia",
+      "skillNames": ["nvidia-skill-finder"],
+      "lane": "upstream",
+      "printLane": "forbidden_for_print",
+      "status": "partial",
+      "buildGroups": ["D", "A"],
+      "allowedUses": [
+        "Concept generation",
+        "img2img polish assist",
+        "Look-dev previews",
+        "Draft SceneSpec assist (non-print)"
+      ],
+      "bannedUses": ["Digital Printer beauty.png SoT", "Provenance beauty bytes"]
+    },
+    {
+      "id": "ai.gen.nvidia.cosmos",
+      "vendor": "nvidia",
+      "skillNames": ["nvidia-skill-finder"],
+      "lane": "upstream",
+      "printLane": "forbidden_for_print",
+      "status": "declared",
+      "buildGroups": ["D"],
+      "allowedUses": ["Video previews", "Concept gen assist"],
+      "bannedUses": ["Print beauty SoT", "Deterministic plate SoT"]
+    },
+    {
+      "id": "ai.vision.nvidia.llama",
+      "vendor": "nvidia",
+      "skillNames": ["rag-blueprint"],
+      "lane": "upstream",
+      "printLane": "forbidden_for_print",
+      "status": "declared",
+      "buildGroups": ["B", "D"],
+      "allowedUses": [
+        "Vision→SceneSpec assist",
+        "Embeddings / search assist",
+        "SceneSpec draft assistants"
+      ],
+      "bannedUses": ["Print SoT", "Evidence substitution"]
+    },
+    {
+      "id": "gpu.compute.amd.rocm",
+      "vendor": "amd",
+      "skillNames": ["rocm-setup", "rocm-doctor"],
+      "lane": "upstream",
+      "printLane": "forbidden_for_print",
+      "status": "declared",
+      "hostCapabilityDriven": true,
+      "buildGroups": ["A", "C"],
+      "allowedUses": [
+        "ROCm host setup / diagnose",
+        "AMD denoise prototypes (non-evidence)",
+        "AMD parity harness scaffolding",
+        "Lighting/material previews"
+      ],
+      "bannedUses": ["HIP/ROCm print SoT", "Claim in-repo AMD print backend"]
+    },
+    {
+      "id": "gpu.compute.amd.hip",
+      "vendor": "amd",
+      "skillNames": ["hip-rocm", "magpie-kernel-evaluator"],
+      "lane": "upstream",
+      "printLane": "forbidden_for_print",
+      "status": "declared",
+      "hostCapabilityDriven": true,
+      "buildGroups": ["A", "C"],
+      "allowedUses": [
+        "HIP kernel reference",
+        "Host-capability dispatch even without in-repo AMD backend"
+      ],
+      "bannedUses": ["HIP print beauty SoT", "Stub native/hip as enforced"]
+    },
+    {
+      "id": "gpu.inference.amd.rocm",
+      "vendor": "amd",
+      "skillNames": ["rocm-setup", "local-ai-use"],
+      "lane": "upstream",
+      "printLane": "forbidden_for_print",
+      "status": "declared",
+      "hostCapabilityDriven": true,
+      "buildGroups": ["B", "D"],
+      "allowedUses": [
+        "ROCm inference assist",
+        "SceneSpec assistants",
+        "Local Lemonade multimodal assist (when configured)"
+      ],
+      "bannedUses": ["Print beauty SoT", "RT4D GPU SoT"]
+    }
+  ],
+  "forbiddenPrintCapabilityIds": [
+    {
+      "id": "gpu.print.beauty",
+      "reason": "GPU print beauty SoT banned until parity proven — Digital Printer mulberry32/CPU path remains SoT"
+    },
+    {
+      "id": "gpu.print.deterministic_plates",
+      "reason": "GPU deterministic plates cannot be print evidence until CPU↔GPU parity receipts pass"
+    },
+    {
+      "id": "gpu.rt4d.sot",
+      "reason": "GPU RT4D is not print SoT; CPU RT4D / Digital Printer contract governs beauty"
+    },
+    {
+      "id": "gpu.denoise.evidence",
+      "reason": "GPU denoise must not enter evidence bundles as beauty/provenance SoT"
+    },
+    {
+      "id": "gpu.integrator.print",
+      "reason": "GPU integrator is not an authorized Digital Printer backend"
+    }
+  ]
+}
