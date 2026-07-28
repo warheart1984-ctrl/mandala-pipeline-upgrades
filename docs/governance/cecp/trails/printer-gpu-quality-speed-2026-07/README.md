@@ -5,7 +5,7 @@
 **Parent:** `digital-printer-v2-2026-07` (PROMOTE / PROMOTE_WITHOUT_GAPS)  
 **Related:** `digital-printer-v3-2026-07` (BEGIN — surface families; orthogonal)  
 **Branch / PR:** `feat/engine3d-genblaze-cinematic-plugin` / PR #83  
-**overallStatus:** **declared** (design + plan only; no GPU backend ship)  
+**overallStatus:** **partial** (Tasks 1–6 implemented; live WebGPU execute gap)  
 **softwareCreationMode:** Pipeline-Conductor + Boundary-Guardian + Optimizer (lens)  
 **actorMode:** Anchor (anti-drift vs GenAI free lunch)  
 **Spec:** `docs/superpowers/specs/2026-07-28-digital-printer-gpu-quality-speed-design.md`  
@@ -39,9 +39,10 @@
 | Superpowers + MRS crew | used |
 | AMD Cursor MCP | **missing** |
 | NVIDIA Cursor MCP | **missing** |
-| In-repo NVIDIA (Genblaze NIM / NVENC) | reviewed |
+| NVIDIA skill-finder + catalog | used (recommend only; no unauthorized install) |
+| In-repo NVIDIA (Genblaze NIM / NVENC) | reviewed + assist labeling |
 | AMD/ROCm/HIP in repo | **absent** |
 
 ## Promotion stance (this trail)
 
-**HOLD** on GPU backend implementation. Design artifacts may land on PR #83 as docs. Do not cite this trail for Digital Printer v2.0 promotion (already PROMOTE).
+**PROMOTE_WITH_GAPS** — CPU quality-then-speed + parity gates tested; live WebGPU print execute remains **partial**. Do not cite this trail as Digital Printer v2.0 (already PROMOTE / PROMOTE_WITHOUT_GAPS).

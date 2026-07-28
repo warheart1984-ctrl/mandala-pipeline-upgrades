@@ -105,9 +105,9 @@
 
 **Deliverable:** Docs + optional response field clarifying NIM stills are not Digital Printer beauty SoT.
 
-- [ ] Doc touch in Genblaze README or printer CONTRACT cross-link
-- [ ] Confirm sovereignty tests still ban GenAI body keys
-- [ ] Commit: `docs(genblaze): clarify NIM assist vs printer SoT`
+- [x] Doc touch in Genblaze README or printer CONTRACT cross-link
+- [x] Confirm sovereignty tests still ban GenAI body keys
+- [x] Commit: `docs(genblaze): clarify NIM assist vs printer SoT`
 
 **Verify:** no code path copies FLUX PNG into printer `beauty.png` SoT.
 
@@ -117,9 +117,9 @@
 
 **Deliverable:** Update `printer-gpu-quality-speed-2026-07` Inspector + ESFR after Tasks 1–5 evidence exists.
 
-- [ ] Fill fresh test commands + outputs in 05/06
-- [ ] Only then consider `PROMOTE_WITH_GAPS` for GPU path
-- [ ] Commit: `docs(cecp): printer-gpu trail evidence after implementation`
+- [x] Fill fresh test commands + outputs in 05/06
+- [x] Only then consider `PROMOTE_WITH_GAPS` for GPU path
+- [x] Commit: `docs(cecp): printer-gpu trail evidence after implementation`
 
 ---
 
@@ -135,5 +135,5 @@
 
 ## Approval gate
 
-**Do not start Task 1+ until user approves**  
+**APPROVED** 2026-07-28 — Tasks 1–7 executed.
 `docs/superpowers/specs/2026-07-28-digital-printer-gpu-quality-speed-design.md`.
