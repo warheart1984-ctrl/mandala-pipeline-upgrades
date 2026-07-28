@@ -1,9 +1,11 @@
 /**
  * GpuAssistModule — multi-vendor GPU assist routing.
  * Namespace: sx.router.module.gpu.assist
- * STATUS: **partial** — routes via router.route stubs; no live GPU.
+ * STATUS: **partial** — routes via router.route; FLUX image ingest wired;
+ * no claim of live GPU without key/endpoint.
  *
- * User drop-in (ESM). Public API: handleLookDev / handleSceneSpecAssist / handleEmbeddings.
+ * Public API: handleLookDev / handleFluxImageIngest / handleSceneSpecAssist /
+ * handleEmbeddings / dispatch
  */
 
 export class GpuAssistModule {
@@ -14,6 +16,23 @@ export class GpuAssistModule {
     this.router = router;
   }
 
+  /**
+   * Mode-aware entry: lookdev-from-image → FLUX ingest; else lookdev.
+   * @param {object} request
+   */
+  async dispatch(request = {}) {
+    if (request.mode === "lookdev-from-image") {
+      return this.handleFluxImageIngest(request);
+    }
+    if (request.mode === "scenespec" || request.mode === "vision_to_scenespec") {
+      return this.handleSceneSpecAssist(request);
+    }
+    if (request.mode === "embeddings") {
+      return this.handleEmbeddings(request);
+    }
+    return this.handleLookDev(request);
+  }
+
   async handleLookDev(request) {
     if (request.determinismRequired) {
       return this.router.route("cpu.rt4d.print", {
@@ -21,6 +40,9 @@ export class GpuAssistModule {
         capabilityClass: "print",
         backend: "cpu.rt4d.print",
       });
+    }
+    if (request.mode === "lookdev-from-image") {
+      return this.handleFluxImageIngest(request);
     }
     const vendor = request.vendorPreference || "neutral";
     if (vendor === "nvidia") {
@@ -37,6 +59,31 @@ export class GpuAssistModule {
     }
     return this.router.route("gpu.gen.nvidia.nim_flux", {
       ...request,
+      assistOnly: true,
+    });
+  }
+
+  /**
+   * NIM FLUX shell image ingest — assist only.
+   * Routes through skill registry capability `gpu.gen.nvidia.nim_flux`.
+   *
+   * @param {object} request
+   * @param {string} [request.imagePath]
+   * @param {string} [request.imageBase64]
+   * @param {string} [request.prompt]
+   * @param {boolean} [request.dryRun]
+   */
+  async handleFluxImageIngest(request = {}) {
+    if (request.determinismRequired) {
+      return this.router.route("cpu.rt4d.print", {
+        ...request,
+        capabilityClass: "print",
+        backend: "cpu.rt4d.print",
+      });
+    }
+    return this.router.route("gpu.gen.nvidia.nim_flux", {
+      ...request,
+      mode: "lookdev-from-image",
       assistOnly: true,
     });
   }

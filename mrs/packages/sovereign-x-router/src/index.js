@@ -58,6 +58,17 @@ export {
 export { validate as validateGpuDispatchContractCanonical } from "../../../../sovereign-x/router/contracts/gpuDispatchContract.js";
 export { GpuAssistModule } from "../../../../sovereign-x/router/modules/gpu/gpuAssistModule.js";
 export { LookDevEngine } from "../../../../sovereign-x/router/modules/gpu/assist/lookDevEngine.js";
+export { extractFluxSceneSpec } from "../../../../sovereign-x/router/modules/gpu/assist/fluxSceneSpecExtractor.js";
+export {
+  integrateDeterministicAssist,
+  mulberry32,
+} from "../../../../sovereign-x/router/modules/gpu/integrator/deterministicGpuIntegrator.js";
+export {
+  fluxGenerate,
+  buildFluxStub,
+  loadImageBase64,
+  resolveFluxEndpoint,
+} from "../../../../sovereign-x/skills/nvidia-gpu-assist/flux_generate.js";
 
 // Aliases matching user API names
 export { routeLookDev as handleLookDev } from "./GpuAssistModule.js";

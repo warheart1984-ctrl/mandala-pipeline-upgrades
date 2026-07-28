@@ -25,11 +25,22 @@ Sovereign X Router now supports governed, assist-only GPU capabilities for look-
 
 ## Modules
 
-- `router/modules/gpu/gpuAssistModule.js` — multi-vendor GPU assist routing.
-- `router/modules/gpu/assist/lookDevEngine.js` — GPU-powered look-dev engine.
+- `router/modules/gpu/gpuAssistModule.js` — multi-vendor GPU assist routing (+ `handleFluxImageIngest`).
+- `router/modules/gpu/assist/lookDevEngine.js` — GPU-powered look-dev engine (`run` / `runFromImage`).
+- `router/modules/gpu/assist/fluxSceneSpecExtractor.js` — draft SceneSpec from FLUX ingest (**declared**).
+- `skills/nvidia-gpu-assist/flux_generate.js` — NIM FLUX shell image ingest skill (assist-only).
 - `router/modules/gpu/integrator/deterministicGpuIntegrator.js` — prototype assist integrator (mulberry32).
 - `router/contracts/gpuDispatchContract.js` — dispatch rules for GPU vs CPU.
 - `router/registry/gpuSkillsRegistry.json` — binding to NVIDIA/AMD skills + declared integrator.
+
+## Lookdev-from-image
+
+See `docs/sx-router/specs/lookdev-from-image.md`.
+
+```bash
+npm run sx:flux-image -- --image ./still.png --dry-run
+npm run sx:capabilities -- inspect-flux-image
+```
 
 ## Roadmap trails
 

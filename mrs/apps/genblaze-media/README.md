@@ -15,11 +15,7 @@ Thin **FastAPI** service: user prompt → **Genblaze** (`genblaze-nvidia` + `gen
 | RT4D → NVIDIA vision | **Prepared** — `POST /api/rt4d-to-nvidia` sends a prior `run_id` PNG to NIM vision (`require_nvidia`). When the prior still's RT4D archetype is known (e.g. `tesseract-lattice`), the path biases `surfaceId` toward lattice/tesseract and expands `tesseract`/`lattice-grid` with beams+rings (not bare vertex/orbital blobs). **Not** img2img; fails clearly when key missing or NIM 5xx/504 |
 | Operator deploy | **Prepared** — Dockerfile + `render.yaml` (Render free web) |
 | Live NIM generate | **Requires** `NVIDIA_API_KEY` at runtime (default backend) |
-| NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared but off by default** (stills-only demo) — API/pipeline intact; set `GENBLAZE_VIDEO_ENABLED=1` to re-enable UI + API. Cosmos catalog access is key-dependent; docs **declared** not enforced |
-| RT4D image backend | **Prepared** — `GENBLAZE_IMAGE_BACKEND=rt4d` shells out to renderer-core `render-still.mjs` for deterministic procedural 4D stills (NOT text-to-image). Requires Node; the **repo-root** Dockerfile bundles it, the app-local one cannot. Render deploy **not yet verified** — check `/health.rt4d.available` |
-| Operator deploy | **Prepared** — Dockerfile + `render.yaml` (Render free web) |
-| Live NIM generate | **Requires** `NVIDIA_API_KEY` at runtime (default backend) |
-| NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared** — defaults **on** when `NVIDIA_API_KEY` is set and `GENBLAZE_VIDEO_ENABLED` is unset; pin `0` for stills-only (Render blueprint does). Cosmos catalog access is key-dependent; docs **declared** not enforced |
+| NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared but off by default** (stills-only demo) — unset `GENBLAZE_VIDEO_ENABLED` defaults OFF (key or not); set `1` to re-enable UI + API. Cosmos catalog access is key-dependent; docs **declared** not enforced |
 | Seedance 2.0 video (fal) | **Prepared** opt-in path (`GENBLAZE_VIDEO_BACKEND=seedance` + `FAL_KEY`); **fal API is billed** — not Dreamina/Jimeng free credits; default `720p`; watermark/1080p **not guaranteed**; temporal layers **declared** only |
 | CROS (`/cros` page) | **Docs only** — static reference UI; this app does **not** implement or import CROS |
 | B2 persistence | **Tests** path via `genblaze-s3` / dual-exported `B2_APP_KEY` |

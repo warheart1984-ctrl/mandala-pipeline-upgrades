@@ -23,9 +23,23 @@ const registryPath = join(
 );
 const registry = requireJson(registryPath);
 
+function printHelp() {
+  console.log("Usage: sx-capabilities <list|inspect|inspect-flux-image|help> [capability]");
+  console.log("  list                      List registry capabilities (skeleton)");
+  console.log("  inspect <capability>      Show skill path + meta");
+  console.log("  inspect-flux-image        Show FLUX lookdev-from-image wiring");
+  console.log("  help                      Show this help");
+  console.log("STATUS: declared/skeleton — no live GPU probe.");
+}
+
 function main() {
   const args = process.argv.slice(2);
   const command = args[0] || "list";
+
+  if (command === "help" || command === "--help" || command === "-h") {
+    printHelp();
+    return;
+  }
 
   if (command === "list") {
     console.log("Sovereign X Router capabilities:");
@@ -43,9 +57,12 @@ function main() {
       process.exit(1);
     }
     if (cap === "cpu.rt4d.print") {
+      const meta = registry.capabilityMeta?.["cpu.rt4d.print"] ?? {};
       console.log("Capability: cpu.rt4d.print");
       console.log("Skill path: (none — PathTracer4D / Digital Printer SoT)");
-      console.log("Authority: authoritative");
+      console.log(`Authority: ${meta.authority ?? "authoritative"}`);
+      console.log(`capabilityClass: ${meta.capabilityClass ?? "print"}`);
+      console.log(`vendor: ${meta.vendor ?? "cpu"}`);
       return;
     }
     const skill = registry.skills?.[cap];
@@ -58,10 +75,34 @@ function main() {
     console.log(`Skill path: ${skill}`);
     console.log(`Authority: ${meta.authority ?? "assist"}`);
     console.log(`capabilityClass: ${meta.capabilityClass ?? "(n/a)"}`);
+    console.log(`vendor: ${meta.vendor ?? "(n/a)"}`);
+    if (meta.status) console.log(`status: ${meta.status}`);
+    if (Array.isArray(meta.bans) && meta.bans.length) {
+      console.log(`bans: ${meta.bans.join(", ")}`);
+    }
+    return;
+  }
+
+  if (command === "inspect-flux-image") {
+    const cap = "gpu.gen.nvidia.nim_flux";
+    const skill = registry.skills?.[cap];
+    const meta = registry.capabilityMeta?.[cap] ?? {};
+    console.log("Mode: lookdev-from-image");
+    console.log(`Capability: ${cap}`);
+    console.log(`Skill path: ${skill ?? "(missing)"}`);
+    console.log(`Authority: ${meta.authority ?? "assist"}`);
+    console.log("CLI: npm run sx:flux-image -- --image <path> [--dry-run]");
+    console.log("Batch: npm run sx:flux-image-batch -- --dir <folder> [--dry-run]");
+    console.log("Module: sovereign-x/skills/nvidia-gpu-assist/flux_generate.js");
+    console.log("Handler: GpuAssistModule.handleFluxImageIngest");
+    console.log("Engine: LookDevEngine.runFromImage");
+    console.log("Ban: never print SoT (cpu.rt4d.print remains authoritative)");
+    if (!skill) process.exit(1);
     return;
   }
 
   console.error(`Unknown command: ${command}`);
+  printHelp();
   process.exit(1);
 }
 

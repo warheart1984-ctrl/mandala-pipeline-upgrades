@@ -14,11 +14,15 @@
     "./lookdev": "./src/lookdev/SovereignLookDevEngine.js",
     "./modules/gpuAssistModule": "./src/modules/gpuAssistModule.js",
     "./modules/gpuDispatchContract": "./src/modules/gpuDispatchContract.js",
-    "./modules/lookDevEngine": "./src/modules/lookDevEngine.js"
+    "./modules/lookDevEngine": "./src/modules/lookDevEngine.js",
+    "./integrator": "../../../../sovereign-x/router/modules/gpu/integrator/deterministicGpuIntegrator.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js",
     "test:parity": "node --test ../../../sovereign-x/tests/gpuParitySuite.test.js",
+    "test:promotion": "node --test ../../../sovereign-x/tests/gpuIntegratorPromotion.test.js",
+    "test:cli": "node --test ../../../sovereign-x/tests/sxCapabilitiesCli.test.js",
+    "test:sot-all": "node --test ../../../sovereign-x/tests/*.test.js",
     "sx:capabilities": "node ../../../sovereign-x/cli/sx-capabilities.js"
   },
   "engines": {

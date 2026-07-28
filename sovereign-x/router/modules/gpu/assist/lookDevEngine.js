@@ -1,8 +1,11 @@
 /**
  * LookDevEngine — GPU-powered look-dev (assist-only steps).
  * Namespace: sx.router.module.gpu.assist.lookDevEngine
- * STATUS: **declared** / **skeleton** — no live GPU; final print is outside.
+ * STATUS: **partial** — run() skeleton stubs; runFromImage wires FLUX ingest.
+ * Final print remains outside (cpu.rt4d.print).
  */
+
+import { extractFluxSceneSpec } from "./fluxSceneSpecExtractor.js";
 
 export class LookDevEngine {
   /**
@@ -37,6 +40,46 @@ export class LookDevEngine {
       enhanced,
       hints,
       nextStep: "human_curation_then_cpu.rt4d.print",
+    };
+  }
+
+  /**
+   * Look-dev from a shell / reference image via NIM FLUX ingest.
+   * Always assistOnly — never print SoT.
+   *
+   * @param {object} request
+   * @param {string} [request.imagePath]
+   * @param {string} [request.imageBase64]
+   * @param {string} [request.prompt]
+   * @param {boolean} [request.dryRun]
+   */
+  async runFromImage(request = {}) {
+    if (request.determinismRequired) {
+      return this.router.route("cpu.rt4d.print", {
+        ...request,
+        capabilityClass: "print",
+        backend: "cpu.rt4d.print",
+      });
+    }
+
+    const concept = await this.router.route("gpu.gen.nvidia.nim_flux", {
+      ...request,
+      mode: "lookdev-from-image",
+      assistOnly: true,
+    });
+
+    const sceneSpec = extractFluxSceneSpec(concept, request);
+
+    return {
+      ok: concept?.ok !== false,
+      assistOnly: true,
+      nonAuthoritative: true,
+      status: concept?.live ? "partial" : "declared",
+      mode: "lookdev-from-image",
+      concept,
+      sceneSpec,
+      nextStep: "human_curation_then_cpu.rt4d.print",
+      bans: ["printSoT", "digitalPrinterEvidence"],
     };
   }
 }
