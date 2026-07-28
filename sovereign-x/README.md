@@ -13,6 +13,7 @@ Sovereign X Router now supports governed, assist-only GPU capabilities for look-
 - `gpu.compute.nvidia.cuda` — CUDA compute (denoise, upscale, parity) (assist).
 - `gpu.inference.amd.rocm` — ROCm-hosted inference (assist).
 - `gpu.compute.amd.hip` — HIP compute (assist).
+- `gpu.integrator.deterministic` — prototype deterministic assist integrator (**declared**; never print SoT).
 - `cpu.rt4d.print` — deterministic PathTracer4D print (authoritative).
 
 ## Determinism & Governance
@@ -20,13 +21,21 @@ Sovereign X Router now supports governed, assist-only GPU capabilities for look-
 - Deterministic intents (`determinismRequired=true`) must route to `cpu.rt4d.print`.
 - GPU outputs are tagged `assistOnly=true`, `nonAuthoritative=true`.
 - Only CPU RT4D participates in the Digital Printer evidence chain.
+- Seed contract for assist harness: mulberry32 + stratified sampling — **declared** (see trail `gpu-determinism-2026-09`).
 
 ## Modules
 
 - `router/modules/gpu/gpuAssistModule.js` — multi-vendor GPU assist routing.
 - `router/modules/gpu/assist/lookDevEngine.js` — GPU-powered look-dev engine.
+- `router/modules/gpu/integrator/deterministicGpuIntegrator.js` — prototype assist integrator (mulberry32).
 - `router/contracts/gpuDispatchContract.js` — dispatch rules for GPU vs CPU.
-- `router/registry/gpuSkillsRegistry.json` — binding to NVIDIA/AMD skills.
+- `router/registry/gpuSkillsRegistry.json` — binding to NVIDIA/AMD skills + declared integrator.
+
+## Roadmap trails
+
+- Phase 1 (Done / PR #83): `docs/governance/cecp/trails/vendor-gpu-integration-2026-07/`
+- vNext Phases 1–4: `docs/governance/cecp/trails/sx-router-vNext-2026-08/`
+- Determinism promotion (Draft): `docs/governance/cecp/trails/gpu-determinism-2026-09/`
 
 ## Package entry
 

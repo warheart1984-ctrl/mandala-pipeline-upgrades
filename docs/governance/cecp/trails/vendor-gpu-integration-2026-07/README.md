@@ -20,7 +20,14 @@
 - [x] `08-esfr-verdict.json`
 - [x] `09-promotion-packet.md`
 - [x] `ciems-v2-gpu-integration-diagram.md`
+- [x] `ciems-lineage-tree-vendor-gpu.md`
 - [x] Specs mirrored under `docs/sx-router/specs/` and trail copies
+
+## Follow-on trails
+
+- Roadmap Phases 1–4: `../sx-router-vNext-2026-08/`
+- Determinism plan (Draft): `../gpu-determinism-2026-09/`
+- Lineage tree: `./ciems-lineage-tree-vendor-gpu.md`
 
 ## Specs (A–E)
 

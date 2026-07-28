@@ -13,6 +13,7 @@
 - `gpu.compute.nvidia.cuda`
 - `gpu.inference.amd.rocm`
 - `gpu.compute.amd.hip`
+- `gpu.integrator.deterministic` (**declared** / prototype assist; never print SoT)
 - `cpu.rt4d.print` (authoritative print SoT)
 
 ## Router View
