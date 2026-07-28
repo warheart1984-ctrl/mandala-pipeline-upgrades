@@ -71,6 +71,21 @@ Mapper allowlist membership: **enforced** by `test_mrs_map.py`.
 | `ENGINE3D_EXPAND_NODE` / `NODE_BIN` | Optional Node binary |
 | `INFINITY_STORY_SRC` / `PROMPT_SCENE_INFINITY_SRC` | Optional Infinity lane source on worker `PYTHONPATH` |
 
+## Docker `/app` layout (**partial** until Manual Deploy health)
+
+Repo-root Dockerfile (not the app-local one) flattens the adapter beside engine3d-core:
+
+| Path / ENV | Status |
+|------------|--------|
+| `COPY` → `/app/prompt-scene-bridge/` (`run_bridge.py`, `mrs_map.py`, `schemas/`) | **partial** (bundled in image contract) |
+| `PROMPT_SCENE_BRIDGE_SCRIPT=/app/prompt-scene-bridge/run_bridge.py` | **partial** (belt-and-suspenders) |
+| `ENGINE3D_EXPAND_SCRIPT=/app/engine3d-core/scripts/expand-world-document.mjs` | **partial** (sibling expand for flattened bridge) |
+| `PROMPT_SCENE_EXPAND_WORLD=0` | **declared** opt-in (default off; build may still `--expand` smoke) |
+| Dual-layout defaults (monorepo → `/app/...`) in Genblaze + `mrs_map` | **enforced** by unit tests |
+| Live Render `/health.prompt_scene.available: true` | **declared** until Manual Deploy evidence |
+
+Infinity / `story_forge` are **not** installed in the image.
+
 ## Ban (**enforced** by `test_no_story_forge_imports` for `story_forge` + `test_ban_note_app_must_not_import_narrative_lane` for `story_forge`/`storyforge`)
 
 - Banned narrative-package strings / imports must not appear under Genblaze `app/*.py`.
@@ -86,6 +101,7 @@ Mapper allowlist membership: **enforced** by `test_mrs_map.py`.
 | Engine3D world stub (`objects: []` etc.) | **partial** (default / no expand) |
 | `expand_world_request` Node OOP | **enforced** (star + mandala tests when dist present) |
 | Genblaze `/api/prompt-to-scene` + health key | **enforced** |
+| Repo-root Docker bridge bundling | **partial** / operator **Prepared**; live Render availability **declared** |
 
 ## Schemas
 
@@ -94,5 +110,6 @@ Mapper allowlist membership: **enforced** by `test_mrs_map.py`.
 
 ## CECP
 
+Docker bundling trail: `docs/governance/cecp/trails/prompt-scene-docker-2026-07/`.
 Expand gap closure trail: `docs/governance/cecp/trails/engine3d-expand-2026-07/`.
 Predecessor: `docs/governance/cecp/trails/prompt-scene-adapter-2026-07/`.

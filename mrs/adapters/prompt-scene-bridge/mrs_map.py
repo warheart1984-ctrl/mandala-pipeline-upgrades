@@ -20,7 +20,22 @@ from pathlib import Path
 from typing import Any
 
 _BRIDGE_DIR = Path(__file__).resolve().parent
-_REPO_ROOT = _BRIDGE_DIR.parents[2]
+
+
+def _guess_repo_root(bridge_dir: Path = _BRIDGE_DIR) -> Path:
+    """Monorepo root when present; otherwise bridge parent (Docker ``/app``)."""
+    try:
+        candidate = bridge_dir.parents[2]
+    except IndexError:
+        return bridge_dir.parent
+    if (candidate / "mrs" / "packages" / "engine3d-core").is_dir():
+        return candidate
+    if (candidate / ".git").exists():
+        return candidate
+    return bridge_dir.parent
+
+
+_REPO_ROOT = _guess_repo_root()
 _DEFAULT_EXPAND_SCRIPT = (
     _REPO_ROOT
     / "mrs"
@@ -29,6 +44,17 @@ _DEFAULT_EXPAND_SCRIPT = (
     / "scripts"
     / "expand-world-document.mjs"
 )
+
+
+def _sibling_expand_script_path(bridge_dir: Path | None = None) -> Path:
+    """Docker flatten: ``/app/prompt-scene-bridge`` → ``/app/engine3d-core/scripts/...``."""
+    base = bridge_dir if bridge_dir is not None else _BRIDGE_DIR
+    return (
+        base.parent
+        / "engine3d-core"
+        / "scripts"
+        / "expand-world-document.mjs"
+    )
 
 
 def _slug(value: str) -> str:
@@ -254,9 +280,15 @@ class WorldExpandError(RuntimeError):
 
 
 def default_expand_script_path() -> Path:
+    """Resolve expand-world-document.mjs across ENV, monorepo, and Docker layouts."""
     override = (os.environ.get("ENGINE3D_EXPAND_SCRIPT") or "").strip()
     if override:
         return Path(override)
+    if _DEFAULT_EXPAND_SCRIPT.is_file():
+        return _DEFAULT_EXPAND_SCRIPT
+    sibling = _sibling_expand_script_path()
+    if sibling.is_file():
+        return sibling
     return _DEFAULT_EXPAND_SCRIPT
 
 

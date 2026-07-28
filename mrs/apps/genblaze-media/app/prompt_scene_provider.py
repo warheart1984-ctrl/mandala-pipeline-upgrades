@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from app.config import REPO_ROOT, Settings
+from app.config import APP_DIR, REPO_ROOT, Settings
 from app.pipeline import GenerationQualityError
 from app.scene_spec_provider import render_scene_spec
 
@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 
 PROMPT_SCENE_PROVIDER_ID = "prompt-scene-bridge"
 PROMPT_SCENE_SETUP_HELP = (
-    "Prompt→scene bridge needs Python and mrs/adapters/prompt-scene-bridge/run_bridge.py. "
+    "Prompt→scene bridge needs Python and run_bridge.py "
+    "(monorepo mrs/adapters/prompt-scene-bridge/ or Docker /app/prompt-scene-bridge/). "
     "Set PROMPT_SCENE_BRIDGE_ENABLED=1 and optionally PROMPT_SCENE_BRIDGE_SCRIPT / "
     "INFINITY_STORY_SRC for the full Infinity narrative lane."
 )
@@ -38,14 +39,26 @@ class PromptSceneBridgeError(Exception):
 
 def prompt_scene_bridge_default_script_path(
     repo_root: Path = REPO_ROOT,
+    app_dir: Path = APP_DIR,
 ) -> Path:
-    return (
+    """Resolve run_bridge.py across monorepo and repo-root Docker layouts.
+
+    * Monorepo: ``<repo>/mrs/adapters/prompt-scene-bridge/run_bridge.py``
+    * Docker: ``<app_dir>/prompt-scene-bridge/run_bridge.py`` (``/app/...``)
+    """
+    monorepo = (
         repo_root
         / "mrs"
         / "adapters"
         / "prompt-scene-bridge"
         / "run_bridge.py"
     )
+    if monorepo.is_file():
+        return monorepo
+    docker = app_dir / "prompt-scene-bridge" / "run_bridge.py"
+    if docker.is_file():
+        return docker
+    return monorepo
 
 
 def prompt_scene_availability(settings: Settings) -> dict[str, Any]:

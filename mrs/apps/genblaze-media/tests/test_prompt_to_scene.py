@@ -19,8 +19,10 @@ from app.config import Settings, get_settings  # noqa: E402
 from app.main import app  # noqa: E402
 from app.prompt_scene_provider import (  # noqa: E402
     PROMPT_SCENE_PROVIDER_ID,
+    PROMPT_SCENE_SETUP_HELP,
     PromptSceneBridgeError,
     prompt_scene_availability,
+    prompt_scene_bridge_default_script_path,
 )
 
 
@@ -343,6 +345,23 @@ def test_settings_prompt_scene_bridge_wiring(monkeypatch):
     assert avail["enabled"] is False
     assert avail["available"] is False
     assert avail["expand_world"] is True
+
+
+def test_prompt_scene_bridge_default_script_docker_layout(tmp_path, monkeypatch):
+    """AC: when monorepo path missing, default resolves APP_DIR/prompt-scene-bridge."""
+    fake_repo = tmp_path / "not-a-monorepo"
+    fake_repo.mkdir()
+    app_dir = tmp_path / "app"
+    bridge_dir = app_dir / "prompt-scene-bridge"
+    bridge_dir.mkdir(parents=True)
+    script = bridge_dir / "run_bridge.py"
+    script.write_text("# docker stub\n", encoding="utf-8")
+    monkeypatch.setattr("app.prompt_scene_provider.APP_DIR", app_dir)
+    resolved = prompt_scene_bridge_default_script_path(
+        repo_root=fake_repo, app_dir=app_dir
+    )
+    assert resolved == script
+    assert "Docker /app/prompt-scene-bridge" in PROMPT_SCENE_SETUP_HELP
 
 
 def test_ban_note_app_must_not_import_narrative_lane():

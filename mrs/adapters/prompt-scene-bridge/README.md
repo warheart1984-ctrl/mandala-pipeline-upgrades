@@ -56,3 +56,18 @@ Then:
 - `POST /api/prompt-to-scene` with `{ "prompt": "..." }` (optional `render`, `quality`, `width`, `height`, `samples`, `max_depth`)
 
 Structured SceneSpecification mapping is **enforced**. Unexpanded world arrays stay empty (**partial**). Expand path is **enforced** when opted in and engine3d-core `dist/` exists.
+
+## Docker `/app` layout
+
+Repo-root image (not app-local Dockerfile) copies this adapter to `/app/prompt-scene-bridge/` beside `/app/engine3d-core/`.
+
+| Item | Tag |
+|------|-----|
+| Bundled `run_bridge.py` + `mrs_map.py` + `schemas/` | **partial** (image contract) |
+| `PROMPT_SCENE_BRIDGE_SCRIPT=/app/prompt-scene-bridge/run_bridge.py` | **partial** |
+| `ENGINE3D_EXPAND_SCRIPT=/app/engine3d-core/scripts/expand-world-document.mjs` | **partial** |
+| `PROMPT_SCENE_EXPAND_WORLD=0` | **declared** (opt-in; default off) |
+| Dual-layout path resolve without ENV | **enforced** (unit tests) |
+| Live Render `/health.prompt_scene.available` | **declared** until Manual Deploy |
+
+Infinity / narrative packages are **not** in the image. Operator maturity remains **Prepared**.

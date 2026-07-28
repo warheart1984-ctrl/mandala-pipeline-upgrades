@@ -19,6 +19,7 @@ if str(_BRIDGE_DIR) not in sys.path:
 
 from mrs_map import (  # noqa: E402
     WorldExpandError,
+    _sibling_expand_script_path,
     default_expand_script_path,
     expand_world_request,
     expand_world_request_if_enabled,
@@ -272,6 +273,34 @@ def test_expand_missing_script_raises(tmp_path):
     missing = tmp_path / "nope.mjs"
     with pytest.raises(WorldExpandError, match="expand script missing"):
         expand_world_request(stub, script_path=missing)
+
+
+def test_default_expand_script_env_override(tmp_path, monkeypatch):
+    """AC: ENGINE3D_EXPAND_SCRIPT wins over monorepo / sibling defaults."""
+    override = tmp_path / "custom-expand.mjs"
+    override.write_text("// override\n", encoding="utf-8")
+    monkeypatch.setenv("ENGINE3D_EXPAND_SCRIPT", str(override))
+    assert default_expand_script_path() == override
+
+
+def test_default_expand_script_sibling_docker_layout(tmp_path, monkeypatch):
+    """AC: when monorepo expand missing, resolve sibling ../engine3d-core/scripts/."""
+    import mrs_map as mm
+
+    monkeypatch.delenv("ENGINE3D_EXPAND_SCRIPT", raising=False)
+    monkeypatch.setattr(mm, "_DEFAULT_EXPAND_SCRIPT", tmp_path / "missing-monorepo.mjs")
+
+    docker_root = tmp_path / "app"
+    bridge = docker_root / "prompt-scene-bridge"
+    scripts = docker_root / "engine3d-core" / "scripts"
+    scripts.mkdir(parents=True)
+    bridge.mkdir(parents=True)
+    expand = scripts / "expand-world-document.mjs"
+    expand.write_text("// docker sibling\n", encoding="utf-8")
+
+    monkeypatch.setattr(mm, "_BRIDGE_DIR", bridge)
+    assert mm.default_expand_script_path() == expand
+    assert _sibling_expand_script_path(bridge) == expand
 
 
 def test_deterministic_seeds_same_infinity_payload():
