@@ -39,5 +39,7 @@ Genblaze (opt-in): `RENDER_REQUEST_API_ENABLED=1` → `POST /api/render-request`
 ## Docker
 
 Dockerfile COPYs boundary + prompt-scene-bridge + proton bridge; build smoke for
-RenderRequest included. **Docker Desktop engine was down** at trail close —
-image build not re-verified live; host smoke **passed**.
+RenderRequest included.
+
+**Live rebuild (2026-07-28):** **PASS** — see `07-docker-live-smoke.md`
+(`mrs-genblaze:storyforge-pipeline-v1`, `/health` 200, adapters + pipeline ok).
