@@ -220,6 +220,10 @@ class Settings:
     engine3d_still_script_path: str | None = None
     engine3d_still_timeout_seconds: float = 120.0
     worlddocument_rt4d_script_path: str | None = None
+    # --- Proton soft-splat (six-mod; default OFF) ---
+    proton_raster_enabled: bool = False
+    proton_raster_script_path: str | None = None
+    proton_raster_timeout_seconds: float = 120.0
     # --- Engine3D short cinematic sequence (soft-raster orbit) ---
     engine3d_sequence_enabled: bool = True
     engine3d_sequence_script_path: str | None = None
@@ -239,6 +243,12 @@ class Settings:
         from app.engine3d_still_provider import engine3d_still_default_script_path
 
         return self.engine3d_still_script_path or str(engine3d_still_default_script_path())
+
+    @property
+    def resolved_proton_raster_script(self) -> str:
+        from app.proton_raster_provider import proton_raster_default_script_path
+
+        return self.proton_raster_script_path or str(proton_raster_default_script_path())
 
     @property
     def resolved_worlddocument_rt4d_script(self) -> str:
@@ -528,6 +538,22 @@ def get_settings() -> Settings:
         engine3d_still_timeout = 120.0
     engine3d_still_timeout = max(15.0, min(600.0, engine3d_still_timeout))
 
+    # --- Proton soft-splat (default OFF) ---
+    proton_raster_env = (os.getenv("PROTON_RASTER_ENABLED") or "0").strip().lower()
+    proton_raster_enabled = proton_raster_env in {"1", "true", "yes", "on"}
+    proton_raster_script_override = (
+        os.getenv("PROTON_RASTER_SCRIPT")
+        or os.getenv("PROTON_RASTER_SCRIPT_PATH")
+        or ""
+    ).strip() or None
+    try:
+        proton_raster_timeout = float(
+            (os.getenv("PROTON_RASTER_TIMEOUT_SECONDS") or "120").strip() or "120"
+        )
+    except ValueError:
+        proton_raster_timeout = 120.0
+    proton_raster_timeout = max(15.0, min(600.0, proton_raster_timeout))
+
     # --- Engine3D short sequence ---
     engine3d_sequence_env = (os.getenv("ENGINE3D_SEQUENCE_ENABLED") or "1").strip().lower()
     engine3d_sequence_enabled = engine3d_sequence_env not in {"0", "false", "no", "off"}
@@ -638,6 +664,9 @@ def get_settings() -> Settings:
         engine3d_still_script_path=engine3d_still_script_override,
         engine3d_still_timeout_seconds=engine3d_still_timeout,
         worlddocument_rt4d_script_path=worlddocument_rt4d_script_override,
+        proton_raster_enabled=proton_raster_enabled,
+        proton_raster_script_path=proton_raster_script_override,
+        proton_raster_timeout_seconds=proton_raster_timeout,
         engine3d_sequence_enabled=engine3d_sequence_enabled,
         engine3d_sequence_script_path=engine3d_sequence_script_override,
         engine3d_sequence_timeout_seconds=engine3d_sequence_timeout,

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hmac
 import logging
-import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -17,9 +16,9 @@ from pydantic import BaseModel, Field, ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.chatgpt_plugin import (
+    PLUGIN_PROTECTED_PREFIXES,
     build_ai_plugin_manifest,
     build_plugin_openapi,
-    is_plugin_protected_path,
     plugin_availability,
     resolve_public_base,
 )
@@ -44,6 +43,12 @@ from app.engine3d_still_provider import (
     engine3d_still_availability,
     generate_engine3d_still,
     resolve_engine3d_cli_path,
+)
+from app.proton_raster_provider import (
+    PROTON_RASTER_KIND,
+    ProtonRasterError,
+    generate_proton_raster,
+    proton_raster_availability,
 )
 from app.face_polish_defaults import (
     resolve_face_polish_prompt,
@@ -226,7 +231,7 @@ class _ChatgptPluginAuthMiddleware(BaseHTTPMiddleware):
         if not expected:
             return await call_next(request)
         path = request.url.path
-        if not is_plugin_protected_path(path):
+        if path not in PLUGIN_PROTECTED_PREFIXES:
             return await call_next(request)
         auth = request.headers.get("authorization") or ""
         expected_header = f"Bearer {expected}"
@@ -244,9 +249,7 @@ class _ChatgptPluginAuthMiddleware(BaseHTTPMiddleware):
 
 # CORS: local operator UIs by default; widen only when GENBLAZE_CORS_ALLOW_ALL=1.
 # CHATGPT_PLUGIN_KEY enables bearer auth only — it does not auto-open CORS.
-# Warning: allow_origins=["*"] lets any website trigger spendy render/polish
-# POSTs (fal/NIM). Prefer GENBLAZE_CORS_ORIGINS=https://chatgpt.com,... when
-# possible; use "*" only for short-lived ngrok demos.
+# Prefer GENBLAZE_CORS_ORIGINS=https://chatgpt.com,... when needed.
 _cors_settings = get_settings()
 _cors_origins: list[str] | str
 _cors_origins_env = (os.getenv("GENBLAZE_CORS_ORIGINS") or "").strip()
@@ -505,6 +508,24 @@ class Engine3dStillRequest(BaseModel):
     )
 
 
+class ProtonRasterRequest(BaseModel):
+    """Proton six-mod soft-splat still (default-off provider)."""
+
+    width: int = Field(default=256, ge=8, le=1024)
+    height: int = Field(default=256, ge=8, le=1024)
+    mode: str = Field(
+        default="demo",
+        description="demo | star-demo | lattice-demo | scene-spec",
+    )
+    aov_depth: bool = Field(default=True)
+    aov_normal: bool = Field(default=True)
+    seed: str | None = Field(default=None, max_length=64)
+    scene_spec: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional SceneSpecification when mode=scene-spec",
+    )
+
+
 class Engine3dSequenceRequest(BaseModel):
     """Short Engine3D soft-raster cinematic sequence (structure AOVs only)."""
 
@@ -658,6 +679,12 @@ def health() -> dict:
             "POST /api/engine3d-still renders Engine3D triangle structure "
             "(beauty + optional depth/normal). Optional RT4D background composite "
             "and polish. Faces/skin require polish — not RT4D sphere-bridge."
+        ),
+        "proton_raster": proton_raster_availability(settings),
+        "proton_raster_note": (
+            "POST /api/proton-raster runs six-mod proton soft-splat when "
+            "PROTON_RASTER_ENABLED=1 (default off). Sibling to Engine3D "
+            "triangle soft-raster."
         ),
         "engine3d_sequence": engine3d_sequence_availability(settings),
         "engine3d_sequence_note": (
@@ -1508,6 +1535,55 @@ def api_engine3d_still(body: Engine3dStillRequest) -> dict:
             payload["polish_error"] = str(exc)
 
     return payload
+
+
+@app.post("/api/proton-raster")
+def api_proton_raster(body: ProtonRasterRequest) -> dict:
+    """Proton six-mod soft-splat still (beauty + optional AOVs).
+
+    Default-off: requires PROTON_RASTER_ENABLED=1. Sibling path to Engine3D
+    triangle soft-raster — not photoreal diffusion.
+    """
+    settings = get_settings()
+    if not settings.proton_raster_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Proton raster is disabled. Set PROTON_RASTER_ENABLED=1 "
+                "and ensure Node + render-proton-splat.mjs are available."
+            ),
+        )
+    mode = (body.mode or "demo").strip().lower()
+    if mode not in {"demo", "star-demo", "lattice-demo", "scene-spec"}:
+        raise HTTPException(
+            status_code=400,
+            detail="mode must be demo|star-demo|lattice-demo|scene-spec",
+        )
+    if mode == "scene-spec" and body.scene_spec is None:
+        raise HTTPException(
+            status_code=400,
+            detail="scene_spec required when mode=scene-spec",
+        )
+    try:
+        result = generate_proton_raster(
+            settings,
+            width=body.width,
+            height=body.height,
+            mode=mode,
+            aov_depth=body.aov_depth,
+            aov_normal=body.aov_normal,
+            seed=body.seed,
+            scene_spec=body.scene_spec,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ProtonRasterError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    entry = result.to_dict()
+    entry["modality"] = "image"
+    entry["kind"] = PROTON_RASTER_KIND
+    return entry
 
 
 @app.post("/api/engine3d-sequence")
