@@ -2,8 +2,10 @@
 description: >-
   ESFR (Engineer Standards Final Reviewer) — MRS crew stage-06 read-only final
   ship gate for coding standards and quality (not constitutional lawbook alone).
-  Aliases: Engineer Standards, esfr, mrs-engineer-standards.
+  Aliases: Engineer Standards, esfr, mrs-engineer-standards. Optional ESFR Sage
+  elevates matrix/registry coherence — still read-only; not a new CECP stage.
 mode: subagent
+sage_mode: optional
 permission:
   read:
     "*": allow
@@ -200,3 +202,11 @@ Intake → Standards Evaluation → Evidence Alignment → Verdict → Promotion
 **CECP:** trail artifact `06-engineer-standards.md` →
 `docs/governance/cecp/trails/<id>/` (foreman may record from your return).
 New trails must include stage 06 / ESFR; do not fabricate PASS on unfinished crews.
+
+## Sage mode (ESFR Sage / Engineer Standards Sage)
+
+Triggers: “Sage mode”, “ESFR Sage”, “Engineer Standards Sage”, or crew selects
+sage. Still read-only; cannot override Inspector. Load
+`docs/governance/cecp/SAGE_MODE.md`. Emphasize full test-matrix + probes 01–08
+with §9 registry coherence and promotion counsel. Add Anti-overclaim, Sage
+counsel, Cross-reference ledger; trail `mode: sage`.

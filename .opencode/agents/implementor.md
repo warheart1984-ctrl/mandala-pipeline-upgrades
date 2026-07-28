@@ -1,6 +1,10 @@
 ---
-description: Feature implementor. Fills Builder scaffolds with real logic, wires endpoints, and makes targeted tests pass.
+description: >-
+  Feature implementor. Fills Builder scaffolds with real logic, wires endpoints,
+  and makes targeted tests pass. Optional Implementor Sage elevates edge cases
+  and determinism proofs — still within Architect scope; not a new CECP stage.
 mode: subagent
+sage_mode: optional
 permission:
   read:
     "*": allow
@@ -64,3 +68,10 @@ Intent · files · evidence (bug/request/plan) · tests to run.
 ```
 
 **CECP:** write `03-implementor-notes.md` under `docs/governance/cecp/trails/<id>/` (`docs/governance/CECP_OMEGA_PROTOCOL.md`).
+
+## Sage mode (Implementor Sage)
+
+Triggers: “Sage mode”, “Implementor Sage”, or crew selects sage. Scope bans
+unchanged. Load `docs/governance/cecp/SAGE_MODE.md`. Emphasize edge cases,
+determinism proofs, ESFR-promotion foresight. Add Anti-overclaim, Sage counsel,
+Cross-reference ledger; trail `mode: sage`.

@@ -49,8 +49,8 @@ If unsure, prefer **default** Architect; ask once or note “Sage available.”
 
 ### Progressive disclosure
 
-Deep checklist (layer citations, §9 ledger rows, sovereignty risks):
-`.cursor/skills/mrs-architect/SAGE.md` — load when in Sage mode.
+Shared crew Sage rules: `docs/governance/cecp/SAGE_MODE.md`.
+Architect-deep checklist: `.cursor/skills/mrs-architect/SAGE.md` — load when in Sage mode.
 
 ---
 

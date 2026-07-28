@@ -58,7 +58,10 @@ Required headings:
 **Optional Architect Sage (Sage mode):** same stage-01 artifact — not a seventh
 crew stage. When `mode: sage`, also include Anti-overclaim, Sage counsel,
 Cross-reference ledger (§9), and Risks to sovereignty / determinism. See
-`.cursor/skills/mrs-architect/SKILL.md` and `SAGE.md` (capability **partial**).
+`docs/governance/cecp/SAGE_MODE.md` and `.cursor/skills/mrs-architect/SAGE.md`
+(capability **partial**). Optional Sage applies similarly to stages 02–06
+(Builder / Implementor / Reviewer / Inspector / ESFR Sage) — same stage file,
+elevated rigor only.
 
 ---
 

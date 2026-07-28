@@ -4,7 +4,8 @@ description: >-
   Orchestrates the local MRS six-role crew (architect, builder, implementor,
   reviewer, inspector, ESFR / engineer-standards). Use when the user asks to use
   the crew, subagents, or to design→build→implement→review→inspect→standards /
-  ESFR a feature instead of doing all roles in one pass.
+  ESFR a feature instead of doing all roles in one pass. Optional Sage mode
+  elevates rigor per role without adding pipeline stages.
 ---
 
 # MRS Crew Orchestrator
@@ -16,12 +17,15 @@ You are the **foreman**. Prefer dispatching role work over doing every role your
 | Role | OpenCode agent | Cursor skill | Writes code? |
 |------|----------------|--------------|--------------|
 | Architect | `.opencode/agents/architect.md` | `mrs-architect` | No |
-| Architect Sage | same agent/skill, **Sage mode** | `mrs-architect` + `SAGE.md` | No (design-only elevation — **not** a seventh stage) |
 | Builder | `.opencode/agents/builder.md` | `mrs-builder` | Stubs only |
 | Implementor | `.opencode/agents/implementor.md` | `mrs-implementor` | Yes |
 | Reviewer | `.opencode/agents/reviewer.md` | `mrs-reviewer` | No |
 | Inspector | `.opencode/agents/inspector.md` | `mrs-inspector` | No |
-| **ESFR** (Engineer Standards Final Reviewer) | `.opencode/agents/engineer-standards.md` | `mrs-engineer-standards` | No |
+| **ESFR** (Engineer Standards) | `.opencode/agents/engineer-standards.md` | `mrs-engineer-standards` | No |
+
+Each role supports optional **Sage mode** (same agent/skill +
+`docs/governance/cecp/SAGE_MODE.md`) — elevated rigor of **that** role only.
+Sage is **not** a seventh stage. See `.cursor/skills/mrs-crew/SAGE.md`.
 
 ESFR package: `docs/governance/esfr/`. ESFR **is** stage-06 Engineer Standards —
 not a parallel seventh role.
@@ -30,16 +34,15 @@ not a parallel seventh role.
 
 Protocol: `docs/governance/CECP_OMEGA_PROTOCOL.md`  
 Template: `docs/governance/cecp/EVIDENCE_TRAIL_TEMPLATE.md`  
-ESFR: `docs/governance/esfr/protocol.esfr.md`
+ESFR: `docs/governance/esfr/protocol.esfr.md`  
+Sage (optional per stage): `docs/governance/cecp/SAGE_MODE.md`
 
-1. **Architect** — plan + file manifest + acceptance tests → trail `01-architect-adr.md`  
-   (optional **Architect Sage** / Sage mode — same stage 01; see below)  
-2. **Builder** — scaffolds from manifest → `02-builder-scaffold-manifest.md`  
-3. **Implementor** — real logic + tests green → `03-implementor-notes.md`  
-4. **Reviewer** — constitutional / defect review (read-only product code) → `04-reviewer-conformance.md`  
-5. **Inspector** — run probes; PASS / PASS_WITH_GAPS / FAIL → `05-inspector-acceptance.md`  
-6. **ESFR** — final ship gate; run `test-matrix.esfr.md` + `probes.esfr.md`;
-   PASS / PASS_WITH_GAPS / HOLD / REJECT → `06-engineer-standards.md`;
+1. **Architect** → `01-architect-adr.md` (optional Architect Sage)
+2. **Builder** → `02-builder-scaffold-manifest.md` (optional Builder Sage)
+3. **Implementor** → `03-implementor-notes.md` (optional Implementor Sage)
+4. **Reviewer** → `04-reviewer-conformance.md` (optional Reviewer Sage)
+5. **Inspector** → `05-inspector-acceptance.md` (optional Inspector Sage)
+6. **ESFR** → `06-engineer-standards.md` (optional ESFR Sage);
    PromotionEligibility: PROMOTE / PROMOTE_WITH_GAPS / HOLD / REJECT  
 
 **Permanent trail (required):** before finishing the crew run, ensure
@@ -53,19 +56,32 @@ Reference registry: `docs/governance/CECP_OMEGA_PROTOCOL.md` §9
 (#1 Prompt→Scene, #2 Proton Raster; follow-ons listed there).
 Layer stack: `docs/governance/CONSTITUTIONAL_LAYER_STACK.md`.
 
-## Architect vs Architect Sage
+## Sage mode (any role)
 
-Sage is a **mode of Architect** (stage 01), not a new crew stage and not ESFR.
+Sage elevates depth of the **current** role. It does **not** reorder the
+pipeline or let a role steal another role’s job. Hard bans unchanged.
+Capability: **partial**.
 
-| Invoke | When |
-|--------|------|
-| **Default Architect** | Single-domain or routine plans; clear ADR scope; user did not ask for Sage |
-| **Architect Sage** | User says “Sage mode” / “Architect Sage”; **or** hard cross-domain design (Prompt→Scene × Engine3D × RT4D/Proton × Genblaze); **or** promotion/ESFR implications need layer + §9 coherence up front |
+| Invoke | Phrases |
+|--------|---------|
+| Architect Sage | “Sage mode”, “Architect Sage” |
+| Builder Sage | “Builder Sage”, “sage builder” |
+| Implementor Sage | “Implementor Sage” |
+| Reviewer Sage | “Reviewer Sage” |
+| Inspector Sage | “Inspector Sage” |
+| ESFR Sage | “ESFR Sage”, “Engineer Standards Sage” |
 
-When invoking Sage: load `mrs-architect/SKILL.md` **and** `mrs-architect/SAGE.md`;
-require extra sections (`Anti-overclaim`, `Sage counsel`, `Cross-reference ledger`,
-`Risks to sovereignty / determinism`); mark trail `01` metadata `mode: sage`.
-Capability is **partial** / skill-declared — not CHEA/CCR/CDGF enforcement.
+Foreman may also select Sage for a stage on hard/cross-domain work.
+
+**When Sage:** load `docs/governance/cecp/SAGE_MODE.md` (+ role `SAGE.md` if any);
+require Anti-overclaim, Sage counsel, Cross-reference ledger; mark trail
+`mode: sage`.
+
+| Prefer Sage | Prefer default |
+|-------------|----------------|
+| User asked for Sage / \<Role\> Sage | Routine single-domain stage |
+| Cross-domain or promotion-critical | Narrow acceptance already clear |
+| Prior stage left coherence gaps | Time-boxed stub fill |
 
 ## How to dispatch (Cursor)
 
@@ -75,9 +91,7 @@ For each role, launch a `Task` (`generalPurpose` or `explore` for read-only):
 2. Put the full role instructions in the Task prompt under **Role law**
 3. Attach the prior role’s artifact (Architect plan → Builder, etc.)
 4. Require the role’s **Output** format in the return
-
-For **Architect Sage**: same as Architect, plus instruct Sage mode triggers and
-extra output sections from `SAGE.md`.
+5. If Sage: name “\<Role\> Sage”, attach `SAGE_MODE.md`, require Sage sections
 
 For **ESFR** specifically: attach Inspector verdict + module paths + trail id;
 require `ESFRVerdict`, full test-matrix table, probes 01–08 citations, and

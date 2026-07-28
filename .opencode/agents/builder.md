@@ -1,6 +1,10 @@
 ---
-description: Scaffolding builder. Creates package layout, stubs, wiring, and empty tests from an Architect plan — no deep business logic.
+description: >-
+  Scaffolding builder. Creates package layout, stubs, wiring, and empty tests
+  from an Architect plan — no deep business logic. Optional Builder Sage elevates
+  scaffold coherence; still stubs only — not a new CECP stage.
 mode: subagent
+sage_mode: optional
 permission:
   read:
     "*": allow
@@ -60,3 +64,10 @@ Declare: intent, files, why (cite Architect plan or user request), tests that wi
 - Stubs labeled accurately
 - Short handoff note for Implementor (what to fill next)
 - CECP trail `02-builder-scaffold-manifest.md` under `docs/governance/cecp/trails/<id>/`
+
+## Sage mode (Builder Sage)
+
+Triggers: “Sage mode”, “Builder Sage”, or crew selects sage. Still stubs only.
+Load `docs/governance/cecp/SAGE_MODE.md`. Emphasize cross-package scaffold
+coherence, dependency foresight, test-placeholder quality. Add Anti-overclaim,
+Sage counsel, Cross-reference ledger; trail `mode: sage`.

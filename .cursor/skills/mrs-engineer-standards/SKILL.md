@@ -7,7 +7,8 @@ description: >-
   license hygiene; CHEA/CCR/CDGF checks declared-only until those layers exist.
   Requires test-matrix.esfr.md + probes.esfr.md. Use when the user asks for
   ESFR, engineer standards, final standards review, ship gate, or the crew
-  Engineer Standards role after Inspector.
+  Engineer Standards role after Inspector. Optional ESFR Sage elevates matrix/
+  registry coherence — still read-only; not a seventh stage.
 ---
 
 # ESFR Skill — Engineering Standards Final Review
@@ -92,3 +93,14 @@ Deprecated aliases on older trails: `PASS_WITH_NOTES` → `PASS_WITH_GAPS` /
 `docs/governance/CECP_OMEGA_PROTOCOL.md`). New trails require ESFR stage 06;
 do not backfill historical 01–05 trails as if ESFR had run unless an honest
 evidence-aligned report is added.
+
+## Sage mode (ESFR Sage / Engineer Standards Sage)
+
+Optional elevation — **not** a new stage. Triggers: “Sage mode”, “ESFR Sage”,
+“Engineer Standards Sage”, or foreman selects sage. Still read-only; cannot
+override Inspector evidence.
+
+When Sage: load `docs/governance/cecp/SAGE_MODE.md`. Emphasize full test-matrix
++ probes 01–08 with ecosystem coherence vs CECP §9 registry and explicit
+promotion counsel. Add Anti-overclaim, Sage counsel, Cross-reference ledger;
+trail `mode: sage`.

@@ -3,8 +3,9 @@
 > **Status:** **partial** — skill/agent capability for elevated Architect mode.
 > Not a CECP stage. Not CHEA/CCR/CDGF enforcement.
 >
-> Load this file when operating as **Architect Sage**. Keep
-> `.cursor/skills/mrs-architect/SKILL.md` lean; this is deep counsel.
+> **Shared rules (all roles):** `docs/governance/cecp/SAGE_MODE.md` — load first.
+> This file is Architect-specific depth. Keep
+> `.cursor/skills/mrs-architect/SKILL.md` lean.
 
 ---
 

@@ -1,6 +1,11 @@
 ---
-description: Evidence inspector. Runs tests/CI probes and verifies documentation claims against implementation — does not redesign features.
+description: >-
+  Evidence inspector. Runs tests/CI probes and verifies documentation claims
+  against implementation — does not redesign features. Optional Inspector Sage
+  deepens probe matrix and replay stress — still no feature writes; not a new
+  CECP stage.
 mode: subagent
+sage_mode: optional
 permission:
   read:
     "*": allow
@@ -62,3 +67,10 @@ PASS | PASS_WITH_GAPS | FAIL
 ```
 
 **CECP:** trail artifact `05-inspector-acceptance.md` → `docs/governance/cecp/trails/<id>/` (foreman may record from your return; include Acceptance with gaps). Next stage for new trails: Engineer Standards (`06-engineer-standards.md`) — final ship gate.
+
+## Sage mode (Inspector Sage)
+
+Triggers: “Sage mode”, “Inspector Sage”, or crew selects sage. Still no
+redesign/implement. Load `docs/governance/cecp/SAGE_MODE.md`. Emphasize richer
+probe matrix, claim↔evidence ledger, replay stress. Add Anti-overclaim, Sage
+counsel, Cross-reference ledger; trail `mode: sage`.
