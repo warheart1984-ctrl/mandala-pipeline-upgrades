@@ -42,7 +42,7 @@ reference implementation** with replayable stage artifacts.
 
 | Stage | Role | Writes product code? | Required trail artifact(s) |
 |-------|------|----------------------|----------------------------|
-| 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface + boundary. Optional **Sage mode** (any stage): elevated rigor of **that** role only — **not** new stages. Shared: `docs/governance/cecp/SAGE_MODE.md` (**partial**). CHEA/CCR/CDGF remain **declared**. |
+| 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface + boundary. Optional **crew modes** (Sage, Trickster, Warrior, Monk, Researcher, Journalist, Poet, Physicist, Theorist, Bard): lenses on **any** stage role — **not** new stages. Index: `docs/governance/cecp/CREW_MODES.md` (**partial**). Sage detail: `SAGE_MODE.md`. Precedence: bans > Sage > lens. CHEA/CCR/CDGF remain **declared**. |
 | 2 | **Builder** | Stubs / scaffolds only | `02-builder-scaffold-manifest.md` — scaffold manifest, dependency graph, build-artifacts inventory. Optional Builder Sage. |
 | 3 | **Implementor** | Yes | `03-implementor-notes.md` — production notes + test inventory. Optional Implementor Sage. |
 | 4 | **Reviewer** | No | `04-reviewer-conformance.md` — constitutional conformance (P1–P5). Optional Reviewer Sage. |
@@ -144,13 +144,13 @@ CECP Ω∞ does **not**:
 
 | CECP stage | Cursor skill | OpenCode agent | Protocol duty |
 |------------|--------------|----------------|---------------|
-| Architect | `mrs-architect` (+ `SAGE.md`) | `architect.md` (`sage_mode: optional`) | `01-architect-adr.md`. Optional Sage = same stage. Shared: `docs/governance/cecp/SAGE_MODE.md` (**partial**). |
-| Builder | `mrs-builder` | `builder.md` (`sage_mode: optional`) | `02-builder-scaffold-manifest.md` (+ optional Builder Sage) |
-| Implementor | `mrs-implementor` | `implementor.md` (`sage_mode: optional`) | `03-implementor-notes.md` (+ optional Implementor Sage) |
-| Reviewer | `mrs-reviewer` | `reviewer.md` (`sage_mode: optional`) | `04-reviewer-conformance.md` (+ optional Reviewer Sage) |
-| Inspector | `mrs-inspector` | `inspector.md` (`sage_mode: optional`) | `05-inspector-acceptance.md` (+ optional Inspector Sage) |
-| **ESFR** (Engineer Standards) | `mrs-engineer-standards` | `engineer-standards.md` (`sage_mode: optional`) | `06-engineer-standards.md` (+ optional ESFR Sage); final ship gate |
-| Foreman | `mrs-crew` (+ `SAGE.md`) | — | Create trail dir; require stage files; select default vs Sage per stage |
+| Architect | `mrs-architect` (+ `SAGE.md`) | `architect.md` (`sage_mode` / `modes: optional`) | `01-architect-adr.md`. Optional mode lenses: `CREW_MODES.md` (**partial**). |
+| Builder | `mrs-builder` | `builder.md` (`sage_mode` / `modes: optional`) | `02-builder-scaffold-manifest.md` (+ optional modes) |
+| Implementor | `mrs-implementor` | `implementor.md` (`sage_mode` / `modes: optional`) | `03-implementor-notes.md` (+ optional modes) |
+| Reviewer | `mrs-reviewer` | `reviewer.md` (`sage_mode` / `modes: optional`) | `04-reviewer-conformance.md` (+ optional modes) |
+| Inspector | `mrs-inspector` | `inspector.md` (`sage_mode` / `modes: optional`) | `05-inspector-acceptance.md` (+ optional modes) |
+| **ESFR** (Engineer Standards) | `mrs-engineer-standards` | `engineer-standards.md` (`sage_mode` / `modes: optional`) | `06-engineer-standards.md` (+ optional modes); final ship gate |
+| Foreman | `mrs-crew` (+ modes hub) | — | Trail dir; stage files; select default vs Sage/mode lens per stage |
 
 **Foreman rule:** after each role returns, ensure the corresponding trail file exists under
 `docs/governance/cecp/trails/<id>/` before starting the next stage. Full protocol text lives

@@ -5,6 +5,7 @@ description: >-
   for hard cross-domain design; still design-only — not a seventh crew stage.
 mode: subagent
 sage_mode: optional
+modes: optional
 permission:
   read:
     "*": allow
@@ -122,3 +123,7 @@ Use only: **enforced** | **partial** | **declared** | **skeleton** — never ove
 
 **CECP:** crew trail artifact `01-architect-adr.md` → `docs/governance/cecp/trails/<id>/`
 (see `docs/governance/CECP_OMEGA_PROTOCOL.md`). Stage 01 only — Sage does not add stage 07.
+
+**Crew modes (optional):** `docs/governance/cecp/CREW_MODES.md` — Sage, Trickster,
+Warrior, Monk, Researcher, Journalist, Poet, Physicist, Theorist, Bard. Precedence:
+bans > Sage > lens.

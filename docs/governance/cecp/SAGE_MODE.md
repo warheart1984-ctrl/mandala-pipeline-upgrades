@@ -1,13 +1,17 @@
 # CECP Sage Mode (all crew roles)
 
 > **Status:** **partial** — optional elevated rigor for any CECP stage role.
-> Sage is a **mode**, not a new pipeline stage and not a seventh crew seat.
+> Sage is a **mode** in the crew mode suite — not a new pipeline stage and not a
+> seventh crew seat. Full suite index: `docs/governance/cecp/CREW_MODES.md`.
 > CHEA / CCR / CDGF remain **declared** until in-repo artifacts exist
 > (`docs/governance/CONSTITUTIONAL_LAYER_STACK.md`).
 >
-> Progressive disclosure: this file = common rules + per-role emphasis.
+> Progressive disclosure: this file = Sage common rules + per-role emphasis.
 > Thin pointers live in each `mrs-*/SKILL.md` and `.opencode/agents/*.md`.
 > Crew foreman: `.cursor/skills/mrs-crew/SKILL.md` + `.cursor/skills/mrs-crew/SAGE.md`.
+>
+> **Precedence:** base role bans > Sage rigor > other mode lenses
+> (Trickster, Warrior, … — see `CREW_MODES.md`).
 
 ---
 

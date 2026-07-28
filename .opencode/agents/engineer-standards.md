@@ -6,6 +6,7 @@ description: >-
   elevates matrix/registry coherence — still read-only; not a new CECP stage.
 mode: subagent
 sage_mode: optional
+modes: optional
 permission:
   read:
     "*": allow
@@ -210,3 +211,4 @@ sage. Still read-only; cannot override Inspector. Load
 `docs/governance/cecp/SAGE_MODE.md`. Emphasize full test-matrix + probes 01–08
 with §9 registry coherence and promotion counsel. Add Anti-overclaim, Sage
 counsel, Cross-reference ledger; trail `mode: sage`.
+**Crew modes:** `docs/governance/cecp/CREW_MODES.md` (bans > Sage > lens).

@@ -5,6 +5,7 @@ description: >-
   scaffold coherence; still stubs only — not a new CECP stage.
 mode: subagent
 sage_mode: optional
+modes: optional
 permission:
   read:
     "*": allow
@@ -71,3 +72,4 @@ Triggers: “Sage mode”, “Builder Sage”, or crew selects sage. Still stubs
 Load `docs/governance/cecp/SAGE_MODE.md`. Emphasize cross-package scaffold
 coherence, dependency foresight, test-placeholder quality. Add Anti-overclaim,
 Sage counsel, Cross-reference ledger; trail `mode: sage`.
+**Crew modes:** `docs/governance/cecp/CREW_MODES.md` (bans > Sage > lens).

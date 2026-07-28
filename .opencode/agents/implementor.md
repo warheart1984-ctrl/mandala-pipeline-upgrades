@@ -5,6 +5,7 @@ description: >-
   and determinism proofs — still within Architect scope; not a new CECP stage.
 mode: subagent
 sage_mode: optional
+modes: optional
 permission:
   read:
     "*": allow
@@ -75,3 +76,4 @@ Triggers: “Sage mode”, “Implementor Sage”, or crew selects sage. Scope b
 unchanged. Load `docs/governance/cecp/SAGE_MODE.md`. Emphasize edge cases,
 determinism proofs, ESFR-promotion foresight. Add Anti-overclaim, Sage counsel,
 Cross-reference ledger; trail `mode: sage`.
+**Crew modes:** `docs/governance/cecp/CREW_MODES.md` (bans > Sage > lens).

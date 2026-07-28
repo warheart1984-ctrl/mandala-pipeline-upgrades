@@ -26,3 +26,5 @@ or foreman selects sage. Hard bans unchanged (protected paths; P3 scope).
 When Sage: load `docs/governance/cecp/SAGE_MODE.md`. Emphasize edge cases,
 determinism proofs, minimal-diff with ESFR promotion foresight. Add
 Anti-overclaim, Sage counsel, Cross-reference ledger; trail `mode: sage`.
+
+**Crew modes (optional):** `docs/governance/cecp/CREW_MODES.md` — bans > Sage > lens.

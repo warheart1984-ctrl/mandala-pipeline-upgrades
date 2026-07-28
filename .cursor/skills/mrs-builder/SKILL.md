@@ -25,3 +25,6 @@ or foreman selects sage. Still **stubs only** (no deep logic).
 When Sage: load `docs/governance/cecp/SAGE_MODE.md`. Emphasize package-crossing
 scaffold coherence, dependency-graph foresight, and test-placeholder quality.
 Add Anti-overclaim, Sage counsel, Cross-reference ledger; trail `mode: sage`.
+
+**Crew modes (optional):** any lens from `docs/governance/cecp/CREW_MODES.md`
+(Trickster, Warrior, Monk, …) may apply — bans unchanged; precedence bans > Sage > lens.

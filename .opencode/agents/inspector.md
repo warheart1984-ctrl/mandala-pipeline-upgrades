@@ -6,6 +6,7 @@ description: >-
   CECP stage.
 mode: subagent
 sage_mode: optional
+modes: optional
 permission:
   read:
     "*": allow
@@ -74,3 +75,4 @@ Triggers: “Sage mode”, “Inspector Sage”, or crew selects sage. Still no
 redesign/implement. Load `docs/governance/cecp/SAGE_MODE.md`. Emphasize richer
 probe matrix, claim↔evidence ledger, replay stress. Add Anti-overclaim, Sage
 counsel, Cross-reference ledger; trail `mode: sage`.
+**Crew modes:** `docs/governance/cecp/CREW_MODES.md` (bans > Sage > lens).

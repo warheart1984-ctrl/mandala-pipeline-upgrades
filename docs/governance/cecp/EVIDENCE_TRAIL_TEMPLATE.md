@@ -59,9 +59,12 @@ Required headings:
 crew stage. When `mode: sage`, also include Anti-overclaim, Sage counsel,
 Cross-reference ledger (§9), and Risks to sovereignty / determinism. See
 `docs/governance/cecp/SAGE_MODE.md` and `.cursor/skills/mrs-architect/SAGE.md`
-(capability **partial**). Optional Sage applies similarly to stages 02–06
-(Builder / Implementor / Reviewer / Inspector / ESFR Sage) — same stage file,
-elevated rigor only.
+(capability **partial**). Optional Sage applies similarly to stages 02–06.
+
+**Optional crew mode suite:** lenses (Trickster, Warrior, Monk, Researcher,
+Journalist, Poet, Physicist, Theorist, Bard, + Sage) may apply to any stage
+role without adding stages — `docs/governance/cecp/CREW_MODES.md` (**partial**).
+Precedence: base role bans > Sage > mode lens.
 
 ---
 

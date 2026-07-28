@@ -27,3 +27,5 @@ or foreman selects sage. Still no redesign/implement.
 When Sage: load `docs/governance/cecp/SAGE_MODE.md`. Emphasize richer probe
 matrix, claim↔evidence ledger, replay stress. Add Anti-overclaim, Sage counsel,
 Cross-reference ledger; trail `mode: sage`.
+
+**Crew modes (optional):** `docs/governance/cecp/CREW_MODES.md` — bans > Sage > lens.

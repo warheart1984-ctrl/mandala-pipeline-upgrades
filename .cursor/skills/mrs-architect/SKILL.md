@@ -111,6 +111,10 @@ paths, invariants, ESFR promotion implications). Add:
 
 Trail `01-architect-adr.md` SHOULD note `mode: sage` in metadata when Sage ran.
 
+**Crew modes (optional):** full suite `docs/governance/cecp/CREW_MODES.md`
+(Sage, Trickster, Warrior, Monk, Researcher, Journalist, Poet, Physicist,
+Theorist, Bard). Precedence: bans > Sage > lens. Not new stages.
+
 ## Status tags
 
 Use only: **enforced** | **partial** | **declared** | **skeleton** — never overclaim.

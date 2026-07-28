@@ -1,25 +1,28 @@
-# Crew Sage Mode — foreman quick reference
+# Crew modes — foreman hub
 
-> **Status:** **partial**. Full common rules + per-role emphasis:
-> `docs/governance/cecp/SAGE_MODE.md`.
+> **Status:** **partial**.  
+> **Suite index:** `docs/governance/cecp/CREW_MODES.md`  
+> **Sage detail:** `docs/governance/cecp/SAGE_MODE.md`
 
-## When to select Sage
+## Modes (lenses, not stages)
 
-| Select Sage | Prefer default |
-|-------------|----------------|
-| User asked “Sage mode” / “\<Role\> Sage” | Routine single-domain stage |
-| Cross-domain or promotion-critical stage | Clear narrow acceptance already |
-| Prior stage left hard coherence gaps | Time-boxed stub fill |
+Sage · Trickster · Warrior · Monk · Researcher · Journalist · Poet ·
+Physicist · Theorist · Bard
 
-## Dispatch checklist
+## When to select
 
-1. Name the role **and** “Sage” in the Task prompt
-2. Load `docs/governance/cecp/SAGE_MODE.md` (or this file + that doc)
-3. Load role `SKILL.md` (+ role `SAGE.md` if present)
-4. Require: Anti-overclaim, Sage counsel, Cross-reference ledger
-5. Remind hard bans unchanged; `mode: sage` on trail artifact
+| Select | Prefer default |
+|--------|----------------|
+| User names a mode / “\<Mode\> \<Role\>” | Routine stage, no lens asked |
+| Cross-domain, math, demo, or adversarial need | Narrow clear acceptance |
+| Compose Sage + one lens | More than one primary lens at once |
 
-## Sage aliases
+## Dispatch
 
-Architect Sage · Builder Sage · Implementor Sage · Reviewer Sage ·
-Inspector Sage · ESFR Sage / Engineer Standards Sage
+1. Keep role order Architect → … → ESFR  
+2. Name role **and** mode in Task prompt  
+3. Load `CREW_MODES.md` (+ `SAGE_MODE.md` if Sage)  
+4. Remind: **bans > Sage > lens**  
+5. Record `mode: sage` / `lens: <name>` on trail artifact  
+
+Do not invent new agents or stages.

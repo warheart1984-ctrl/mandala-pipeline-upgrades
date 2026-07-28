@@ -104,3 +104,5 @@ When Sage: load `docs/governance/cecp/SAGE_MODE.md`. Emphasize full test-matrix
 + probes 01–08 with ecosystem coherence vs CECP §9 registry and explicit
 promotion counsel. Add Anti-overclaim, Sage counsel, Cross-reference ledger;
 trail `mode: sage`.
+
+**Crew modes (optional):** `docs/governance/cecp/CREW_MODES.md` — bans > Sage > lens.

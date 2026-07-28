@@ -5,6 +5,7 @@ description: >-
   audit — still read-only; not a new CECP stage.
 mode: subagent
 sage_mode: optional
+modes: optional
 permission:
   read:
     "*": allow
@@ -102,3 +103,4 @@ edits; do not issue ESFR PromotionEligibility. Load
 `docs/governance/cecp/SAGE_MODE.md`. Emphasize deeper constitutional + §9
 cross-ref. Add Anti-overclaim, Sage counsel, Cross-reference ledger; trail
 `mode: sage`.
+**Crew modes:** `docs/governance/cecp/CREW_MODES.md` (bans > Sage > lens).
