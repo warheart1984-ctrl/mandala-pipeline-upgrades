@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ReplayService } from "../ReplayService.js";
-import { createFrameProvenance } from "../ProvenanceRecorder.js";
+import { createFrameProvenance, hashFrameProvenance } from "../ProvenanceRecorder.js";
 
 describe("ReplayService", () => {
   it("replay() calls applyFrame on target for each frame", () => {
@@ -124,5 +124,51 @@ describe("ReplayService", () => {
     };
     ReplayService.replay(frames, target);
     assert.equal(count, 100);
+  });
+
+  it("createLineageReceipt() includes frame hashes and world/timeline ids", () => {
+    const frames = [
+      createFrameProvenance({
+        intentId: "i1",
+        timelineId: "t1",
+        worldId: "w1",
+        timeSeconds: 0,
+        parameters: { speed: 1 },
+      }),
+      createFrameProvenance({
+        intentId: "i2",
+        timelineId: "t1",
+        worldId: "w1",
+        timeSeconds: 1,
+        parameters: { speed: 2 },
+      }),
+    ];
+    const receipt = ReplayService.createLineageReceipt(frames, {
+      targetId: "target-a",
+      evidenceRefs: ["ev-1"],
+    });
+    assert.equal(receipt.kind, "replay-lineage-receipt");
+    assert.equal(receipt.frameCount, 2);
+    assert.equal(receipt.frameHashes.length, 2);
+    assert.equal(receipt.frameHashes[0], frames[0].provenanceHash);
+    assert.equal(receipt.frameHashes[0], hashFrameProvenance(frames[0]));
+    assert.deepEqual(receipt.worldIds, ["w1"]);
+    assert.deepEqual(receipt.timelineIds, ["t1"]);
+    assert.equal(receipt.targetId, "target-a");
+    assert.deepEqual(receipt.evidenceRefs, ["ev-1"]);
+  });
+
+  it("replayWithReceipt() applies frames and returns receipt", () => {
+    const frames = [
+      createFrameProvenance({ intentId: "i1", worldId: "w1", timelineId: "t1" }),
+    ];
+    let applied = 0;
+    const receipt = ReplayService.replayWithReceipt(
+      frames,
+      { applyFrame() { applied++; } },
+      { targetId: "t" },
+    );
+    assert.equal(applied, 1);
+    assert.equal(receipt.frameCount, 1);
   });
 });

@@ -195,3 +195,28 @@ def test_generate_video_rejects_byok_header(monkeypatch):
     )
     assert r.status_code == 400
     assert "stills" in str(r.json().get("detail", "")).lower()
+
+
+def test_polish_rejects_byok_header(monkeypatch):
+    monkeypatch.setenv("GENBLAZE_DRY_RUN", "1")
+    monkeypatch.setenv("GENBLAZE_POLISH_ENABLED", "1")
+    monkeypatch.delenv("RENDER", raising=False)
+    from app.main import app
+
+    client = TestClient(app)
+    r = client.post(
+        "/api/polish-still",
+        json={"run_id": "00000000-0000-4000-8000-000000000001", "prompt": "polish"},
+        headers={"X-NVIDIA-API-Key": "session-key-xyz"},
+    )
+    assert r.status_code == 400
+    assert "stills" in str(r.json().get("detail", "")).lower()
+
+
+def test_soft_warn_model_id_catalog():
+    from app.byok import soft_warn_model_id
+
+    assert soft_warn_model_id("black-forest-labs/flux.1-schnell") is None
+    warn = soft_warn_model_id("vendor/unknown-model-xyz")
+    assert warn is not None
+    assert warn["code"] == "byok_model_not_in_catalog"

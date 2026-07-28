@@ -5,6 +5,11 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ConstitutionalKnowledgeLayer, resolveDecision } from "../ConstitutionalKnowledgeLayer.js";
 import { GovernanceKernel } from "../GovernanceKernel.js";
+import {
+  ProvenanceRecorder,
+  createFrameProvenance,
+} from "../../runtime/ProvenanceRecorder.js";
+import { ReplayService } from "../../runtime/ReplayService.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const defaultPolicies = JSON.parse(readFileSync(join(root, "engine/governance/policies/default.policies.json"), "utf-8"));
@@ -18,8 +23,8 @@ function makeIntent(overrides = {}) {
 }
 
 describe("Conformance: provenance.recorder-exists", () => {
-  it("in-memory recorder has record/getFrames/clear", () => {
-    const recorder = { frames: [], record(f) { this.frames.push(f); }, getFrames() { return this.frames; }, clear() { this.frames = []; } };
+  it("ProvenanceRecorder has record/getFrames/clear", () => {
+    const recorder = new ProvenanceRecorder();
     assert.equal(typeof recorder.record, "function");
     assert.equal(typeof recorder.getFrames, "function");
     assert.equal(typeof recorder.clear, "function");
@@ -28,7 +33,13 @@ describe("Conformance: provenance.recorder-exists", () => {
 
 describe("Conformance: provenance.frame-fields", () => {
   it("frame has all 5 required fields", () => {
-    const frame = { intentId: "i1", timelineId: "t1", worldId: "w1", timeSeconds: 0, parameters: {} };
+    const frame = createFrameProvenance({
+      intentId: "i1",
+      timelineId: "t1",
+      worldId: "w1",
+      timeSeconds: 0,
+      parameters: {},
+    });
     for (const field of ["intentId", "timelineId", "worldId", "timeSeconds", "parameters"]) {
       assert.ok(field in frame, `missing ${field}`);
     }
@@ -37,24 +48,36 @@ describe("Conformance: provenance.frame-fields", () => {
 
 describe("Conformance: provenance.frame-recorded-during-play", () => {
   it("frame is recorded", () => {
-    const recorder = { frames: [], record(f) { this.frames.push(f); }, getFrames() { return this.frames; }, clear() { this.frames = []; } };
-    recorder.record({ intentId: "i1", timelineId: "t1", worldId: "w1", timeSeconds: 0, parameters: {} });
+    const recorder = new ProvenanceRecorder();
+    recorder.record(createFrameProvenance({
+      intentId: "i1",
+      timelineId: "t1",
+      worldId: "w1",
+      timeSeconds: 0,
+      parameters: {},
+    }));
     assert.ok(recorder.getFrames().length > 0);
   });
 });
 
 describe("Conformance: replay.service-exists", () => {
-  it("replay service has static replay method", () => {
-    const replay = { static: true };
-    assert.ok(typeof replay !== "function" || typeof replay.static === "boolean");
+  it("ReplayService has static replay method", () => {
+    assert.equal(typeof ReplayService.replay, "function");
   });
 });
 
 describe("Conformance: replay.deterministic-params", () => {
-  it("applyFrame restores params", () => {
-    const target = { params: {} };
-    const frame = { parameters: { theta: 1.5, speed: 2 } };
-    target.params = { ...frame.parameters };
+  it("applyFrame restores params via ReplayService", () => {
+    const target = {
+      params: {},
+      applyFrame(frame) {
+        this.params = { ...frame.parameters };
+      },
+    };
+    const frame = createFrameProvenance({
+      parameters: { theta: 1.5, speed: 2 },
+    });
+    ReplayService.replay([frame], target);
     assert.equal(target.params.theta, 1.5);
     assert.equal(target.params.speed, 2);
   });

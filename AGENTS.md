@@ -37,31 +37,34 @@ The governance framework is defined across:
 
 ## I. CORE PRINCIPLES (MANDATORY)
 
-These are the **enforced** principles from the Constitutional Charter (`charter.js`). Every agent action must satisfy all of them.
+Machine SoT (`engine/constitution/charter.js`) tags runtime gate status per principle.
+**Agent / operator norms** still bind all five below; do not treat “mandatory for agents”
+as identical to “runtime-enforced.”
 
-| # | Principle | Rule |
-|---|-----------|------|
-| **P1** | **No execution without intent** | Every operation you perform must have a clear, declared purpose. You must not make changes "just in case" or "for completeness." State your intent before acting. |
-| **P2** | **No state change without evidence** | Every file modification must be backed by a verifiable reason. Cite the specific issue, bug, test failure, or user request that necessitates the change. |
-| **P3** | **No authority without contract** | You may only modify files within the scope you have been given. Do not expand scope without explicit authorization. |
-| **P4** | **Replayable reality** | Every change you make must be deterministic and reproducible. Do not introduce randomness, time-dependent behavior, or non-deterministic state. |
-| **P5** | **Sovereign independence** | Prefer platform-agnostic solutions. Do not introduce vendor lock-in, proprietary dependencies, or cloud-specific code without explicit approval. |
+| # | Principle | charter.js status | Rule |
+|---|-----------|-------------------|------|
+| **P1** | **No execution without intent** | **enforced** | Every operation you perform must have a clear, declared purpose. You must not make changes "just in case" or "for completeness." State your intent before acting. |
+| **P2** | **No state change without evidence** | **enforced** | Every file modification must be backed by a verifiable reason. Cite the specific issue, bug, test failure, or user request that necessitates the change. |
+| **P3** | **No authority without contract** | **enforced** | You may only modify files within the scope you have been given. Do not expand scope without explicit authorization. |
+| **P4** | **Replayable reality** | **partial** | Every change you make must be deterministic and reproducible. Do not introduce randomness, time-dependent behavior, or non-deterministic state. |
+| **P5** | **Sovereign independence** | **declared** | Prefer platform-agnostic solutions. Do not introduce vendor lock-in, proprietary dependencies, or cloud-specific code without explicit approval. |
 
 ---
 
 ## II. POLICIES (ENFORCED)
 
-These are the 7 runtime policies from `default.policies.json`. They are **critical** severity and must not be violated.
+These are the 7 runtime policies from `default.policies.json`. Severities are **mixed**
+(not all critical). Critical/high policies block or attach provenance; medium may modify params.
 
-| Policy ID | Scope | Rule | Violation |
-|-----------|-------|------|-----------|
-| `policy-no-execution-without-intent` | runtime | `deny_if_false` — intent != null | **BLOCKED** |
-| `policy-no-state-change-without-evidence` | state | `deny_if_false` — require evidence for mutation | **BLOCKED** |
-| `policy-no-render-without-provenance` | render | `attach_provenance` — every render must carry provenance | **BLOCKED** |
-| `policy-no-authority-without-contract` | authority | `deny_if_false` — actor must have contract | **BLOCKED** |
-| `policy-play-timeline-requires-world` | timeline | `deny_if_missing_world` — play_timeline requires world id | **BLOCKED** |
-| `policy-ascension-drift-throttle` | render | `modify_param` — throttle speed when drift > 0.7 | **MODIFIED** |
-| `policy-ascension-evidence` | runtime | `deny_if_false` — dual evidence required for Mythar Ascension | **BLOCKED** |
+| Policy ID | Scope | Severity | Rule | Violation |
+|-----------|-------|----------|------|-----------|
+| `policy-no-execution-without-intent` | runtime | **critical** | `deny_if_false` — intent != null | **BLOCKED** |
+| `policy-no-state-change-without-evidence` | state | **high** | `deny_if_false` — require evidence for mutation | **BLOCKED** |
+| `policy-no-render-without-provenance` | render | **high** | `attach_provenance` — every render must carry provenance | **BLOCKED** |
+| `policy-no-authority-without-contract` | authority | **critical** | `deny_if_false` — actor must have a registered contract (action allow-list when `intent.action` set; else CSE/`resolveAuthority` on execute) | **BLOCKED** |
+| `policy-play-timeline-requires-world` | timeline | **critical** | `deny_if_missing_world` — play_timeline requires world id | **BLOCKED** |
+| `policy-ascension-drift-throttle` | render | **medium** | `modify_param` — throttle speed when drift > 0.7 | **MODIFIED** |
+| `policy-ascension-evidence` | runtime | **critical** | `deny_if_false` — dual evidence required for Mythar Ascension | **BLOCKED** |
 
 ---
 
@@ -212,11 +215,11 @@ This lawbook is enforced through:
 
 By operating in this repository, you acknowledge that:
 1. You have read and understood this lawbook
-2. You will follow all principles (P1–P5)
-3. You will obey all policies (1–7)
+2. You will follow all principles (P1–P5) as agent norms; runtime gates match `charter.js` (P1–P3 **enforced**, P4 **partial**, P5 **declared**)
+3. You will obey all policies (1–7) at their stated severities in `default.policies.json`
 4. You will produce evidence for every change
 5. You will respect the constitutional structure
-6. You understand that violations will be blocked
+6. You understand that critical/high policy violations will be blocked
 
 ---
 

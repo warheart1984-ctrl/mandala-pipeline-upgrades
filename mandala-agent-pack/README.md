@@ -24,9 +24,11 @@ mandala-agent-pack/
 
 ## Operational six agents
 
-Cursor agents: `.cursor/agents/`  
+**Shared SoT is this pack** (`mandala-agent-pack/`).  
+`.cursor/` is **local-only** (gitignored). Regenerate agents/rules from the pack — see [`docs/cursor-local-setup.md`](docs/cursor-local-setup.md).
+
 Map + mode matrix: `docs/governance/cecp/MANDALA_SIX_AGENTS.md`  
-Optional rule: `.cursor/rules/mandala-mode.mdc` (does **not** edit `AGENTS.md`)
+Optional local rule: `.cursor/rules/mandala-mode.mdc` (does **not** edit `AGENTS.md`)
 
 ## Skill count honesty
 
@@ -37,14 +39,16 @@ Optional rule: `.cursor/rules/mandala-mode.mdc` (does **not** edit `AGENTS.md`)
 
 Prefer JSON for IDs; SPEC for fuller declared checklist.
 
-## Tooling (related)
+## Tooling (canonical — this pack)
 
 | Tool | Path | Default safety |
 |------|------|----------------|
-| Constitutional linter | `scripts/mandala-lint/run.mjs` | report-only heuristics (**partial**) |
-| Drift radar | `mandala-agent/drift-radar/generate-report.mjs` | writes JSON; dashboard needs local serve |
-| Auto-fix | `mandala-agent/auto-fix/auto-fix.mjs` | **dry-run**; refuses protected paths |
+| Constitutional linter | `mandala-agent-pack/lint/run-lint.js` | report-only heuristics (**partial**) |
+| Drift radar | `mandala-agent-pack/drift-radar/generate-report.js` | writes JSON; dashboard needs local serve |
+| Auto-fix | `mandala-agent-pack/auto-fix/auto-fix.js` | **dry-run**; refuses protected paths |
 | Additive CI | `.github/workflows/mandala-agent-ci.yml` | never `--apply` auto-fix |
+
+Legacy roots `mandala-agent/` and `scripts/mandala-lint/` are **removed** (optional thin wrappers may redirect here). Do not maintain dual copies.
 
 Protected paths (`engine/constitution/`, policies, `AGENTS.md`, …) are **never** auto-written without explicit dangerous flags + human auth.
 

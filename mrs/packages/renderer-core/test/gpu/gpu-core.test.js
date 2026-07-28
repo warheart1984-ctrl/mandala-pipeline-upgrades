@@ -317,13 +317,16 @@ describe("ShadowMapper — constructor defaults", () => {
 
 describe("ShadowMapper — createShadowMapper factory", () => {
   it("creates instance and calls init", async () => {
-    const calls = [];
+    const layoutCalls = [];
     const mockDevice = {
       createTexture: () => ({ createView: () => ({}) }),
       createSampler: () => ({}),
       createBuffer: () => ({}),
       createShaderModule: () => ({}),
-      createBindGroupLayout: () => ({}),
+      createBindGroupLayout: (desc) => {
+        layoutCalls.push(desc);
+        return { entries: desc.entries };
+      },
       createPipelineLayout: () => ({}),
       createRenderPipeline: () => ({}),
       createBindGroup: () => ({}),
@@ -331,6 +334,42 @@ describe("ShadowMapper — createShadowMapper factory", () => {
     const mapper = await createShadowMapper(mockDevice, { size: 512 });
     assert.ok(mapper instanceof ShadowMapper);
     assert.equal(mapper.size, 512);
+    // Depth-pass BGL (1 entry) + consumer BGL (3 entries)
+    assert.ok(layoutCalls.some((d) => d.entries?.length === 1));
+    assert.ok(layoutCalls.some((d) => d.entries?.length === 3));
+    const consumer = layoutCalls.find((d) => d.entries?.length === 3);
+    assert.deepEqual(
+      consumer.entries.map((e) => e.binding),
+      [0, 1, 2],
+    );
+  });
+});
+
+describe("ShadowMapper — consumer bind group uses consumer layout", () => {
+  it("getShadowBindGroup binds against consumerBindGroupLayout", async () => {
+    const bindGroupCalls = [];
+    const mockDevice = {
+      createTexture: () => ({ createView: () => ({ id: "depth" }) }),
+      createSampler: () => ({ id: "cmp" }),
+      createBuffer: () => ({ id: "ubo" }),
+      createShaderModule: () => ({}),
+      createBindGroupLayout: (desc) => ({ entries: desc.entries, id: desc.entries.length }),
+      createPipelineLayout: () => ({}),
+      createRenderPipeline: () => ({}),
+      createBindGroup: (desc) => {
+        bindGroupCalls.push(desc);
+        return {};
+      },
+    };
+    const mapper = await createShadowMapper(mockDevice, { size: 64 });
+    mapper.getShadowBindGroup();
+    const consumerCall = bindGroupCalls.find((c) => c.entries?.length === 3);
+    assert.ok(consumerCall);
+    assert.equal(consumerCall.layout, mapper.consumerBindGroupLayout);
+    assert.deepEqual(
+      consumerCall.entries.map((e) => e.binding),
+      [0, 1, 2],
+    );
   });
 });
 
@@ -391,7 +430,135 @@ describe("PostProcessor — updateUniforms", () => {
   });
 });
 
-/* ── EnvironmentMapper (constructor) ─────────────────────────────── */
+describe("PostProcessor — bloomCombine bind-group layout", () => {
+  it("creates dedicated layout with bindings 0–3", async () => {
+    const layoutCalls = [];
+    const bindGroupCalls = [];
+    const fakePipeline = {
+      getBindGroupLayout: () => ({ id: "bloom-combine-layout" }),
+    };
+    const device = {
+      createTexture: () => ({ createView: () => ({}) }),
+      createBuffer: () => ({}),
+      createSampler: () => ({}),
+      createShaderModule: () => ({}),
+      createBindGroupLayout: (desc) => {
+        layoutCalls.push(desc);
+        return { entries: desc.entries };
+      },
+      createPipelineLayout: () => ({}),
+      createRenderPipeline: () => fakePipeline,
+      createBindGroup: (desc) => {
+        bindGroupCalls.push(desc);
+        return {};
+      },
+      queue: { writeBuffer: () => {} },
+    };
+    const pp = new PostProcessor(device, { width: 64, height: 64 });
+    await pp.createBloomCombinePipeline();
+
+    const combineLayout = layoutCalls.find((d) => d.entries?.length === 4);
+    assert.ok(combineLayout, "expected a 4-entry bloomCombine bind-group layout");
+    assert.deepEqual(
+      combineLayout.entries.map((e) => e.binding),
+      [0, 1, 2, 3],
+    );
+    assert.ok(combineLayout.entries[0].texture);
+    assert.ok(combineLayout.entries[1].texture);
+    assert.ok(combineLayout.entries[2].sampler);
+    assert.ok(combineLayout.entries[3].buffer);
+
+    pp.pipelines.bloomCombine = fakePipeline;
+    pp.sceneTexture = { createView: () => ({ id: "scene" }) };
+    pp.sampler = { id: "sampler" };
+    pp.uniformBuffer = { id: "ubo" };
+    const bloomView = { id: "bloom" };
+    pp.createBindGroup({ createView: () => bloomView }, "bloomCombine");
+
+    assert.equal(bindGroupCalls.length, 1);
+    assert.deepEqual(
+      bindGroupCalls[0].entries.map((e) => e.binding),
+      [0, 1, 2, 3],
+    );
+  });
+});
+
+describe("PostProcessor — createRenderPipeline sampleType matches filtering sampler", () => {
+  it("uses float (not unfilterable-float) with filtering sampler", async () => {
+    const layoutCalls = [];
+    const device = {
+      createShaderModule: () => ({}),
+      createBindGroupLayout: (desc) => {
+        layoutCalls.push(desc);
+        return { entries: desc.entries };
+      },
+      createPipelineLayout: () => ({}),
+      createRenderPipeline: () => ({}),
+    };
+    const pp = new PostProcessor(device);
+    await pp.createRenderPipeline(
+      `@group(0) @binding(0) var t: texture_2d<f32>;
+       @group(0) @binding(1) var s: sampler;
+       @group(0) @binding(2) var<uniform> p: array<f32>;
+       @vertex fn vs_main(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
+         return vec4<f32>(0.0);
+       }
+       @fragment fn fs_main() -> @location(0) vec4<f32> { return vec4<f32>(1.0); }`,
+      "rgba16float",
+    );
+    assert.equal(layoutCalls.length, 1);
+    assert.equal(layoutCalls[0].entries[0].texture.sampleType, "float");
+    assert.equal(layoutCalls[0].entries[1].sampler.type, "filtering");
+  });
+});
+
+describe("EnvironmentMapper — prefilter size + reflection BGL", () => {
+  it("creates prefilter with mipLevelCount and layout bindings 0–5", async () => {
+    const textureCalls = [];
+    const layoutCalls = [];
+    const device = {
+      createTexture: (desc) => {
+        textureCalls.push(desc);
+        return { createView: () => ({}) };
+      },
+      createBuffer: () => ({}),
+      createSampler: () => ({}),
+      createShaderModule: () => ({}),
+      createBindGroupLayout: (desc) => {
+        layoutCalls.push(desc);
+        return { entries: desc.entries };
+      },
+      createPipelineLayout: () => ({}),
+      createRenderPipeline: () => ({}),
+      createBindGroup: () => ({}),
+      queue: {
+        writeBuffer: () => {},
+        submit: () => {},
+      },
+    };
+    // Stub heavy GPU path: only exercise init texture + layout helpers.
+    const em = new EnvironmentMapper(device, { size: 64 });
+    em.generateDefaultEnvironment = async () => {};
+    em.generateBRDFLUT = async () => {};
+    await em.init();
+
+    const prefilter = textureCalls.find(
+      (t) => Array.isArray(t.size) && t.size[0] === 128 && t.mipLevelCount === 5,
+    );
+    assert.ok(prefilter, "prefilter must use size [128,128,6] + mipLevelCount 5");
+    assert.deepEqual(prefilter.size, [128, 128, 6]);
+    assert.equal(prefilter.mipLevelCount, 5);
+
+    const layout = em.getBindGroupLayout();
+    assert.equal(layout.entries.length, 6);
+    assert.deepEqual(
+      layout.entries.map((e) => e.binding),
+      [0, 1, 2, 3, 4, 5],
+    );
+    assert.ok(layout.entries[5].buffer);
+    assert.match(em.getReflectionShaderCode(), /@binding\(5\)/);
+  });
+});
 
 describe("EnvironmentMapper — constructor defaults", () => {
   it("sets defaults", () => {
@@ -654,6 +821,7 @@ describe("GPUPreviewClient — constructor defaults", () => {
     assert.equal(client.process, null);
     assert.equal(client.restartCount, 0);
     assert.equal(client.frameCount, 0);
+    assert.equal(client.lastError, null);
   });
 
   it("accepts custom options", () => {
@@ -661,6 +829,16 @@ describe("GPUPreviewClient — constructor defaults", () => {
     assert.equal(client.instanceName, "custom");
     assert.equal(client.width, 800);
     assert.equal(client.autoRestart, false);
+  });
+});
+
+describe("GPUPreviewClient — lastError on missing config", () => {
+  it("records lastError when SXFR config is absent", async () => {
+    const client = new GPUPreviewClient({ previewExePath: "test.exe", instanceName: "gap-close-test" });
+    const result = await client.readConfigViaSXFR();
+    assert.equal(result, null);
+    assert.ok(client.lastError instanceof Error);
+    assert.ok(client.getStats().lastError);
   });
 });
 
@@ -674,5 +852,112 @@ describe("GPUPreviewClient — findPreviewExe does not throw", () => {
     } finally {
       mock.restoreAll();
     }
+  });
+});
+
+describe("GPUPreviewClient — ESM __dirname construct smoke", () => {
+  it("constructs and resolves a candidate path without ReferenceError", () => {
+    const client = new GPUPreviewClient({ previewExePath: "explicit-missing.exe" });
+    assert.equal(client.state, PreviewState.DISCONNECTED);
+    const resolved = client.findPreviewExe();
+    assert.equal(typeof resolved, "string");
+    assert.ok(resolved.length > 0);
+    assert.ok(resolved.includes("4d-preview") || resolved.includes("native-preview") || resolved.includes("build"));
+  });
+
+  it("exposes dirnameResolved via getStats and denies gpu.print via route()", () => {
+    const client = new GPUPreviewClient({ previewExePath: "x.exe" });
+    const stats = client.getStats();
+    assert.equal(stats.dirnameResolved, true);
+    assert.equal(typeof stats.moduleDir, "string");
+    const denied = client.route("gpu.print", {});
+    assert.equal(denied.ok, false);
+    assert.equal(denied.assistOnly, true);
+    const assist = client.route("renderAssist", {});
+    assert.equal(assist.ok, true);
+  });
+});
+
+describe("ShadowMapper — mock shadow pass begin/end", () => {
+  it("renderShadowPass begins depth pass, sets pipeline, draws, ends", async () => {
+    const passCalls = [];
+    const mockPass = {
+      setPipeline(p) { passCalls.push(["setPipeline", p]); },
+      setBindGroup(i, g) { passCalls.push(["setBindGroup", i, g]); },
+      draw(...args) { passCalls.push(["draw", ...args]); },
+      end() { passCalls.push(["end"]); },
+    };
+    let beginDesc = null;
+    const mockDevice = {
+      createTexture: () => ({ createView: () => ({ id: "depth-view" }) }),
+      createSampler: () => ({}),
+      createBuffer: () => ({}),
+      createShaderModule: () => ({}),
+      createBindGroupLayout: (desc) => ({ entries: desc.entries }),
+      createPipelineLayout: () => ({}),
+      createRenderPipeline: () => ({ id: "shadow-pipe" }),
+      createBindGroup: () => ({ id: "shadow-bg" }),
+    };
+    const mapper = await createShadowMapper(mockDevice, { size: 64 });
+    const encoder = {
+      beginRenderPass(desc) {
+        beginDesc = desc;
+        return mockPass;
+      },
+    };
+    mapper._runShadowPass(encoder);
+    assert.ok(beginDesc);
+    assert.deepEqual(beginDesc.colorAttachments, []);
+    assert.equal(beginDesc.depthStencilAttachment.depthClearValue, 1.0);
+    assert.equal(passCalls[0][0], "setPipeline");
+    assert.equal(passCalls[1][0], "setBindGroup");
+    assert.equal(passCalls[2][0], "draw");
+    assert.equal(passCalls[3][0], "end");
+    assert.equal(typeof mapper._createShadowPipeline, "function");
+  });
+});
+
+describe("EnvironmentMapper — _createEnvResources cube+sampler", () => {
+  it("returns cube resources and 6-entry BGL after init", async () => {
+    const device = {
+      createTexture: () => ({ createView: () => ({}) }),
+      createBuffer: () => ({}),
+      createSampler: () => ({ id: "env-samp" }),
+      createShaderModule: () => ({}),
+      createBindGroupLayout: (desc) => ({ entries: desc.entries }),
+      createPipelineLayout: () => ({}),
+      createRenderPipeline: () => ({}),
+      createBindGroup: (desc) => desc,
+      queue: { writeBuffer: () => {}, submit: () => {} },
+    };
+    const em = new EnvironmentMapper(device, { size: 64 });
+    em.generateDefaultEnvironment = async () => {};
+    em.generateBRDFLUT = async () => {};
+    await em.init();
+    const res = em._createEnvResources();
+    assert.ok(res.environmentTexture);
+    assert.ok(res.sampler);
+    assert.equal(res.prefilterMipCount, 5);
+    assert.equal(res.bindGroupLayout.entries.length, 6);
+    const bg = em._createEnvBindGroup();
+    assert.deepEqual(bg.entries.map((e) => e.binding), [0, 1, 2, 3, 4, 5]);
+  });
+});
+
+describe("PostProcessor — _createBloomCombinePipeline alias", () => {
+  it("alias creates 4-entry BGL", async () => {
+    const layoutCalls = [];
+    const device = {
+      createShaderModule: () => ({}),
+      createBindGroupLayout: (desc) => {
+        layoutCalls.push(desc);
+        return { entries: desc.entries };
+      },
+      createPipelineLayout: () => ({}),
+      createRenderPipeline: () => ({}),
+    };
+    const pp = new PostProcessor(device);
+    await pp._createBloomCombinePipeline();
+    assert.ok(layoutCalls.some((d) => d.entries?.length === 4));
   });
 });

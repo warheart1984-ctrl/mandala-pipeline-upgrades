@@ -26,6 +26,16 @@ BYOK_SCOPE_ASSIST = "assist"
 BYOK_SCOPE_VIDEO = "video"
 BYOK_SCOPE_POLISH = "polish"
 
+# Disclosure catalog (UI datalist / marketplace). Soft allowlist only — not a live inventory.
+BYOK_MODEL_CATALOG: frozenset[str] = frozenset(
+    {
+        "black-forest-labs/flux.1-schnell",
+        "black-forest-labs/flux.1-dev",
+        "black-forest-labs/flux.1-pro",
+        "meta/llama-3.2-11b-vision-instruct",
+    }
+)
+
 _LOOPBACK = frozenset({"127.0.0.1", "::1", "localhost", "testclient"})
 
 
@@ -35,6 +45,27 @@ class ByokForbiddenError(PermissionError):
 
 class ByokScopeError(ValueError):
     """BYOK used on an endpoint outside stills+assist scope."""
+
+
+def soft_warn_model_id(model_id: str | None) -> dict[str, Any] | None:
+    """Return a soft warning dict when model is outside the disclosed catalog.
+
+    Does not reject — catalog is disclosure-only (Drive-G-1).
+    """
+    if not model_id or not str(model_id).strip():
+        return None
+    mid = str(model_id).strip()
+    if mid in BYOK_MODEL_CATALOG:
+        return None
+    return {
+        "level": "warn",
+        "code": "byok_model_not_in_catalog",
+        "model": mid,
+        "message": (
+            "Model id is not in the disclosed Genblaze catalog; "
+            "upstream NIM may still accept it depending on your key."
+        ),
+    }
 
 
 def is_loopback_client(request: Request) -> bool:
@@ -140,6 +171,9 @@ def resolve_settings_for_request(
         meta["byok_used"] = True
         if meta["byok_source"] == "env":
             meta["byok_source"] = "request-model"
+        warn = soft_warn_model_id(model)
+        if warn:
+            meta["byok_model_warning"] = warn
 
     if not updates:
         return settings, meta

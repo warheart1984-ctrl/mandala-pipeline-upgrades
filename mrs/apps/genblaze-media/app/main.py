@@ -978,7 +978,8 @@ def _run_generate_common(
                     body.polish_prompt, lattice=True
                 ) or LATTICE_POLISH_DEFAULT_PROMPT
             pol_res = _polish_pipeline(
-                settings,
+                # Polish is out of BYOK scope — never proxy per-request keys into polish.
+                base_settings,
                 run_id=str(public["run_id"]),
                 prompt=polish_prompt,
                 strength=body.polish_strength,
@@ -1387,7 +1388,7 @@ def _validate_spec_shape(spec: dict[str, Any]) -> list[dict[str, str]] | None:
 
 
 @app.post("/api/polish-still")
-def api_polish_still(body: PolishStillRequest) -> dict:
+def api_polish_still(body: PolishStillRequest, request: Request) -> dict:
     """Prior generate/RT4D still (run_id) → diffusion img2img polish.
 
     Structure pass = MRS RT4D; polish = diffusion edit. The source still is
@@ -1396,7 +1397,18 @@ def api_polish_still(body: PolishStillRequest) -> dict:
     Requires GENBLAZE_POLISH_ENABLED=1 and one of:
     - FAL_KEY (for fal.ai FLUX image-to-image)
     - NVIDIA_API_KEY (if NIM supports img2img on your key — not guaranteed)
+
+    BYOK headers are rejected (400) — polish is out of BYOK scope.
     """
+    if byok_headers_present(request):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "BYOK scope is stills + assist only. "
+                "Polish does not accept per-request keys/models."
+            ),
+        )
+
     settings = get_settings()
 
     if not settings.polish_enabled:

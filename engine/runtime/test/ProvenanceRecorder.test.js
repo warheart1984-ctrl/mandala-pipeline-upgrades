@@ -140,3 +140,42 @@ describe("ProvenanceRecorder", () => {
     assert.equal(rec.getFrames()[0].parameters.speed, 1);
   });
 });
+
+describe("hashFrameProvenance()", () => {
+  it("is deterministic for identical fields", () => {
+    const a = createFrameProvenance({
+      intentId: "i1",
+      timelineId: "t1",
+      worldId: "w1",
+      timeSeconds: 1.5,
+      parameters: { b: 2, a: 1 },
+    });
+    const b = createFrameProvenance({
+      intentId: "i1",
+      timelineId: "t1",
+      worldId: "w1",
+      timeSeconds: 1.5,
+      parameters: { a: 1, b: 2 },
+    });
+    assert.equal(a.provenanceHash, b.provenanceHash);
+    assert.match(a.provenanceHash, /^[0-9a-f]{64}$/);
+  });
+
+  it("changes when any constitutional field changes", () => {
+    const base = createFrameProvenance({
+      intentId: "i1",
+      timelineId: "t1",
+      worldId: "w1",
+      timeSeconds: 1,
+      parameters: { speed: 1 },
+    });
+    const changed = createFrameProvenance({
+      intentId: "i1",
+      timelineId: "t1",
+      worldId: "w1",
+      timeSeconds: 2,
+      parameters: { speed: 1 },
+    });
+    assert.notEqual(base.provenanceHash, changed.provenanceHash);
+  });
+});

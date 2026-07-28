@@ -639,14 +639,27 @@
           location.hostname === "127.0.0.1" || location.hostname === "localhost";
         xss.hidden = localHost && !(server && server.hosted_render_detected);
       }
-      el.innerHTML =
-        "<strong>BYOK diagnostics</strong><br/>" +
-        "Key present: " + (keyPresent ? "Yes (session)" : "No") + "<br/>" +
-        "Model override: " + model + "<br/>" +
-        "Scope: stills + assist<br/>" +
-        "Hosted BYOK flag: " + flag + "<br/>" +
-        "Permitted for this host: " + permitted + "<br/>" +
-        "<span style=\"font-size:0.9em\">Keys are never logged, never persisted server-side, never sent to Digital Printer.</span>";
+      el.replaceChildren();
+      const title = document.createElement("strong");
+      title.textContent = "BYOK diagnostics";
+      el.appendChild(title);
+      el.appendChild(document.createElement("br"));
+      const lines = [
+        "Key present: " + (keyPresent ? "Yes (session)" : "No"),
+        "Model override: " + model,
+        "Scope: stills + assist",
+        "Hosted BYOK flag: " + flag,
+        "Permitted for this host: " + String(permitted),
+      ];
+      lines.forEach(function (line) {
+        el.appendChild(document.createTextNode(line));
+        el.appendChild(document.createElement("br"));
+      });
+      const note = document.createElement("span");
+      note.style.fontSize = "0.9em";
+      note.textContent =
+        "Keys are never logged, never persisted server-side, never sent to Digital Printer.";
+      el.appendChild(note);
       refreshComplianceBadges();
       refreshCapabilityRegistry();
     }
@@ -680,19 +693,26 @@
         text: "disclosure ≠ certification",
         warn: true,
       });
-      row.innerHTML = badges
-        .map(function (b) {
-          const cls = b.warn ? "badge warn" : b.ok ? "badge ok" : "badge";
-          return '<span class="' + cls + '">' + b.text + "</span>";
-        })
-        .join("");
+      row.replaceChildren();
+      badges.forEach(function (b) {
+        const span = document.createElement("span");
+        span.className = b.warn ? "badge warn" : b.ok ? "badge ok" : "badge";
+        span.textContent = b.text;
+        row.appendChild(span);
+      });
     }
 
     function refreshCapabilityRegistry() {
       const dl = document.getElementById("cap-registry");
       if (!dl) return;
+      dl.replaceChildren();
       if (!health) {
-        dl.innerHTML = "<dt>status</dt><dd>waiting for /health</dd>";
+        const dt = document.createElement("dt");
+        dt.textContent = "status";
+        const dd = document.createElement("dd");
+        dd.textContent = "waiting for /health";
+        dl.appendChild(dt);
+        dl.appendChild(dd);
         return;
       }
       function avail(obj) {
@@ -717,11 +737,26 @@
         ["prompt_scene", avail(health.prompt_scene)],
         ["video_enabled", health.video_enabled],
       ];
-      dl.innerHTML = entries
-        .map(function (pair) {
-          return "<dt>" + pair[0] + "</dt><dd>" + pair[1] + "</dd>";
-        })
-        .join("");
+      entries.forEach(function (pair) {
+        const dt = document.createElement("dt");
+        dt.textContent = String(pair[0]);
+        const dd = document.createElement("dd");
+        dd.textContent = String(pair[1]);
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      });
+    }
+
+    function warnByokModelIfNeeded(model) {
+      const catalog = Array.from(
+        document.querySelectorAll("#byok-model-catalog option"),
+      ).map(function (o) { return o.value; });
+      if (!model || catalog.indexOf(model) >= 0) return;
+      setStatus(
+        statusEl,
+        "Model id not in disclosed catalog (soft warn): " + model,
+        "warn",
+      );
     }
 
     document.getElementById("model-market-list")?.addEventListener("click", (ev) => {
@@ -742,6 +777,7 @@
       if (model) sessionStorage.setItem(BYOK_MODEL, model);
       else sessionStorage.removeItem(BYOK_MODEL);
       if (document.getElementById("byok-key")) document.getElementById("byok-key").value = "";
+      warnByokModelIfNeeded(model);
       refreshByokDiag();
       setStatus(statusEl, "BYOK session updated (key not shown).", "");
     });

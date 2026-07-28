@@ -7,7 +7,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const IGNORE = new Set(["node_modules", ".git", "dist", "build", "output"]);
+const IGNORE = new Set(["node_modules", ".git", "dist", "build", "output", "vendor"]);
 
 function findPackageJsons(dir) {
   const results = [];

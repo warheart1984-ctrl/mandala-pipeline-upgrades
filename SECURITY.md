@@ -35,6 +35,18 @@ If you discover a security vulnerability in this project, please report it respo
 
 This repository includes several server components that should be hardened before production use:
 
+### Genblaze Media / BYOK (`mrs/apps/genblaze-media/`)
+
+- **Local-first BYOK:** session keys live in browser `sessionStorage` and are sent only as
+  per-request headers (`X-NVIDIA-API-Key` / `Authorization: Bearer`) on stills + assist paths.
+- **Hosted default:** BYOK is denied on Render unless `GENBLAZE_ALLOW_BYOK=1`.
+- **Scope:** video and polish endpoints reject BYOK headers with HTTP 400.
+- **Path honesty:** UI → Genblaze → NVIDIA NIM (assist). BYOK keys never enter Digital Printer
+  evidence / print SoT.
+- **XSS:** BYOK diagnostics and capability registry must not inject untrusted model IDs via
+  `innerHTML` — use `textContent` / escaped text.
+- See also: `docs/genblaze/security/`, `mandala-agent-pack/agents/GenblazeAgent/byok.rules.md`.
+
 ### CSSV Server (`cssv/server.js`)
 - Binds to all interfaces by default — restrict to localhost in production
 - No authentication on `/cql`, `/ingest`, or `/ledger` endpoints
@@ -50,6 +62,7 @@ This repository includes several server components that should be hardened befor
 - Never commit `.env` files to version control
 - Use a secrets manager for production deployments
 - Rotate API keys if they are exposed
+- Genblaze: `GENBLAZE_ALLOW_BYOK`, `NVIDIA_API_KEY`, `FAL_KEY` — treat as secrets
 
 ## Scope
 

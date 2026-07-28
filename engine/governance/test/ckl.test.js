@@ -217,6 +217,49 @@ describe("resolveDecision()", () => {
     );
   });
 
+  it("unknown actor without registered contract is denied", () => {
+    const result = resolveDecision(
+      { type: "query", actor: "unknown.actor" },
+      { id: "ev1" },
+      policySet
+    );
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.violations.includes("policy-no-authority-without-contract"),
+      `Expected authority violation, got: ${JSON.stringify(result.violations)}`
+    );
+  });
+
+  it("actor with explicit unauthorized action is denied via resolveAuthority", () => {
+    const result = resolveDecision(
+      {
+        type: "query",
+        actor: "4dce.renderer",
+        action: "timeline.play",
+      },
+      { id: "ev1" },
+      policySet
+    );
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.violations.includes("policy-no-authority-without-contract")
+    );
+  });
+
+  it("actor with explicit authorized action is allowed", () => {
+    const result = resolveDecision(
+      {
+        type: "query",
+        actor: "4dce.renderer",
+        action: "render.session.start",
+      },
+      { id: "ev1" },
+      policySet
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.verdict, "allow");
+  });
+
   it("play_timeline with world=null is denied", () => {
     const result = resolveDecision(
       { type: "play_timeline", actor: "4dce.renderer", world: null },

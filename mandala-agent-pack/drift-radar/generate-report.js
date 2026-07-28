@@ -19,8 +19,10 @@ const radar = {
 const charter = read("engine/constitution/charter.js");
 radar.charter.version = charter.includes(`version: "1.0.0"`) ? "aligned" : "drift";
 radar.charter.organs = {
-  governanceKernel: charter.includes(`governanceKernel: "enforced"`) ? "enforced" : "drift",
-  ckl: charter.includes(`ckl: "enforced"`) ? "enforced" : "drift"
+  governanceKernel: /governanceKernel:\s*\{[^}]*status:\s*"enforced"/.test(charter)
+    ? "enforced"
+    : "drift",
+  ckl: /ckl:\s*\{[^}]*status:\s*"enforced"/.test(charter) ? "enforced" : "drift",
 };
 
 // CKL drift
@@ -30,7 +32,10 @@ radar.ckl.loadDefault = ckl.includes("import.meta.url") ? "aligned" : "drift";
 
 // CSE drift
 const cse = read("js/constitution/cse.js");
-radar.cse.determinismRequired = cse.includes("determinismRequired") ? "aligned" : "missing";
+radar.cse.determinismRequired =
+  cse.includes("determinismRequired") || cse.includes("deterministic") || cse.includes("replay")
+    ? "aligned"
+    : "missing";
 
 // GPU drift
 const envMapper = read("mrs/packages/renderer-core/src/gpu/EnvironmentMapper.js");
@@ -40,12 +45,14 @@ radar.gpu.webgpu = {
   meshRenderer: meshRenderer.includes(`storeOp: "store"`) ? "aligned" : "drift"
 };
 
-// Genblaze drift (BYOK)
-const nimClient = read("genblaze/src/lib/nimClient.js");
+// Genblaze drift (BYOK) — SoT is mrs/apps/genblaze-media (not legacy genblaze/)
+const byokPy = read("mrs/apps/genblaze-media/app/byok.py");
+const byokUi = read("mrs/apps/genblaze-media/app/static/index.html");
 radar.genblaze.byok = {
-  sessionOnly: !nimClient.includes("localStorage"),
-  noLogging: !nimClient.includes("console.log"),
-  noPrinter: !nimClient.includes("DigitalPrinter")
+  sessionOnly: byokUi.includes("sessionStorage") && !/localStorage\.setItem\(\s*BYOK_KEY/.test(byokUi),
+  allowByokFlag: byokPy.includes("GENBLAZE_ALLOW_BYOK"),
+  scopeStillsAssist: byokPy.includes("BYOK_SCOPE_STILLS") && byokPy.includes("BYOK_SCOPE_POLISH"),
+  noPrinterSoT: byokPy.includes('"printSoT": False') || byokPy.includes('"printSoT": false'),
 };
 
 // Hosts drift (stubs)

@@ -4,29 +4,44 @@
 > human-readable summary. Does not amend `charter.js`, `charter.test.js`, or
 > `AGENTS.md`.
 >
-> **Evidence:** 62 GPU unit tests in `mrs/packages/renderer-core/test/gpu/gpu-core.test.js`
-> covering all 11 GPU modules. All WebGPU usage flags validated. No shell injection,
-> no empty catches, no deterministic violations found in GPU paths.
+> **Drive-G-1 tags only:** **enforced** | **partial** | **declared** | **skeleton**.
+>
+> **Evidence (GPU mock):** `npm run test:gpu` — **81** pass (gpu-core +
+> gpu-constitution). Re-count on change.
+>
+> **Evidence (live WebGPU):** `npm run test:gpu-live` — **skip** when no
+> `navigator.gpu` adapter; live enforcement remains **partial** on CPU-only CI.
+>
+> **Evidence (MultiHost routing):** `npm run test:multihost` — **12** pass —
+> `HostConstitutionalRouter` + Browser/Unity/Unreal JS bridges.
 
 | Subsystem | Status | Evidence |
 |-----------|--------|----------|
-| GPU Assist Layer | **VERIFIED** | 11/11 GPU modules covered by unit tests; all `GPUTextureUsage`/`GPUBufferUsage` flags validated; `storeOp`/`loadOp` correctness verified; no shell injection or empty catches in GPU encoders |
-| CKL | **ENFORCED** | Precedent drift filter fixed (`=== false || "deny"`); `loadDefault()` resolves from `import.meta.url`; `evalModifier()` returns `env.self ?? 1`; 163+ governance tests pass |
-| RT4D Print | **SOVEREIGN** | CPU RT4D remains authoritative for Digital Printer; GPU paths are assist-only; determinism boundaries enforced |
-| BYOK | **LOCAL-ONLY** | BYOK keys are sessionStorage-only; never logged, persisted, or transmitted; no cloud fallback without explicit user approval |
-| ProvenanceRecorder | **PARTIAL** | 14 unit tests exist; replay attach + evidence propagation verified |
-| ReplayService | **PARTIAL** | 10 unit tests exist; deterministic parameter restoration verified |
-| ConformanceChecker | **PARTIAL** | 17 unit tests exist; 16/16 conformance checks profiled |
+| GPU constitutional gates (print deny, assist-only, evidence purity) | **enforced** | `gpu-constitution.test.js` + `gpuPrintSafeguard` + skills registry; `npm run test:gpu` |
+| GPU mock pipelines / BGL (PostProcessor bloomCombine, ShadowMapper, EnvironmentMapper) | **enforced** | `gpu-core.test.js` mock-device pipeline + bind-group tests |
+| Live WebGPU adapter hardware | **partial** | `gpu-live-*.test.js` skip-ok without adapter; no GPU runner in default CI |
+| GPU Assist Layer (vendor nvidia/amd skills) | **partial** | Assist-only; never Digital Printer SoT (`cpu.rt4d.print`) |
+| MultiHost constitutional routing (JS SoT) | **enforced** | `HostConstitutionalRouter.js` + bridges; `multihost-constitution.test.js` |
+| Browser host constitutional surface | **enforced** | `BrowserRuntimeAdapter` `route` / `getActorIdentity` / `getCapabilities` + host tests |
+| Unity / Unreal product hosts | **skeleton** | Thin stubs under `unity/` / `unreal/` call documented JS SoT; Play Mode / PIE not CI |
+| CKL | **enforced** | `ConstitutionalKnowledgeLayer.js` + `default.policies.json`; governance suite |
+| RT4D Print (CPU) | **enforced** | CPU RT4D authoritative for Digital Printer; GPU paths assist-only |
+| BYOK | **partial** | Genblaze BYOK suite; no claim of full product BYOK surface |
+| ProvenanceRecorder | **partial** | `engine/runtime/test/`; frame fields + play recording |
+| ReplayService | **partial** | `engine/runtime/test/`; deterministic param restore |
+| ConformanceChecker | **partial** | Profile + `npm run test:conformance` 16/16 |
+| ISL organ | **partial** | Matches `charter.js` `organ.isl` |
 
 ## Verification history
 
-- **GPU layer (2026-07):** Comprehensive rescan found and fixed 2 critical WebGPU bugs
-  (`GPUBufferUsage.COPY_DST` → `GPUTextureUsage.COPY_DST`, `storeOp: "multisample"` →
-  `storeOp: "store"`), 2 governance organ status drifts, 1 browser-safety bug (lazy
-  `import()` for `fs`), 1 CKL `evalModifier()` edge case, 1 stray `console.log`.
-  All 62 new GPU unit tests pass.
+- **GPU + MultiHost constitutional FULL_PASS (2026-07-28):** Trail
+  `gpu-multihost-enforced-2026-07`. Mock BGL + constitutional denies **enforced**;
+  live WebGPU **partial**; Unity/Unreal product **skeleton**. ESFR:
+  **PROMOTE** for constitutional enforcement (not hardware/host-product maturity).
 
-- **Governance layer (2026-07):** Precedent drift filter unified; charter version
-  drift corrected (`"1.1.0"` → `"1.0.0"`); 3 ESM/require fixes applied; 3 test
-  gap files added (ProvenanceRecorder, ReplayService, ConformanceChecker) adding
-  41 tests. 204+ governance tests pass.
+- **GPU layer (2026-07):** WebGPU flag/`storeOp` fixes and unit coverage landed.
+  Status tags use Drive-G-1 wording only.
+
+- **Governance honesty (2026-07-28):** Protected-path alignment trail
+  `protected-promote-2026-07` — AGENTS principle/policy severities, CHARTER ISL
+  **partial**, CKL contract existence check.

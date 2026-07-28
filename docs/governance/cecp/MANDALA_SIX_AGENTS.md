@@ -55,7 +55,10 @@ Compose: one primary mode (+ optional Sage). Precedence: **role bans > Constitut
 
 ## Tooling
 
-- Linter: `node scripts/mandala-lint/run.mjs` (**partial**)
-- Drift radar: `node mandala-agent/drift-radar/generate-report.mjs`
-- Auto-fix: `node mandala-agent/auto-fix/auto-fix.mjs` (dry-run default; refuses protected paths)
+Canonical SoT: **`mandala-agent-pack/`** (legacy `mandala-agent/` + `scripts/mandala-lint/` removed).
+
+- Linter: `node mandala-agent-pack/lint/run-lint.js` (**partial**)
+- Drift radar: `node mandala-agent-pack/drift-radar/generate-report.js`
+- Auto-fix: `node mandala-agent-pack/auto-fix/auto-fix.js` (dry-run default; refuses protected paths)
 - Additive CI: `.github/workflows/mandala-agent-ci.yml`
+- Local Cursor agents: regenerate from pack — `mandala-agent-pack/docs/cursor-local-setup.md` (`.cursor/` is gitignored)

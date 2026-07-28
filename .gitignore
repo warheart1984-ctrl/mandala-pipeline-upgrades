@@ -53,6 +53,7 @@ credentials.json
 .idea/
 .vs/
 *.swp
+.cursor/
 
 # Upstream reference clone (pip packages remain the runtime dependency)
 vendor/

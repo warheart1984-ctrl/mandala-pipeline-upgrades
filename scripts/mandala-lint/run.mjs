@@ -1,33 +1,19 @@
 #!/usr/bin/env node
 /**
- * CLI entry for constitutional linter.
- * Exit 1 on severity=error issues. Warnings alone → exit 0.
+ * Deprecated thin wrapper — canonical linter is mandala-agent-pack/lint.
+ * Kept so old docs/CI snippets still resolve.
  */
-import { runLinter } from "./constitutional-linter.mjs";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 
-const summary = runLinter();
-const json = process.argv.includes("--json");
-
-if (json) {
-  console.log(JSON.stringify(summary, null, 2));
-} else {
-  console.log("Mandala constitutional linter (partial heuristics)");
-  console.log(`root: ${summary.root}`);
-  console.log(`checks: ${summary.checkCount} · errors: ${summary.errorCount} · warns: ${summary.warnCount}`);
-  for (const c of summary.checks) {
-    const mark =
-      c.status === "pass" ? "PASS" : c.status === "skip" ? "SKIP" : c.status === "warn" ? "WARN" : "FAIL";
-    console.log(`  [${mark}] ${c.id}${c.detail ? " — " + c.detail : ""}`);
-  }
-  if (summary.issues.length) {
-    console.log("\nIssues:");
-    for (const i of summary.issues) {
-      console.log(`  - (${i.severity}/${i.fidelity}) [${i.type}] ${i.file}: ${i.message}`);
-    }
-  }
-  console.log(
-    "\nNote: substring probes are partial — not full constitutional enforcement (Drive-G-1).",
-  );
-}
-
-process.exit(summary.errorCount > 0 ? 1 : 0);
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const target = resolve(root, "mandala-agent-pack/lint/run-lint.js");
+console.warn(
+  "[deprecated] scripts/mandala-lint → use mandala-agent-pack/lint/run-lint.js",
+);
+const r = spawnSync(process.execPath, [target, ...process.argv.slice(2)], {
+  cwd: root,
+  stdio: "inherit",
+});
+process.exit(r.status ?? 1);
