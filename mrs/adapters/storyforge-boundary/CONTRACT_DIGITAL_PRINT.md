@@ -45,9 +45,18 @@ python mrs/adapters/storyforge-boundary/demo_digital_print.py \
 
 - `governance/surface_contract.json`
 - `printer/` (`errors`, `sovereignty`, `print_request`, `evidence`, `pipeline`)
-- `demo_digital_print.py`
+- `demo_digital_print.py` / `run_print.py`
 - Contract: this file
+- HTTP: `docs/governance/cecp/PRINTER_SERVICE_API.md` (`/printer/*` on Genblaze)
+- Deployment: `docs/governance/cecp/DIGITAL_PRINTER_DEPLOYMENT_CHARTER_v1.0.md`
 
+## Quality profiles
+
+`print_fast` | `print_hq` (**enforced**) · `print_cinematic` | `print_reference` (**partial**)
+
+## Timeout
+
+`MRS_PRINT_TIMEOUT_SECONDS` (fallback `MRS_RENDER_TIMEOUT_SECONDS`, default 900) — **enforced** on printer HTTP + CLI.
 ## Draft CI
 
 Default draft quality clamps in `execute.py` are unchanged. Print/cinematic is

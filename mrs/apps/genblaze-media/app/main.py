@@ -55,6 +55,12 @@ from app.render_request_provider import (
     render_request_availability,
     run_render_request,
 )
+from app.printer_provider import (
+    printer_availability,
+    run_printer_print,
+    run_printer_provenance,
+    run_printer_validate,
+)
 from app.face_polish_defaults import (
     resolve_face_polish_prompt,
     resolve_face_polish_strength,
@@ -698,6 +704,12 @@ def health() -> dict:
             "POST /api/render-request accepts RenderRequest JSON (MRS crossing). "
             "Opt-in: RENDER_REQUEST_API_ENABLED=1. Upstream Story→PromptSpec "
             "remains outside this host."
+        ),
+        "printer": printer_availability(settings),
+        "printer_note": (
+            "POST /printer/print | /printer/validate | /printer/provenance ; "
+            "GET /printer/health. Opt-in execute: PRINTER_API_ENABLED=1. "
+            "Timeout: MRS_PRINT_TIMEOUT_SECONDS."
         ),
         "engine3d_sequence": engine3d_sequence_availability(settings),
         "engine3d_sequence_note": (
@@ -1569,6 +1581,75 @@ def api_render_request(body: dict[str, Any]) -> dict:
         )
     try:
         return run_render_request(body, settings, execute=True)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/printer/health")
+def printer_health() -> dict:
+    """Deterministic Digital Printer health (no execute)."""
+    settings = get_settings()
+    avail = printer_availability(settings)
+    return {
+        "status": "ok" if avail.get("pipeline_found") else "degraded",
+        "kind": "mrs-digital-printer",
+        "deterministic": True,
+        **avail,
+    }
+
+
+@app.post("/printer/print")
+def printer_print(body: dict[str, Any], dry_run: bool = Query(False)) -> dict:
+    """Run the deterministic print pipeline (opt-in execute).
+
+    Body: RenderRequest **or** ``{ scene, surfaces?, samples?, quality? }``.
+    Set ``PRINTER_API_ENABLED=1`` for live Node prints. ``?dry_run=true`` forces
+    sovereignty + evidence only.
+    """
+    settings = get_settings()
+    avail = printer_availability(settings)
+    if not avail.get("enabled") and not dry_run:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Printer API disabled. Set PRINTER_API_ENABLED=1 "
+                "or pass dry_run=true for sovereignty-only."
+            ),
+        )
+    try:
+        return run_printer_print(body, settings, execute=not dry_run)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/printer/validate")
+def printer_validate(body: dict[str, Any]) -> dict:
+    """Validate surface contract + SceneSpec / RenderRequest for print."""
+    settings = get_settings()
+    try:
+        return run_printer_validate(body, settings)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/printer/provenance")
+def printer_provenance(body: dict[str, Any]) -> dict:
+    """Return provenance frames for a print (dry-run evidence or caller echo)."""
+    settings = get_settings()
+    try:
+        return run_printer_provenance(body, settings)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001

@@ -40,6 +40,7 @@ import {
   accumulateAdaptive,
   encodeBeautyRgb,
 } from "./lib/sceneQuality.mjs";
+import { bilateralFilter } from "../src/render/rt4d/denoiser/BilateralDenoiser.js";
 
 export const RENDER_SCENE_VERSION = "1.1.0";
 
@@ -303,7 +304,23 @@ export function renderSceneFromSpec(spec, frameSel = {}) {
   }
   const meanSamplesUsed = samplesUsedSum / (width * height);
 
-  const png = encodePNG(width, height, rgba);
+  const useDenoise = qualityOpts.denoise === true;
+  let denoiseHash = null;
+  let beautyRgba = rgba;
+  if (useDenoise) {
+    const filtered = bilateralFilter(rgba, width, height, {
+      radius: 2,
+      sigmaSpatial: 3.0,
+      sigmaColor: 25.0,
+      iterations: 1,
+    });
+    beautyRgba = filtered.denoised;
+    denoiseHash = filtered.filterHash;
+    // Copy denoised pixels back so any later AOV/debug paths see the print plate.
+    rgba.set(beautyRgba);
+  }
+
+  const png = encodePNG(width, height, beautyRgba);
   const sha256 = createHash("sha256").update(png).digest("hex");
 
   const provenance = {
@@ -323,6 +340,8 @@ export function renderSceneFromSpec(spec, frameSel = {}) {
     exposure,
     tonemap: tonemapMode,
     adaptiveSampling: useAdaptive,
+    denoise: useDenoise,
+    denoiseFilterHash: denoiseHash,
     meanSamplesUsed: Number(meanSamplesUsed.toFixed(3)),
     earlyStopPixels: earlyStopCount,
     fireflyMax,

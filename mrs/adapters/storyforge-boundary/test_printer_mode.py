@@ -23,6 +23,7 @@ from printer.evidence import write_evidence_bundle, sha256_json  # noqa: E402
 from printer.print_request import (  # noqa: E402
     apply_print_request_to_render_request,
     normalize_print_request,
+    QUALITY_PROFILES,
 )
 from printer.sovereignty import (  # noqa: E402
     check_render_request_surfaces,
@@ -50,6 +51,36 @@ def test_normalize_print_request_defaults():
     assert p["tone_mapper"] == "aces-lite"
     assert p["denoise"] is False
     assert "beauty" in p["aovs"]
+    assert p["quality"] == "print_hq"
+
+
+def test_quality_profiles_resolve():
+    assert set(QUALITY_PROFILES) == {
+        "print_fast",
+        "print_hq",
+        "print_cinematic",
+        "print_reference",
+    }
+    fast = normalize_print_request({"quality": "print_fast"})
+    assert fast["samples"] == 8
+    assert fast["width"] == 256
+    assert fast["qualityStatusTag"] == "enforced"
+
+    cine = normalize_print_request({"quality": "print_cinematic"})
+    assert cine["denoise"] is True
+    assert cine["samples"] == 48
+    assert cine["qualityStatusTag"] == "partial"
+
+    # Explicit override wins over profile
+    override = normalize_print_request({"quality": "print_fast", "samples": 12})
+    assert override["samples"] == 12
+
+
+def test_surface_contract_timeout_and_profiles():
+    c = load_surface_contract()
+    assert c["timeoutGovernance"]["env"] == "MRS_PRINT_TIMEOUT_SECONDS"
+    assert "print_hq" in c["qualityProfiles"]
+    assert c["qualityTags"]["denoise"] == "enforced-when-opt-in"
 
 
 def test_sovereignty_ok_on_fixture():

@@ -120,7 +120,8 @@ def run_digital_print(
 
     stages = {
         "sampling": "enforced",
-        "reconstruction": "partial" if print_req.get("denoise") else "declared",
+        # Denoise opt-in → BilateralDenoiser in render-scene (enforced when true).
+        "reconstruction": "enforced" if print_req.get("denoise") else "declared",
         "tonemap": "enforced",
         "color": "enforced",
         "encode": "enforced",

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "kind": "PrintSurfaceContract",
   "id": "mrs-digital-print-surface-contract",
   "status": "enforced",
@@ -52,13 +52,28 @@
     "tone_mapper": "aces-lite",
     "denoise": false,
     "seed": 42,
-    "format": "png"
+    "format": "png",
+    "quality": "print_hq"
+  },
+  "qualityProfiles": {
+    "print_fast": { "statusTag": "enforced" },
+    "print_hq": { "statusTag": "enforced" },
+    "print_cinematic": { "statusTag": "partial" },
+    "print_reference": { "statusTag": "partial" }
+  },
+  "timeoutGovernance": {
+    "env": "MRS_PRINT_TIMEOUT_SECONDS",
+    "fallbackEnv": "MRS_RENDER_TIMEOUT_SECONDS",
+    "defaultSeconds": 900,
+    "statusTag": "enforced"
   },
   "qualityTags": {
     "adaptiveSampling": "enforced-when-opt-in",
     "stratifiedAA": "enforced",
     "tonemapAces": "enforced-when-opt-in",
-    "denoise": "partial-or-declared",
+    "denoise": "enforced-when-opt-in",
+    "softPenumbra": "declared",
+    "rt4dSpecularGgx": "partial",
     "draftCi": "fast-defaults-unchanged"
   },
   "trail": "docs/governance/cecp/trails/printer-mode-renderer-2026-07/"
