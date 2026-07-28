@@ -39,9 +39,14 @@
 | Superpowers + MRS crew | used |
 | AMD Cursor MCP | **missing** |
 | NVIDIA Cursor MCP | **missing** |
-| NVIDIA skill-finder + catalog | used (recommend only; no unauthorized install) |
+| NVIDIA skill-finder + catalog | used |
+| NVIDIA skills installed 2026-07-28 | `rag-blueprint`, `tilegym-cutile-python`, `dynamo-troubleshoot`, `tao-setup-nvidia-gpu-host`, `tao-run-inference-service` → `~/.agents/skills/` |
+| AMD Cursor plugin (`amd-skills`) | present (e.g. `rocm-doctor`, `magpie-kernel-evaluator`) |
+| AMD skills.sh installs 2026-07-28 | `rocm-setup`, `hip-rocm` → `~/.agents/skills/` |
 | In-repo NVIDIA (Genblaze NIM / NVENC) | reviewed + assist labeling |
-| AMD/ROCm/HIP in repo | **absent** |
+| AMD/ROCm/HIP in repo | **absent** (skills ≠ implementation) |
+
+See: `docs/superpowers/specs/2026-07-28-vendor-skills-install-note.md`
 
 ## Promotion stance (this trail)
 

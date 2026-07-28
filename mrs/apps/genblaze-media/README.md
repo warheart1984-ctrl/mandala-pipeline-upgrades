@@ -30,6 +30,8 @@ Operators type a prompt for a concept image. The **default** service calls NVIDI
 
 Optionally, set `GENBLAZE_IMAGE_BACKEND=rt4d` to skip NVIDIA entirely and produce a **deterministic procedural 4D still** via the MRS `renderer-core` RT4D path tracer (keyword → scene archetype + palette; seed → camera/placement). That path is **not** text-to-image and does **not** claim photorealism or semantic image synthesis. Same prompt (same seed) → byte-identical PNG. It cannot 504 on an upstream generative API because there is none.
 
+For **local AMD / Lemonade diffusion** (on-device concept stills, no NVIDIA bill), set `GENBLAZE_IMAGE_BACKEND=lemonade`. Genblaze calls Lemonade Server at `http://127.0.0.1:13305/api/v1` (override with `LEMONADE_BASE_URL`) using `SD-Turbo` by default. Receipts label the provider as `lemonade-local`. Install Lemonade from https://lemonade-server.ai , run `lemonade serve`, then `lemonade pull SD-Turbo` on first use.
+
 This does **not** mean Genblaze's NVIDIA path renders 4D scenes.
 
 ### Digital Printer vs NIM (assist ≠ SoT)
@@ -213,7 +215,11 @@ Copy secrets into the **repo-root** `.env` (preferred) or `mrs/apps/genblaze-med
 | `GENBLAZE_STORAGE_PREFIX` | optional; default `genblaze-media` |
 | `GENBLAZE_DRY_RUN` | `1` only for unit tests / offline mocks — **not** live demos |
 | `B2_PROBE_ON_HEALTH` | default **off** — when `1`, `/health` runs a ListObjects probe (B2 **Class C**). Keep `0` on Render/demo day |
-| `GENBLAZE_IMAGE_BACKEND` | default `nvidia`; set `rt4d` (aliases: `renderer`, `mrs`) for the deterministic RT4D renderer backend |
+| `GENBLAZE_IMAGE_BACKEND` | default `nvidia`; set `rt4d` (aliases: `renderer`, `mrs`) for the deterministic RT4D renderer backend; set `lemonade` (aliases: `local`, `amd`) for local Lemonade Server diffusion |
+| `LEMONADE_BASE_URL` | optional; default `http://127.0.0.1:13305/api/v1` |
+| `GENBLAZE_LEMONADE_MODEL` | optional; default `SD-Turbo` when backend is lemonade |
+| `GENBLAZE_LEMONADE_SIZE` / `GENBLAZE_LEMONADE_STEPS` / `GENBLAZE_LEMONADE_TIMEOUT` | optional; defaults `512x512` / `4` / `600` |
+| `LEMONADE_API_KEY` | optional; only if the local Lemonade server requires auth |
 | `GENBLAZE_IMAGE_FALLBACK_TO_RT4D` | default **off** — set `1` so a blank/504 NVIDIA still falls back to one RT4D render instead of surfacing the failure |
 | `RT4D_NODE_PATH` | optional; default `node` |
 | `RT4D_SCRIPT_PATH` | optional; default `<repo>/mrs/packages/renderer-core/scripts/render-still.mjs` |
@@ -456,6 +462,18 @@ Live evidence on 2026-07-25: startup warmup itself returned `http_status: 504`,
 and generate returned empty 504 after roughly 153–245 seconds. This points
 primarily to NVIDIA gateway/NIM availability. Longer polling can reduce a
 cold-start race, but cannot force an unavailable NIM to respond.
+
+**Top-down check order** (skill-inspired: collect evidence before changing
+knobs — mirrors layered troubleshoot discipline; this is **Genblaze NIM**, not
+Dynamo/K8s):
+
+1. `/health` → `nvidia_configured`, `nvidia_nim_status`, `nvidia_timeouts`,
+   `nvidia_warmup` (do not claim NIM live without these).
+2. Env: `NVIDIA_API_KEY` present; `GENBLAZE_DRY_RUN` off for real generates.
+3. Timeouts / NVCF poll (below) before retry storms.
+4. Gateway availability (empty 504) vs app bug — prefer wait+manual retry over
+   silent double-bill (`GENBLAZE_EMPTY_504_RETRY` default **off**).
+5. Only then consider abstract-retry / model slug changes.
 
 Try these in order:
 

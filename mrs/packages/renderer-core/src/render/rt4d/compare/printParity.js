@@ -8,6 +8,13 @@
 /**
  * Probe whether a WebGPU adapter is available in this runtime.
  * Node without Dawn/navigator.gpu → unavailable.
+ *
+ * GPU host note (tao-setup-nvidia-gpu-host skill, Drive-G-1):
+ *   Claiming NVIDIA CUDA print acceleration also requires a checked GPU host
+ *   (nvidia-smi / container toolkit). That path remains **absent** for printer.
+ *   AMD ROCm/HIP remains **absent** — use rocm-doctor/rocm-setup skills only
+ *   when diagnosing a future host, not as evidence of print support.
+ *
  * @returns {{ available: boolean, reason: string, statusTag: string }}
  */
 export function probeWebGpuAvailability() {

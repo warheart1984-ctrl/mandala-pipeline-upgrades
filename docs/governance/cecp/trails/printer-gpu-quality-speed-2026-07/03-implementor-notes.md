@@ -23,6 +23,14 @@
 | CUDA / HIP backends | **absent** |
 | NIM → beauty.png SoT | **rejected** (by design) |
 
+## 2026-07-28 vendor skills pass
+
+- Installed NVIDIA + AMD skills (see vendor-skills-install-note).
+- Fixed legacy `RT4DGPURenderer` FrameParams: removed `Date.now()` seed; aligned
+  width/height/maxDepth/seed layout with `shaders.js` (**partial** GPU honesty).
+- Genblaze NIM empty-504 playbook: top-down health order.
+- No FLUX→beauty SoT; no CUDA/HIP stubs claiming support.
+
 ## Regressions preserved
 
 - v2.0 profiles, denoise, soft penumbra, sovereignty — tests green (21 passed)
