@@ -37,6 +37,8 @@ Checklist: `docs/governance/esfr/DIGITAL_PRINTER_PROMOTION_CHECKLIST.md`
 Deployment: `docs/governance/cecp/DIGITAL_PRINTER_DEPLOYMENT_CHARTER_v1.0.md`  
 API: `docs/governance/cecp/PRINTER_SERVICE_API.md`
 
+**Contract:** `mrs/adapters/storyforge-boundary/CONTRACT_DIGITAL_PRINT.md`
+
 ## Run
 
 ```bash

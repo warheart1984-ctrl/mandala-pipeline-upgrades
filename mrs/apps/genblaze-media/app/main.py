@@ -1621,6 +1621,9 @@ def api_render_request(body: dict[str, Any]) -> dict:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
+
+
+
 @app.get("/printer/health")
 def printer_health() -> dict:
     """Deterministic Digital Printer health (no execute)."""
