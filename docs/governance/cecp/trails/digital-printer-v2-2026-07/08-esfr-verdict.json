@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "ESFRVerdictRecord",
+  "trailId": "digital-printer-v2-2026-07",
+  "initiative": "Digital Printer Initiative v2",
+  "evaluatedAt": "2026-07-28",
+  "ESFRVerdict": "PASS_WITH_GAPS",
+  "PromotionEligibility": "PROMOTE_WITH_GAPS",
+  "equivalentUserLanguage": "PROMOTE_WITH_GAPS",
+  "note": "§E gaps from prior HOLD are closed with tests. Residual A/C/D gaps block PROMOTE / PROMOTE_WITHOUT_GAPS. Do not inflate.",
+  "priorTrail": {
+    "trailId": "printer-mode-renderer-2026-07",
+    "ESFRVerdict": "HOLD",
+    "PromotionEligibility": "HOLD"
+  },
+  "checklist": {
+    "E_GapsBeforePromotion": {
+      "denoise_enforced": {
+        "checked": true,
+        "statusTag": "enforced",
+        "note": "Profile-gated BilateralDenoiser on scene-spec; print_hq+ default on; print_fast off. Tests: render-scene-print-quality, bilateral-denoise, test_printer_mode."
+      },
+      "soft_penumbra_enforced": {
+        "checked": true,
+        "statusTag": "enforced",
+        "note": "qualityOpts.softPenumbra + min radius 0.75; soft-penumbra-print.test.js PASS."
+      },
+      "rt4d_specular_enforced": {
+        "checked": true,
+        "statusTag": "enforced",
+        "note": "SceneSpec brdf=ggx → convert → render-scene createMaterial ggx; print-specular-ggx.test.js PASS."
+      },
+      "print_timeout_governance": {
+        "checked": true,
+        "statusTag": "enforced"
+      },
+      "print_quality_profiles": {
+        "checked": true,
+        "statusTag": "enforced",
+        "note": "print_fast/hq/cinematic/reference all statusTag enforced with locked params."
+      }
+    },
+    "residualGaps": {
+      "unity_unreal_mesh_sha": { "statusTag": "declared" },
+      "live_csr_governance_decision": { "statusTag": "declared" },
+      "governance_102_suite_rerun": { "statusTag": "declared" },
+      "denoise_other_backends": { "statusTag": "declared", "note": "proton/engine3d out of scope" }
+    }
+  },
+  "antiOverclaim": [
+    "Not PROMOTE_WITHOUT_GAPS",
+    "Not GPU denoise",
+    "Not commercial RIP",
+    "Not Unity/Unreal sync verified"
+  ]
+}

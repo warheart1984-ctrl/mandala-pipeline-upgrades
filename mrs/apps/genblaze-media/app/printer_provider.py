@@ -203,6 +203,8 @@ def run_printer_print(
             "width": body.get("width"),
             "height": body.get("height"),
             "denoise": body.get("denoise"),
+            "softPenumbra": body.get("softPenumbra"),
+            "penumbraLightSamples": body.get("penumbraLightSamples"),
         }
         print_request = {k: v for k, v in print_request.items() if v is not None}
     else:
@@ -236,6 +238,8 @@ def run_printer_print(
             "width": body.get("width"),
             "height": body.get("height"),
             "denoise": body.get("denoise"),
+            "softPenumbra": body.get("softPenumbra"),
+            "penumbraLightSamples": body.get("penumbraLightSamples"),
         }
         print_request = {k: v for k, v in print_request.items() if v is not None}
 

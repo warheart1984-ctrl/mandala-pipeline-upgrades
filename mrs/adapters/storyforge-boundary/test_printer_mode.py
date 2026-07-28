@@ -49,7 +49,9 @@ def test_normalize_print_request_defaults():
     p = normalize_print_request(None)
     assert p["width"] == 512
     assert p["tone_mapper"] == "aces-lite"
-    assert p["denoise"] is False
+    assert p["denoise"] is True
+    assert p["softPenumbra"] is True
+    assert p["penumbraLightSamples"] == 4
     assert "beauty" in p["aovs"]
     assert p["quality"] == "print_hq"
 
@@ -64,12 +66,27 @@ def test_quality_profiles_resolve():
     fast = normalize_print_request({"quality": "print_fast"})
     assert fast["samples"] == 8
     assert fast["width"] == 256
+    assert fast["denoise"] is False
+    assert fast["softPenumbra"] is False
+    assert fast["penumbraLightSamples"] == 1
     assert fast["qualityStatusTag"] == "enforced"
+
+    hq = normalize_print_request({"quality": "print_hq"})
+    assert hq["denoise"] is True
+    assert hq["softPenumbra"] is True
+    assert hq["penumbraLightSamples"] == 4
+    assert hq["qualityStatusTag"] == "enforced"
 
     cine = normalize_print_request({"quality": "print_cinematic"})
     assert cine["denoise"] is True
+    assert cine["softPenumbra"] is True
     assert cine["samples"] == 48
-    assert cine["qualityStatusTag"] == "partial"
+    assert cine["qualityStatusTag"] == "enforced"
+
+    ref = normalize_print_request({"quality": "print_reference"})
+    assert ref["samples"] == 64
+    assert ref["penumbraLightSamples"] == 8
+    assert ref["qualityStatusTag"] == "enforced"
 
     # Explicit override wins over profile
     override = normalize_print_request({"quality": "print_fast", "samples": 12})
@@ -80,7 +97,11 @@ def test_surface_contract_timeout_and_profiles():
     c = load_surface_contract()
     assert c["timeoutGovernance"]["env"] == "MRS_PRINT_TIMEOUT_SECONDS"
     assert "print_hq" in c["qualityProfiles"]
-    assert c["qualityTags"]["denoise"] == "enforced-when-opt-in"
+    assert c["qualityProfiles"]["print_cinematic"]["statusTag"] == "enforced"
+    assert c["qualityProfiles"]["print_reference"]["statusTag"] == "enforced"
+    assert c["qualityTags"]["denoise"] == "enforced-when-profile-or-opt-in"
+    assert c["qualityTags"]["softPenumbra"] == "enforced"
+    assert c["qualityTags"]["rt4dSpecularGgx"] == "enforced"
 
 
 def test_sovereignty_ok_on_fixture():
@@ -159,6 +180,24 @@ def test_print_request_patch_sets_cinematic_quality_opts():
     opts = patched["payload"]["sceneSpecification"]["output"]["qualityOpts"]
     assert opts["adaptiveSampling"] is True
     assert opts["tonemap"] == "aces-lite"
+    assert opts["denoise"] is True
+    assert opts["softPenumbra"] is True
+    assert opts["penumbraLightSamples"] == 4
+    assert opts["printQuality"] == "print_hq"
+
+
+def test_evidence_denoise_enforced_when_requested(tmp_path):
+    pr = normalize_print_request({"quality": "print_hq"})
+    ev = write_evidence_bundle(
+        out_dir=tmp_path,
+        print_request=pr,
+        render_request=_base_rr(),
+        route_result={"status": "ok", "routeUsed": "scene-spec", "artifacts": []},
+        print_state="OK",
+    )
+    assert ev["denoise"]["statusTag"] == "enforced"
+    assert ev["softPenumbra"]["statusTag"] == "enforced"
+    assert "digital-printer-v2" in ev["trail"]
 
 
 def test_dry_run_print_determinism(tmp_path):

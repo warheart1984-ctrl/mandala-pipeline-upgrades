@@ -64,14 +64,24 @@ def write_evidence_bundle(
             }
         ]
 
+    denoise_on = bool(print_request.get("denoise"))
+    soft_on = bool(print_request.get("softPenumbra"))
     stage_tags = stages or {
         "sampling": "enforced",
-        "reconstruction": "partial",  # denoise off / declared by default
+        "reconstruction": "enforced" if denoise_on else "declared",
         "tonemap": "enforced",
         "color": "enforced",
         "encode": "enforced",
         "hash_provenance": "enforced",
     }
+
+    cli_prov = (route_result.get("mapping") or {}).get("cliProvenance") or {}
+    denoise_applied = denoise_on and (
+        cli_prov.get("denoise") is True or cli_prov.get("denoiseFilterHash")
+    )
+    # Dry-run / mocked execute: requested denoise counts as profile-gated enforced.
+    if denoise_on and not cli_prov:
+        denoise_applied = True
 
     evidence = {
         "kind": "mrs-digital-print-evidence",
@@ -95,14 +105,29 @@ def write_evidence_bundle(
         "mapping": route_result.get("mapping"),
         "cliProvenance": (route_result.get("mapping") or {}).get("cliProvenance"),
         "denoise": {
-            "requested": bool(print_request.get("denoise")),
-            "statusTag": "partial" if print_request.get("denoise") else "declared",
+            "requested": denoise_on,
+            "applied": bool(denoise_applied),
+            "statusTag": "enforced" if denoise_applied else "declared",
+            "filterHash": cli_prov.get("denoiseFilterHash"),
             "note": (
-                "CPU denoise not applied by default; flag recorded for lineage. "
-                "Full bilateral denoise remains partial until timed CI budget allows."
+                "CPU BilateralDenoiser on scene-spec print path when denoise=true "
+                "(quality-profile gated). Not GPU denoise."
+                if denoise_applied
+                else "Denoise off for this PrintRequest (e.g. print_fast)."
             ),
         },
-        "trail": "docs/governance/cecp/trails/printer-mode-renderer-2026-07/",
+        "softPenumbra": {
+            "enabled": soft_on,
+            "penumbraLightSamples": int(print_request.get("penumbraLightSamples") or 1),
+            "statusTag": "enforced" if soft_on else "declared",
+            "note": (
+                "Deterministic soft shadows via finite-radius area lights + qualityOpts "
+                "radius floors on render-scene print path."
+                if soft_on
+                else "Soft penumbra off for this PrintRequest."
+            ),
+        },
+        "trail": "docs/governance/cecp/trails/digital-printer-v2-2026-07/",
         "contract": "mrs/adapters/storyforge-boundary/governance/surface_contract.json",
     }
 

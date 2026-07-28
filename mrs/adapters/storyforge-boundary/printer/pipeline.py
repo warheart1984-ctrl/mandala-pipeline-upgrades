@@ -1,7 +1,8 @@
 """Digital print pipeline — sovereignty → execute → evidence.
 
 STATUS: **enforced** for sovereignty + evidence + deterministic scene print path
-when Node CLIs present; denoise **partial**/declared.
+when Node CLIs present; denoise/softPenumbra quality-profile gated (**enforced**
+when profile/request enables them on scene-spec → render-scene).
 
 Print stages: Sampling → Reconstruction → Tonemap → Color → Encode → Hash.
 """
@@ -120,7 +121,7 @@ def run_digital_print(
 
     stages = {
         "sampling": "enforced",
-        # Denoise opt-in → BilateralDenoiser in render-scene (enforced when true).
+        # Denoise profile-gated → BilateralDenoiser in render-scene (enforced when true).
         "reconstruction": "enforced" if print_req.get("denoise") else "declared",
         "tonemap": "enforced",
         "color": "enforced",

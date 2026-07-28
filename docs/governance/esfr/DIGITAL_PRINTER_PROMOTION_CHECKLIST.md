@@ -1,8 +1,9 @@
 # ESFR Promotion Checklist — Digital Printer Initiative
 
 > **Status:** living checklist with honest Drive-G-1 tags.  
-> **Trail verdict:** `docs/governance/cecp/trails/printer-mode-renderer-2026-07/08-esfr-verdict.json`  
-> **Do not** request `PROMOTE_WITHOUT_GAPS` while section E is open.
+> **Active trail verdict:** `docs/governance/cecp/trails/digital-printer-v2-2026-07/08-esfr-verdict.json`  
+> **Prior HOLD:** `docs/governance/cecp/trails/printer-mode-renderer-2026-07/08-esfr-verdict.json`  
+> **Do not** request `PROMOTE_WITHOUT_GAPS` while residual gaps remain.
 
 Legend: `[x]` verified this initiative · `[ ]` open / unverified · tags:
 **enforced** / **partial** / **declared** / **skeleton**
@@ -24,7 +25,7 @@ Legend: `[x]` verified this initiative · `[ ]` open / unverified · tags:
 | Item | Box | Tag |
 |------|-----|-----|
 | Deterministic sampling (stratified AA) | [x] | enforced |
-| Deterministic reconstruction | [x] | partial (denoise opt-in) |
+| Deterministic reconstruction | [x] | enforced (profile-gated BilateralDenoiser) |
 | Deterministic tonemap (ACES opt-in) | [x] | enforced |
 | Deterministic color pipeline | [x] | enforced |
 | Deterministic encode → PNG | [x] | enforced |
@@ -46,7 +47,7 @@ Legend: `[x]` verified this initiative · `[ ]` open / unverified · tags:
 
 | Item | Box | Tag |
 |------|-----|-----|
-| beauty.png | [x] | enforced (`06-print-plate.png`) |
+| beauty.png | [x] | enforced |
 | evidence.json | [x] | enforced |
 | lineage.json | [x] | enforced |
 | provenance frames | [x] | partial |
@@ -57,14 +58,14 @@ Legend: `[x]` verified this initiative · `[ ]` open / unverified · tags:
 
 | Item | Box | Tag |
 |------|-----|-----|
-| Denoise → enforced | [ ] | partial (opt-in BilateralDenoiser) |
-| Soft penumbra → enforced | [ ] | declared |
-| RT4D specular materials → enforced | [ ] | partial (GGX4D library) |
+| Denoise → enforced | [x] | enforced (profile-gated; scene-spec) |
+| Soft penumbra → enforced | [x] | enforced |
+| RT4D specular materials → enforced | [x] | enforced (print path) |
 | Print timeout governance → added | [x] | enforced (`MRS_PRINT_TIMEOUT_SECONDS`) |
-| Print quality profiles → added | [x] | partial (`print_fast`/`hq` enforced; cinematic/reference partial) |
+| Print quality profiles → added | [x] | enforced (all four) |
 
 ## Verdict
 
-**ESFRVerdict:** `HOLD`  
-**PromotionEligibility:** `HOLD`  
-(User-language equivalent: **HOLD_WITH_GAPS**)
+**ESFRVerdict:** `PASS_WITH_GAPS`  
+**PromotionEligibility:** `PROMOTE_WITH_GAPS`  
+(User-language **PROMOTE_WITHOUT_GAPS** is **not** authorized while A/C/D residuals remain.)

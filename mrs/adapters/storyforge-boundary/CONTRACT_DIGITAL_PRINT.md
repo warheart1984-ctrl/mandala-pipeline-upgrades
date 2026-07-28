@@ -1,8 +1,9 @@
 # CONTRACT — MRS as a Governed Digital Printing System
 
-> **Status:** **partial** → printer mode intake/evidence **enforced** (tests);
-> full product RIP / commercial print pipeline **declared**.
-> **Trail:** `docs/governance/cecp/trails/printer-mode-renderer-2026-07/`
+> **Status:** printer mode intake/evidence/profiles/denoise/penumbra/specular
+> print path **enforced** (tests); commercial RIP / GPU denoise **declared**.
+> **Trail:** `docs/governance/cecp/trails/digital-printer-v2-2026-07/`  
+> **Prior:** `docs/governance/cecp/trails/printer-mode-renderer-2026-07/`
 
 ## Governing invariant
 
@@ -19,7 +20,8 @@ inside MRS.
 | Stage | Meaning | Tag |
 |-------|---------|-----|
 | Sampling / convergence | spp, stratified AA, adaptive early-stop | **enforced** (opt-in print/cinematic) |
-| Reconstruction / denoise | optional CPU denoise | **partial** / **declared** (off by default) |
+| Reconstruction / denoise | CPU BilateralDenoiser (profile-gated) | **enforced** when denoise=true (hq+) |
+| Soft penumbra | finite-radius area lights + radius floors | **enforced** when softPenumbra=true |
 | Tonemap | aces-lite / reinhard | **enforced** when print qualityOpts set |
 | Color | sRGB gamma | **enforced** |
 | Encode | PNG | **enforced** |
@@ -38,6 +40,7 @@ python -m pytest mrs/adapters/storyforge-boundary/test_printer_mode.py -q
 
 # Live digital print (opt-in; needs Node + render-scene)
 python mrs/adapters/storyforge-boundary/demo_digital_print.py \
+
   --out-dir output/cecp-digital-print --samples 16
 ```
 
@@ -52,7 +55,8 @@ python mrs/adapters/storyforge-boundary/demo_digital_print.py \
 
 ## Quality profiles
 
-`print_fast` | `print_hq` (**enforced**) · `print_cinematic` | `print_reference` (**partial**)
+`print_fast` | `print_hq` | `print_cinematic` | `print_reference` — all **enforced**
+(deterministic params; wall-clock is ops). Denoise/softPenumbra gated by profile.
 
 ## Timeout
 
