@@ -1,8 +1,10 @@
 # Constitutional Engineering Crew Protocol (CECP Ω∞)
 
-> **Status (MRS local):** **partial** — five-role crew skills exist and require permanent
-> trail artifacts under `docs/governance/cecp/trails/`. Full org-wide enforcement of
-> trail writes is not claimed until CI gates exist.
+> **Status (MRS local):** **partial** — six-role crew skills exist (Architect → …
+> Engineer Standards). Permanent trail artifacts under `docs/governance/cecp/trails/`
+> are required; **stage 06 is required for new trails** but historical 01–05 trails
+> are not rewritten. Full org-wide enforcement of trail writes is not claimed until
+> CI gates exist and trails routinely include 06.
 >
 > **Status (cross-project):** **declared** only — Research OS, PARAGON One,
 > Sovereign X OS, CIEMS, DAR-Z adoption is roadmap language, not present capability.
@@ -15,8 +17,8 @@
 ## 1. Purpose
 
 CECP Ω∞ is the default **crew workflow** for Mandala Rendering Software (MRS): a
-governed lineage from architecture through acceptance where every stage leaves a
-**permanent, independently verifiable evidence trail**.
+governed lineage from architecture through Standards Acceptance where every stage
+leaves a **permanent, independently verifiable evidence trail**.
 
 It turns Prompt→Scene-class work from “a feature that shipped” into a **governed
 reference implementation** with replayable stage artifacts.
@@ -29,7 +31,7 @@ reference implementation** with replayable stage artifacts.
 | C2 | **Independently verifiable** | Inspector verdicts cite commands, paths, and claim↔evidence rows — not author reputation. |
 | C3 | **Constitutionally governed** | Roles obey `AGENTS.md` / charter principles; protected paths stay off-limits unless the user explicitly authorizes. |
 | C4 | **Evidence-bound claims** | Status tags (**enforced** / **partial** / **declared** / **skeleton**) must match tests and code (Drive-G-1). |
-| C5 | **Lineage over heroics** | Architecture → Build → Implementation → Review → Inspection → Acceptance. Skip stages only when the user narrows scope. |
+| C5 | **Lineage over heroics** | Architecture → Build → Implementation → Review → Inspection → Standards Acceptance. Skip stages only when the user narrows scope. |
 
 ## 3. Role definitions and required artifacts
 
@@ -38,10 +40,11 @@ reference implementation** with replayable stage artifacts.
 | 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface specification + constitutional boundary analysis |
 | 2 | **Builder** | Stubs / scaffolds only | `02-builder-scaffold-manifest.md` — scaffold manifest, dependency graph, build-artifacts inventory |
 | 3 | **Implementor** | Yes | `03-implementor-notes.md` — production implementation notes + unit/integration test inventory |
-| 4 | **Reviewer** | No | `04-reviewer-conformance.md` — constitutional conformance, standards compliance, policy validation |
+| 4 | **Reviewer** | No | `04-reviewer-conformance.md` — constitutional conformance, policy validation (lawbook / P1–P5) |
 | 5 | **Inspector** | No | `05-inspector-acceptance.md` — claim-vs-evidence table, replay/probe notes, verdict, acceptance section |
+| 6 | **Engineer Standards** | No | `06-engineer-standards.md` — coding standards, API consistency, Drive-G-1/G-2 wording, CI/test adequacy, ops/license hygiene; ship-gate verdict |
 
-Trail home:
+Trail home (new trails — include stage 06):
 
 ```text
 docs/governance/cecp/trails/<trail-id>/
@@ -51,8 +54,13 @@ docs/governance/cecp/trails/<trail-id>/
   03-implementor-notes.md
   04-reviewer-conformance.md
   05-inspector-acceptance.md
+  06-engineer-standards.md  # required for new trails; optional stub note only on historical trails
   lineage.json              # optional machine-readable handoff (see schema)
 ```
+
+**Historical trails:** existing 01–05 references remain valid evidence. Do **not**
+rewrite them as if stage 06 had run. Optionally add a one-line README note that
+Standards Acceptance was not yet in protocol when the trail closed.
 
 Reusable templates: `docs/governance/cecp/EVIDENCE_TRAIL_TEMPLATE.md`,
 `docs/governance/cecp/lineage.schema.json`.
@@ -65,7 +73,7 @@ Reference implementations (registry): see **§9** below. Layer stack context:
 Logical chain:
 
 ```text
-Architecture → Build → Implementation → Review → Inspection → Acceptance
+Architecture → Build → Implementation → Review → Inspection → Standards Acceptance
 ```
 
 Each stage record SHOULD include:
@@ -73,14 +81,14 @@ Each stage record SHOULD include:
 | Field | Description |
 |-------|-------------|
 | `trailId` | Stable id (directory name), e.g. `prompt-scene-adapter-2026-07` |
-| `stage` | `architect` \| `builder` \| `implementor` \| `reviewer` \| `inspector` \| `acceptance` |
+| `stage` | `architect` \| `builder` \| `implementor` \| `reviewer` \| `inspector` \| `engineer_standards` \| `acceptance` |
 | `predecessor` | Prior stage id or null for Architect |
 | `intent` | Declared purpose (P1) |
 | `artifacts` | Paths written or cited this stage |
 | `evidence` | Tests, commands, file citations |
 | `statusTags` | Map of claim → tag |
 | `handoff` | What the next role must do |
-| `verdict` | Inspector only: `PASS` \| `PASS_WITH_GAPS` \| `FAIL` |
+| `verdict` | Inspector: `PASS` \| `PASS_WITH_GAPS` \| `FAIL`. Engineer Standards: `PASS` \| `PASS_WITH_NOTES` \| `FAIL` |
 
 Machine shape: see `docs/governance/cecp/lineage.schema.json`.
 
@@ -94,6 +102,10 @@ Machine shape: see `docs/governance/cecp/lineage.schema.json`.
 Prefer accumulating evidence-backed CECP references (and closing gaps in later trails)
 over one-off “green” features that hide incompleteness. Promote gaps only when new
 tests/code evidence justify a stronger tag (Drive-G-1).
+
+Engineer Standards uses `PASS_WITH_NOTES` (not `PASS_WITH_GAPS`) for non-blocking
+ship notes after inspection. That is the preferred Standards outcome when the change
+is shipable but ops/docs/CI notes remain honest.
 
 ## 5. Status tags
 
@@ -127,16 +139,18 @@ CECP Ω∞ does **not**:
 | Implementor | `mrs-implementor` | `.opencode/agents/implementor.md` | Write `03-implementor-notes.md` |
 | Reviewer | `mrs-reviewer` | `.opencode/agents/reviewer.md` | Write `04-reviewer-conformance.md` (read-only product code; trail write is allowed for evidence) |
 | Inspector | `mrs-inspector` | `.opencode/agents/inspector.md` | Write `05-inspector-acceptance.md` |
+| Engineer Standards | `mrs-engineer-standards` | `.opencode/agents/engineer-standards.md` | Write `06-engineer-standards.md` (final ship gate; read-only product code) |
 | Foreman | `mrs-crew` | — | Create trail dir; require stage files; merge handoffs |
 
 **Foreman rule:** after each role returns, ensure the corresponding trail file exists under
 `docs/governance/cecp/trails/<id>/` before starting the next stage. Full protocol text lives
-here; skills keep one-line pointers (progressive disclosure).
+here; skills keep one-line pointers (progressive disclosure). Do not treat a crew run as
+ship-ready until Engineer Standards returns `PASS` or `PASS_WITH_NOTES` (new trails).
 
-**Read-only roles vs trail writes:** Architect / Reviewer / Inspector remain banned from
-product/source edits; writing CECP trail markdown under `docs/governance/cecp/trails/` is
-part of the protocol and is the permanent evidence channel (foreman may write trails from
-role returns if a subagent cannot write).
+**Read-only roles vs trail writes:** Architect / Reviewer / Inspector / Engineer Standards
+remain banned from product/source edits; writing CECP trail markdown under
+`docs/governance/cecp/trails/` is part of the protocol and is the permanent evidence
+channel (foreman may write trails from role returns if a subagent cannot write).
 
 ## 8. Cross-project adoption (**declared**)
 
@@ -156,8 +170,10 @@ Do not claim “CECP enforced across Drive G” without per-repo artifacts.
 
 ## 9. Reference implementations registry
 
-CECP Ω∞ prefers **accumulating governed references** (full five-stage trails + honest
+CECP Ω∞ prefers **accumulating governed references** (full stage trails + honest
 tags) over one-off features. Registry below is evidence-bound (Drive-G-1).
+**New** references should include stages 01–06; registry rows closed before stage 06
+remain 01–05 evidence (do not invent a 06 file for them).
 
 | # | Reference | Trail | SoT / contract | Inspector | Notes |
 |---|-----------|-------|----------------|-----------|-------|
@@ -167,7 +183,9 @@ tags) over one-off features. Registry below is evidence-bound (Drive-G-1).
 | **2** | Prompt→Scene→4D-ProtonRaster (six mods) | `docs/governance/cecp/trails/proton-raster-2026-07/` | `mrs/packages/renderer-core/src/render/rt4d/proton/` · `mrs/adapters/proton-raster-bridge/CONTRACT.md` | **PASS_WITH_GAPS** | Second CECP Ω∞ reference. Six CPU mods + PNG **enforced**; Genblaze host **partial**; anisotropic/GPU/roadmap mods **declared**. Landmark commit: `8fa2bc3`. |
 
 **Promotion rule:** a new feature becomes a numbered reference only when it has a
-complete trail (01–05 + README), claim↔evidence rows, and an Inspector verdict.
+complete trail (01–06 + README for trails started after Engineer Standards was
+added; 01–05 + README for historical references), claim↔evidence rows, an
+Inspector verdict, and (for new trails) an Engineer Standards ship-gate verdict.
 Gaps stay tagged until a follow-on trail promotes them.
 
 Layer framing (how CECP relates to CHEA / CCR / CDGF):  

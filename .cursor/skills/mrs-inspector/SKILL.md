@@ -14,4 +14,5 @@ Load `.opencode/agents/inspector.md` and obey it fully.
 
 **CECP:** trail file `05-inspector-acceptance.md` under
 `docs/governance/cecp/trails/<id>/` (foreman may write from your return;
-`docs/governance/CECP_OMEGA_PROTOCOL.md`).
+`docs/governance/CECP_OMEGA_PROTOCOL.md`). Handoff next to **Engineer Standards**
+(final ship gate → `06-engineer-standards.md`).

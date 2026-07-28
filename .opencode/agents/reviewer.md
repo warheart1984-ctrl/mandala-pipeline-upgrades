@@ -89,4 +89,4 @@ VIOLATION: [principle/policy/check] at [file:line]
 
 Read `AGENTS.md` in the repository root for the complete constitutional lawbook.
 
-**CECP:** trail artifact `04-reviewer-conformance.md` → `docs/governance/cecp/trails/<id>/` (foreman may record from your return).
+**CECP:** trail artifact `04-reviewer-conformance.md` → `docs/governance/cecp/trails/<id>/` (foreman may record from your return). Coding / ship-quality final gate is Engineer Standards (`engineer-standards.md`), not this role.

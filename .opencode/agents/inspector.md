@@ -61,4 +61,4 @@ PASS | PASS_WITH_GAPS | FAIL
 - …
 ```
 
-**CECP:** trail artifact `05-inspector-acceptance.md` → `docs/governance/cecp/trails/<id>/` (foreman may record from your return; include Acceptance with gaps).
+**CECP:** trail artifact `05-inspector-acceptance.md` → `docs/governance/cecp/trails/<id>/` (foreman may record from your return; include Acceptance with gaps). Next stage for new trails: Engineer Standards (`06-engineer-standards.md`) — final ship gate.

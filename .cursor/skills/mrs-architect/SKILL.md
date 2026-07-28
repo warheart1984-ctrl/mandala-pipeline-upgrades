@@ -14,3 +14,4 @@ Load `.opencode/agents/architect.md` and obey it fully.
 
 **CECP:** crew runs also require trail file `01-architect-adr.md` under
 `docs/governance/cecp/trails/<id>/` (see `docs/governance/CECP_OMEGA_PROTOCOL.md`).
+Pipeline ends at **Engineer Standards** (`06-engineer-standards.md`) as the final ship gate.

@@ -14,3 +14,4 @@ Load `.opencode/agents/implementor.md` and obey it fully.
 
 **CECP:** write `03-implementor-notes.md` under
 `docs/governance/cecp/trails/<id>/` (`docs/governance/CECP_OMEGA_PROTOCOL.md`).
+Standards FAILs from **Engineer Standards** (final ship gate) may return here for fixes.

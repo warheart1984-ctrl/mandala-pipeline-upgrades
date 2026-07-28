@@ -14,4 +14,5 @@ Load `.opencode/agents/reviewer.md` and obey it fully.
 
 **CECP:** trail file `04-reviewer-conformance.md` under
 `docs/governance/cecp/trails/<id>/` (foreman may write from your return;
-`docs/governance/CECP_OMEGA_PROTOCOL.md`).
+`docs/governance/CECP_OMEGA_PROTOCOL.md`). Constitutional focus only — coding /
+ship-quality final gate is **Engineer Standards** (`mrs-engineer-standards`).

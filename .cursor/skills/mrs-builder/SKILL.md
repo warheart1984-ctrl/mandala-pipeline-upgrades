@@ -14,3 +14,4 @@ Load `.opencode/agents/builder.md` and obey it fully.
 
 **CECP:** write `02-builder-scaffold-manifest.md` under
 `docs/governance/cecp/trails/<id>/` (`docs/governance/CECP_OMEGA_PROTOCOL.md`).
+Final ship gate after Inspect is **Engineer Standards** (`mrs-engineer-standards`).
