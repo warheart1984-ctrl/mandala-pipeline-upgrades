@@ -1,0 +1,200 @@
+{
+  "generatedAt": "2026-07-28T17:06:18.693Z",
+  "fidelity": "partial",
+  "note": "Drift radar is a documentation/probe aid. PASS/aligned ≠ runtime constitutional enforcement.",
+  "linter": {
+    "errorCount": 0,
+    "warnCount": 0,
+    "checks": [
+      {
+        "id": "charter.version",
+        "status": "pass"
+      },
+      {
+        "id": "charter.governanceKernel",
+        "status": "pass"
+      },
+      {
+        "id": "charter.ckl",
+        "status": "pass"
+      },
+      {
+        "id": "ckl.filters",
+        "status": "pass"
+      },
+      {
+        "id": "cse.exists",
+        "status": "pass"
+      },
+      {
+        "id": "cse.determinismRequired_string",
+        "status": "skip",
+        "detail": "Not in cse.js; see sovereign-x GPU contracts (honest path)."
+      },
+      {
+        "id": "determinism.contracts",
+        "status": "pass",
+        "detail": "sovereign-x/router/contracts/gpuPrintSafeguard.js"
+      },
+      {
+        "id": "gpu.printSafeguard",
+        "status": "pass"
+      },
+      {
+        "id": "byok.no_localStorage",
+        "status": "pass"
+      },
+      {
+        "id": "byok.sessionStorage",
+        "status": "pass"
+      },
+      {
+        "id": "byok.module",
+        "status": "pass"
+      },
+      {
+        "id": "printer.evidence.py.secrets",
+        "status": "pass"
+      },
+      {
+        "id": "printer.pipeline.py.secrets",
+        "status": "pass"
+      },
+      {
+        "id": "printer.sovereignty.py.secrets",
+        "status": "pass"
+      },
+      {
+        "id": "printer.sceneSpecLineageTracker.js.secrets",
+        "status": "pass"
+      },
+      {
+        "id": "esm.TimelineSerializer.js",
+        "status": "pass"
+      },
+      {
+        "id": "esm.GPUVideoEncoder.js",
+        "status": "pass"
+      },
+      {
+        "id": "esm.NVENCEncoder.js",
+        "status": "pass"
+      },
+      {
+        "id": "webgpu.C1",
+        "status": "pass"
+      },
+      {
+        "id": "webgpu.C2",
+        "status": "pass"
+      },
+      {
+        "id": "security.nvenc.exec",
+        "status": "pass",
+        "detail": "uses execFile/dynamic import pattern"
+      }
+    ],
+    "issues": []
+  },
+  "genblazeByok": [
+    {
+      "path": "mrs/apps/genblaze-media/app/static/index.html",
+      "expect": "present",
+      "status": "aligned",
+      "detail": "found"
+    },
+    {
+      "path": "mrs/apps/genblaze-media/app/byok.py",
+      "expect": "present",
+      "status": "aligned",
+      "detail": "found"
+    },
+    {
+      "path": "docs/genblaze/security/byok-security-charter.md",
+      "expect": "present",
+      "status": "aligned",
+      "detail": "found"
+    },
+    {
+      "path": "docs/governance/cecp/trails/genblaze-byok-session-2026-07/README.md",
+      "expect": "present",
+      "status": "aligned",
+      "detail": "found"
+    },
+    {
+      "path": "mrs/apps/genblaze-media/app/static/index.html",
+      "expect": "sessionStorage BYOK",
+      "status": "aligned",
+      "detail": "sessionStorage present"
+    },
+    {
+      "path": "mrs/apps/genblaze-media/app/byok.py",
+      "expect": "hosted flag + printSoT false",
+      "status": "aligned",
+      "detail": "policy helpers present"
+    }
+  ],
+  "hosts": [
+    {
+      "host": "Browser",
+      "status": "partial",
+      "detail": "browser host surfaces exist; full adapter matrix not claimed"
+    },
+    {
+      "host": "Unity",
+      "status": "skeleton",
+      "detail": "unity/ present as skeleton if found"
+    },
+    {
+      "host": "Unreal",
+      "status": "skeleton",
+      "detail": "unreal/ present as skeleton if found"
+    }
+  ],
+  "corpus": [
+    {
+      "path": "mandala-agent-pack/manifests/skills.json",
+      "expect": "present",
+      "status": "aligned",
+      "detail": "found"
+    },
+    {
+      "path": "mandala-agent-pack/manifests/agents.yaml",
+      "expect": "present",
+      "status": "aligned",
+      "detail": "found"
+    },
+    {
+      "path": "mandala-agent-pack/manifests/skills.json",
+      "expect": "14 agents catalog",
+      "status": "aligned",
+      "detail": "14 agents · 173 skill IDs (catalog; not 312 executable SKILL.md files)"
+    }
+  ],
+  "governance": [
+    {
+      "path": "engine/constitution/charter.js",
+      "expect": "present",
+      "status": "aligned",
+      "detail": "found"
+    },
+    {
+      "path": "engine/governance/policies/default.policies.json",
+      "expect": "present",
+      "status": "aligned",
+      "detail": "found"
+    },
+    {
+      "path": "engine/conformance/default.conformance-profile.json",
+      "expect": "present",
+      "status": "aligned",
+      "detail": "found"
+    },
+    {
+      "path": "docs/governance/cecp/MANDALA_SIX_AGENTS.md",
+      "expect": "present",
+      "status": "aligned",
+      "detail": "found"
+    }
+  ]
+}

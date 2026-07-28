@@ -2,6 +2,30 @@
 
 **Start here:** [`docs/START_HERE_MRS_30_MIN.md`](docs/START_HERE_MRS_30_MIN.md) — practical onboarding in ~30 minutes (commands, layout, role paths). Not marketing.
 
+## Quick Start (30 seconds)
+
+```bash
+# Clone and install
+git clone <repo-url> && cd "Mandala Rendering Software"
+npm install
+
+# Run the web demo
+npm run serve
+# open http://localhost:8080
+
+# Run all tests (smoke + governance + conformance)
+npm run test:all
+
+# Run governance tests only (102 tests)
+npm run test:governance
+
+# Sync surface meshes to Unity/Unreal
+npm run sync:surfaces
+
+# Render a still frame
+npm run render:4d -- --surface tesseract --width 512 --height 512
+```
+
 Published title: **4D Rendering System v1.0**  
 Formal engine name: **RT4D** (*Ray Tracer for Four Dimensions*)  
 Official validation scene: **Hyper-Caustic Lens**

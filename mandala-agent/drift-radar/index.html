@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mandala Drift Radar</title>
+  <style>
+    :root { --bg:#101418; --ink:#e8eef2; --muted:#8a9aa6; --ok:#3d9b6e; --bad:#c45c5c; --warn:#c9a227; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, sans-serif; background:var(--bg); color:var(--ink); padding:1.5rem; }
+    h1 { font-size:1.35rem; margin:0 0 .5rem; }
+    .note { color:var(--muted); max-width:40rem; line-height:1.45; margin-bottom:1.25rem; }
+    table { border-collapse:collapse; width:100%; max-width:56rem; }
+    th, td { text-align:left; padding:.45rem .55rem; border-bottom:1px solid #243038; font-size:.92rem; }
+    .aligned, .pass { color:var(--ok); }
+    .drift, .fail { color:var(--bad); }
+    .skip, .warn, .partial, .skeleton, .unknown { color:var(--warn); }
+    code { font-size:.85em; }
+  </style>
+</head>
+<body>
+  <h1>Mandala Drift Radar</h1>
+  <p class="note">
+    Local dashboard. Serve this folder and keep <code>drift-radar.json</code> beside this file
+    (run <code>node mandala-agent/drift-radar/generate-report.mjs</code>).
+    Status tags are <strong>partial</strong> probes — not CI “enforced” constitutional law.
+  </p>
+  <div id="meta" class="note">Loading drift-radar.json…</div>
+  <h2>Linter checks</h2>
+  <table id="lint"><thead><tr><th>ID</th><th>Status</th><th>Detail</th></tr></thead><tbody></tbody></table>
+  <h2>Genblaze BYOK</h2>
+  <table id="byok"><thead><tr><th>Path</th><th>Status</th><th>Detail</th></tr></thead><tbody></tbody></table>
+  <h2>Hosts</h2>
+  <table id="hosts"><thead><tr><th>Host</th><th>Status</th><th>Detail</th></tr></thead><tbody></tbody></table>
+  <script>
+    function rows(tbody, items, cols) {
+      tbody.innerHTML = "";
+      for (const it of items || []) {
+        const tr = document.createElement("tr");
+        for (const c of cols) {
+          const td = document.createElement("td");
+          const v = it[c] ?? "";
+          td.textContent = v;
+          if (c === "status") td.className = String(v);
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+    fetch("./drift-radar.json")
+      .then((r) => r.json())
+      .then((rep) => {
+        document.getElementById("meta").textContent =
+          "generatedAt=" + rep.generatedAt +
+          " · linter errors=" + (rep.linter && rep.linter.errorCount) +
+          " · fidelity=" + rep.fidelity;
+        rows(document.querySelector("#lint tbody"), rep.linter && rep.linter.checks, ["id", "status", "detail"]);
+        rows(document.querySelector("#byok tbody"), rep.genblazeByok, ["path", "status", "detail"]);
+        rows(document.querySelector("#hosts tbody"), (rep.hosts || []).map((h) => ({
+          path: h.host, status: h.status, detail: h.detail, id: h.host
+        })), ["path", "status", "detail"]);
+        // fix hosts columns
+        const ht = document.querySelector("#hosts tbody");
+        ht.innerHTML = "";
+        for (const h of rep.hosts || []) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = "<td>" + h.host + "</td><td class=\"" + h.status + "\">" + h.status + "</td><td>" + (h.detail || "") + "</td>";
+          ht.appendChild(tr);
+        }
+      })
+      .catch((e) => {
+        document.getElementById("meta").textContent =
+          "Could not load drift-radar.json — generate it first. " + e;
+      });
+  </script>
+</body>
+</html>

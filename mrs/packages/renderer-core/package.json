@@ -5,6 +5,12 @@
   "type": "module",
   "main": "src/index.js",
   "types": "types.d.ts",
+  "files": [
+    "src/**/*.js",
+    "types.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "types": "./types.d.ts",

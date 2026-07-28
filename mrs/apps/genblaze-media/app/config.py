@@ -240,6 +240,10 @@ class Settings:
     face_creation_assist_enabled: bool = False
     face_creation_assist_cli_path: str | None = None
     face_creation_assist_timeout_seconds: float = 120.0
+    # --- BYOK (session key from browser; hosted off unless flag) ---
+    # GENBLAZE_ALLOW_BYOK=1 enables per-request keys on non-loopback / Render.
+    # Default False: local loopback still accepts BYOK; hosted rejects.
+    allow_byok: bool = False
     # --- ChatGPT / Custom GPT plugin ---
     chatgpt_plugin_key: str | None = None
     public_base_url: str | None = None
@@ -635,6 +639,9 @@ def get_settings() -> Settings:
         face_creation_assist_timeout = 120.0
     face_creation_assist_timeout = max(15.0, min(600.0, face_creation_assist_timeout))
 
+    allow_byok_env = (os.getenv("GENBLAZE_ALLOW_BYOK") or "0").strip().lower()
+    allow_byok = allow_byok_env in {"1", "true", "yes", "on"}
+
     chatgpt_plugin_key = (os.getenv("CHATGPT_PLUGIN_KEY") or "").strip() or None
     public_base_url = (os.getenv("GENBLAZE_PUBLIC_BASE_URL") or "").strip() or None
     cors_env = (os.getenv("GENBLAZE_CORS_ALLOW_ALL") or "").strip().lower()
@@ -740,6 +747,7 @@ def get_settings() -> Settings:
         face_creation_assist_enabled=face_creation_assist_enabled,
         face_creation_assist_cli_path=face_creation_assist_cli_path,
         face_creation_assist_timeout_seconds=face_creation_assist_timeout,
+        allow_byok=allow_byok,
         chatgpt_plugin_key=chatgpt_plugin_key,
         public_base_url=public_base_url,
         cors_allow_all=cors_allow_all,

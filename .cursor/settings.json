@@ -1,0 +1,16 @@
+{
+  "plugins": {
+    "nvidia-skills": {
+      "enabled": true
+    },
+    "appwrite-plugin": {
+      "enabled": true
+    },
+    "continual-learning": {
+      "enabled": true
+    },
+    "svelte": {
+      "enabled": true
+    }
+  }
+}

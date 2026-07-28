@@ -24,6 +24,16 @@ from app.chatgpt_plugin import (
     resolve_public_base,
 )
 from app.config import APP_DIR, NVIDIA_SETUP_HELP, SEEDANCE_SETUP_HELP, get_settings
+from app.byok import (
+    BYOK_SCOPE_ASSIST,
+    BYOK_SCOPE_STILLS,
+    BYOK_SCOPE_VIDEO,
+    ByokForbiddenError,
+    ByokScopeError,
+    byok_health_view,
+    byok_headers_present,
+    resolve_settings_for_request,
+)
 from app.composite_still import (
     CompositeError,
     composite_provenance,
@@ -362,6 +372,14 @@ class GenerateRequest(BaseModel):
             "Abstract/lattice scenes: 0.35-0.55 recommended."
         ),
     )
+    model: str | None = Field(
+        default=None,
+        max_length=200,
+        description=(
+            "Optional NIM / GenAI model id override (BYOK). "
+            "Honored for stills only; ignored for video."
+        ),
+    )
 
 
 class SearchRequest(BaseModel):
@@ -397,6 +415,11 @@ class FaceCreationAssistRequest(BaseModel):
     dry_run: bool = Field(
         default=True,
         description="Default true — force FLUX stub (no live NIM). Set false for live assist.",
+    )
+    model: str | None = Field(
+        default=None,
+        max_length=200,
+        description="Optional BYOK model override (stills+assist only).",
     )
 
 
@@ -606,7 +629,7 @@ class RenderClipRequest(BaseModel):
 
 
 @app.get("/health")
-def health() -> dict:
+def health(request: Request) -> dict:
     settings = get_settings()
     b2_probe: dict | None = None
     b2_error: str | None = None
@@ -625,6 +648,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "service": "mrs-genblaze-media",
+        "byok": byok_health_view(settings, request),
         "nvidia_configured": settings.nvidia_configured,
         "seedance_configured": settings.seedance_configured,
         "b2_configured": settings.b2_configured,
@@ -828,9 +852,34 @@ def _dispatch_image(settings: Any, prompt: str, quality: str | None = None):
         raise
 
 
-def _run_generate_common(body: GenerateRequest, *, video: bool) -> dict:
+def _run_generate_common(
+    body: GenerateRequest,
+    *,
+    video: bool,
+    request: Request | None = None,
+) -> dict:
     """Shared generate path: image or video → embed → index → response-local preview."""
-    settings = get_settings()
+    base_settings = get_settings()
+    byok_meta: dict[str, Any] = {}
+    if request is not None:
+        try:
+            if video and byok_headers_present(request):
+                raise ByokScopeError(
+                    "BYOK scope is stills + assist only. "
+                    "Video generate does not accept per-request keys."
+                )
+            settings, byok_meta = resolve_settings_for_request(
+                base_settings,
+                request,
+                body_model=getattr(body, "model", None),
+                scope=BYOK_SCOPE_VIDEO if video else BYOK_SCOPE_STILLS,
+            )
+        except ByokForbiddenError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ByokScopeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    else:
+        settings = base_settings
     # Uvicorn writes its access-log line only after the response is sent, and this
     # path can block for the full NVIDIA pipeline budget (see
     # settings.nvidia_pipeline_seconds). Without this the operator log shows only
@@ -839,9 +888,10 @@ def _run_generate_common(body: GenerateRequest, *, video: bool) -> dict:
     kind = "video" if video else "image"
     started = time.monotonic()
     logger.info(
-        "generate start · modality=%s backend=%s prompt_chars=%d",
+        "generate start · modality=%s backend=%s byok=%s prompt_chars=%d",
         kind,
         "nvidia-video" if video else settings.image_backend,
+        bool(byok_meta.get("byok_used")),
         len(body.prompt or ""),
     )
     try:
@@ -944,11 +994,29 @@ def _run_generate_common(body: GenerateRequest, *, video: bool) -> dict:
             public["polish_error"] = str(exc)
 
     logger.info(
-        "generate done · modality=%s run=%s elapsed_s=%.1f",
+        "generate done · modality=%s run=%s byok=%s elapsed_s=%.1f",
         kind,
         public.get("run_id") or "—",
+        bool(byok_meta.get("byok_used")),
         time.monotonic() - started,
     )
+    if byok_meta:
+        # Never include raw keys — meta is boolean provenance only.
+        public["byok"] = {
+            k: v
+            for k, v in byok_meta.items()
+            if k
+            in {
+                "byok_used",
+                "byok_key_present",
+                "byok_model_override",
+                "byok_source",
+                "byok_scope",
+                "byok_permitted",
+                "assistOnly",
+                "printSoT",
+            }
+        }
     return public
 
 
@@ -1193,17 +1261,17 @@ def _polish_pipeline(
 
 
 @app.post("/api/generate")
-def api_generate(body: GenerateRequest) -> dict:
-    return _run_generate_common(body, video=False)
+def api_generate(body: GenerateRequest, request: Request) -> dict:
+    return _run_generate_common(body, video=False, request=request)
 
 
 @app.post("/api/generate-video")
-def api_generate_video(body: GenerateRequest) -> dict:
-    return _run_generate_common(body, video=True)
+def api_generate_video(body: GenerateRequest, request: Request) -> dict:
+    return _run_generate_common(body, video=True, request=request)
 
 
 @app.post("/api/image-to-scene")
-def api_image_to_scene(body: ImageToSceneRequest) -> dict:
+def api_image_to_scene(body: ImageToSceneRequest, request: Request) -> dict:
     """Image bytes → SceneSpecification → optional MRS path-traced full frame.
 
     Honest scope: scene interpretation + path-traced full frame — NOT reconstruction.
@@ -1218,8 +1286,18 @@ def api_image_to_scene(body: ImageToSceneRequest) -> dict:
             status_code=400,
             detail="require_nvidia and force_heuristic are mutually exclusive",
         )
-    settings = get_settings()
-    return _image_to_scene_pipeline(
+    base = get_settings()
+    try:
+        settings, byok_meta = resolve_settings_for_request(
+            base,
+            request,
+            scope=BYOK_SCOPE_ASSIST,
+        )
+    except ByokForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ByokScopeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    payload = _image_to_scene_pipeline(
         settings,
         image_base64=body.image_base64,
         ingest_id=body.id,
@@ -1230,17 +1308,35 @@ def api_image_to_scene(body: ImageToSceneRequest) -> dict:
         require_nvidia=body.require_nvidia,
         quality=body.quality,
     )
+    if byok_meta.get("byok_used"):
+        payload["byok"] = {
+            "byok_used": True,
+            "byok_source": byok_meta.get("byok_source"),
+            "assistOnly": True,
+            "printSoT": False,
+        }
+    return payload
 
 
 @app.post("/api/rt4d-to-nvidia")
-def api_rt4d_to_nvidia(body: Rt4dToNvidiaRequest) -> dict:
+def api_rt4d_to_nvidia(body: Rt4dToNvidiaRequest, request: Request) -> dict:
     """RT4D / generate still (run_id) → NVIDIA NIM vision → optional MRS re-render.
 
     Uses the existing NIM vision image→scene path (not img2img). Requires
     NVIDIA_API_KEY; on missing key or NIM 5xx/504 returns a clear NVIDIA-unavailable
     error and does not replace the source still.
     """
-    settings = get_settings()
+    base = get_settings()
+    try:
+        settings, byok_meta = resolve_settings_for_request(
+            base,
+            request,
+            scope=BYOK_SCOPE_ASSIST,
+        )
+    except ByokForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ByokScopeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     try:
         req = build_rt4d_to_nvidia_request(
             run_id=body.run_id,
@@ -1253,7 +1349,7 @@ def api_rt4d_to_nvidia(body: Rt4dToNvidiaRequest) -> dict:
     if not is_run_id(req["run_id"]):
         raise HTTPException(status_code=400, detail="invalid run_id")
 
-    return _image_to_scene_pipeline(
+    payload = _image_to_scene_pipeline(
         settings,
         run_id=req["run_id"],
         render=req["render"],
@@ -1262,6 +1358,14 @@ def api_rt4d_to_nvidia(body: Rt4dToNvidiaRequest) -> dict:
         quality=req["quality"],
         provenance_kind="rt4d-to-nvidia-mrs-full-frame",
     )
+    if byok_meta.get("byok_used"):
+        payload["byok"] = {
+            "byok_used": True,
+            "byok_source": byok_meta.get("byok_source"),
+            "assistOnly": True,
+            "printSoT": False,
+        }
+    return payload
 
 
 def _validate_spec_shape(spec: dict[str, Any]) -> list[dict[str, str]] | None:
@@ -1400,13 +1504,24 @@ def api_prompt_to_scene(body: PromptToSceneRequest) -> dict:
 
 
 @app.post("/api/face-creation-assist")
-def api_face_creation_assist(body: FaceCreationAssistRequest) -> dict:
+def api_face_creation_assist(body: FaceCreationAssistRequest, request: Request) -> dict:
     """Opt-in Face Creation Assist (Sovereign X CLI shell).
 
     assistOnly draft CharacterSpec / lookdev — never Digital Printer SoT.
     Requires FACE_CREATION_ASSIST_ENABLED=1.
     """
-    settings = get_settings()
+    base = get_settings()
+    try:
+        settings, byok_meta = resolve_settings_for_request(
+            base,
+            request,
+            body_model=body.model,
+            scope=BYOK_SCOPE_ASSIST,
+        )
+    except ByokForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ByokScopeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     avail = face_creation_assist_availability(settings)
     if not avail.get("enabled"):
         raise HTTPException(
@@ -1418,7 +1533,7 @@ def api_face_creation_assist(body: FaceCreationAssistRequest) -> dict:
             ),
         )
     try:
-        return run_face_creation_assist(
+        payload = run_face_creation_assist(
             settings,
             prompt=body.prompt,
             image_path=body.image_path,
@@ -1426,6 +1541,14 @@ def api_face_creation_assist(body: FaceCreationAssistRequest) -> dict:
         )
     except FaceCreationAssistError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    if byok_meta.get("byok_used"):
+        payload["byok"] = {
+            "byok_used": True,
+            "byok_source": byok_meta.get("byok_source"),
+            "assistOnly": True,
+            "printSoT": False,
+        }
+    return payload
 
 
 @app.post("/api/engine3d-still")

@@ -1,0 +1,89 @@
+# Mandala Agent CI (additive)
+
+# Status: **partial** probes + existing npm scripts. Does not replace `.github/workflows/ci.yml`.
+# Drive-G-1: linter/radar heuristics are not full constitutional enforcement.
+
+name: Mandala Agent CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  constitutional-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Constitutional linter (partial heuristics)
+        run: node scripts/mandala-lint/run.mjs
+
+  drift-radar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Generate drift radar report
+        run: node mandala-agent/drift-radar/generate-report.mjs --out mandala-agent/drift-radar/drift-radar.json
+      - name: Upload drift-radar.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-radar
+          path: mandala-agent/drift-radar/drift-radar.json
+
+  auto-fix-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Auto-fix dry-run only (never --apply in CI)
+        run: node mandala-agent/auto-fix/auto-fix.mjs
+
+  governance-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # No npm ci — root package uses file: deps; matches existing ci.yml pattern.
+      - name: Governance unit tests
+        run: npm run test:governance
+
+  conformance-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Conformance profile tests
+        run: npm run test:conformance
+
+  genblaze-byok-pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Genblaze test deps (minimal)
+        working-directory: mrs/apps/genblaze-media
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          pip install pytest fastapi httpx starlette pydantic python-dotenv || true
+      - name: BYOK + constitutional compliance tests
+        working-directory: mrs/apps/genblaze-media
+        run: |
+          python -m pytest tests/test_byok.py tests/test_constitutional_compliance.py -q
+        continue-on-error: false

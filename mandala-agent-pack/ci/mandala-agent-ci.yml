@@ -1,0 +1,44 @@
+name: Mandala Agent CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  mandala-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run constitutional linter
+        run: node mandala-lint/run-lint.js
+
+      - name: Run governance tests
+        run: node --test engine/constitution/test/**/*.test.js
+
+      - name: Run renderer-core tests
+        run: node --test mrs/packages/renderer-core/test/**/*.test.js
+
+      - name: Run Genblaze tests
+        run: node --test genblaze/test/**/*.test.js
+
+      - name: Generate drift radar report
+        run: node mandala-agent/drift-radar/generate-report.js > drift-radar.json
+
+      - name: Upload drift radar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-radar
+          path: drift-radar.json

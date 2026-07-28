@@ -15,7 +15,11 @@ export class ConstitutionalKnowledgeLayer {
   }
 
   static async loadDefault(fetchImpl = fetch) {
-    const res = await fetchImpl("engine/governance/policies/default.policies.json");
+    const base = typeof import.meta?.url === "string"
+      ? new URL(".", import.meta.url).href
+      : "file://" + process.cwd() + "/";
+    const url = new URL("../../engine/governance/policies/default.policies.json", base).href;
+    const res = await fetchImpl(url);
     if (!res.ok) throw new Error("Failed to load CKL policies");
     const policies = await res.json();
     return new ConstitutionalKnowledgeLayer(policies);
@@ -241,7 +245,7 @@ export function resolveDecision(intent, evidence, policySet, precedents = []) {
   }
 
   // Drift from precedents: if recent denials for same type, slow cinematic
-  const recentDenials = precedents.filter((p) => p.decision === false).length;
+  const recentDenials = precedents.filter((p) => p.decision === false || p.decision === "deny").length;
   if (recentDenials >= 2 && intent.params) {
     paramAdjust = {
       ...(paramAdjust || {}),
@@ -319,8 +323,5 @@ function evalModifier(modifier, env) {
   if (Object.prototype.hasOwnProperty.call(env, raw)) {
     return Number(env[raw] ?? 0);
   }
-  console.warn(
-    `[CKL] Unparseable modifier "${raw}" — expected "param * number"; returning 0`,
-  );
-  return 0;
+  return Number(env.self ?? 1);
 }

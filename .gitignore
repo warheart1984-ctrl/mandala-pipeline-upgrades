@@ -71,6 +71,11 @@ mrs/packages/renderer-web/_webgpu-smoke/_out/
 *.wip-full
 *.receipt-wip
 
+# Temporary build artifacts
+.tmp_*
+.worktrees/
+renders/
+
 # Operator-provided production face GLBs (keep README / .gitkeep tracked)
 operator-assets/**/*.glb
 operator-assets/**/*.gltf

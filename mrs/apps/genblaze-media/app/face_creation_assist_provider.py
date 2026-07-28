@@ -89,6 +89,13 @@ def run_face_creation_assist(
         else getattr(settings, "face_creation_assist_timeout_seconds", 120.0)
     )
 
+    env = {**os.environ, "FORCE_COLOR": "0"}
+    # BYOK / request-scoped key for child NIM call — never log.
+    if getattr(settings, "nvidia_api_key", None):
+        env["NVIDIA_API_KEY"] = str(settings.nvidia_api_key)
+    if getattr(settings, "image_model", None):
+        env["GENBLAZE_IMAGE_MODEL"] = str(settings.image_model)
+
     try:
         completed = subprocess.run(
             cmd,
@@ -97,7 +104,7 @@ def run_face_creation_assist(
             text=True,
             timeout=timeout,
             check=False,
-            env={**os.environ, "FORCE_COLOR": "0"},
+            env=env,
         )
     except subprocess.TimeoutExpired as exc:
         raise FaceCreationAssistError(

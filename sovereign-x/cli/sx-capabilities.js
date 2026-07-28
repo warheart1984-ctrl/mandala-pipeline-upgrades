@@ -24,10 +24,14 @@ const registryPath = join(
 const registry = requireJson(registryPath);
 
 function printHelp() {
-  console.log("Usage: sx-capabilities <list|inspect|inspect-flux-image|help> [capability]");
+  console.log(
+    "Usage: sx-capabilities <list|inspect|inspect-flux-image|inspect-nim|help> [capability]",
+  );
   console.log("  list                      List registry capabilities (skeleton)");
   console.log("  inspect <capability>      Show skill path + meta");
   console.log("  inspect-flux-image        Show FLUX lookdev-from-image wiring");
+  console.log("  inspect-nim               NIM capability charter summary");
+  console.log("  inspect-nim.flux.stills   Per-capability NIM stills detail");
   console.log("  help                      Show this help");
   console.log("STATUS: declared/skeleton — no live GPU probe.");
 }
@@ -98,6 +102,42 @@ function main() {
     console.log("Engine: LookDevEngine.runFromImage");
     console.log("Ban: never print SoT (cpu.rt4d.print remains authoritative)");
     if (!skill) process.exit(1);
+    return;
+  }
+
+  if (command === "inspect-nim") {
+    console.log("NIM Capability Charter");
+    console.log("----------------------");
+    console.log("Domain: GPU Assist / NIM");
+    console.log("Authority: assist-only (non-deterministic)");
+    console.log("Docs: docs/genblaze/capabilities/nim-capability-charter.md");
+    console.log("");
+    console.log("Registered NIM / FLUX assist capabilities:");
+    console.log(" - gpu.gen.nvidia.nim_flux     (stills, lookdev)");
+    console.log(" - nim.flux.stills             (alias label — maps to nim_flux)");
+    console.log(" - nim.flux.face_assist        (face creation assist)");
+    console.log(" - nim.vision.scene_assist     (SceneSpec assist)");
+    console.log("");
+    console.log("Routing rules:");
+    console.log(" - Never used as Digital Printer beauty SoT.");
+    console.log(" - Never used with determinismRequired=true as GPU SoT.");
+    console.log(" - Never routed into print evidence as authoritative.");
+    console.log("");
+    console.log("BYOK rules:");
+    console.log(" - Keys are local-only (sessionStorage) by default.");
+    console.log(" - Hosted BYOK requires GENBLAZE_ALLOW_BYOK=1.");
+    console.log(" - No server-side key persistence or logging.");
+    return;
+  }
+
+  if (command === "inspect-nim.flux.stills") {
+    console.log("Capability: nim.flux.stills (→ gpu.gen.nvidia.nim_flux)");
+    console.log("Vendor: multi (e.g., BFL FLUX via NVIDIA NIM)");
+    console.log("Mode: assist-only, stills generation, lookdev.");
+    console.log("Input: prompt, optional image, model override.");
+    console.log("Output: assist-only images + SceneSpec hints.");
+    console.log("Print: barred from print SoT and evidence chain as beauty.");
+    console.log("BYOK: sessionStorage; see docs/genblaze/security/byok-security-charter.md");
     return;
   }
 

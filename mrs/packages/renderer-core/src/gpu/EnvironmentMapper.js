@@ -42,14 +42,14 @@ export class EnvironmentMapper {
       size: [128, 128, 6, 5], // 5 roughness levels
       dimension: '2d-array',
       format: this.format,
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUBufferUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
-    
+
     // Create BRDF lookup texture
     this.brdfTexture = this.device.createTexture({
       size: [512, 256],
       format: 'rg16float',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUBufferUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
     
     // Create sampler
@@ -251,7 +251,6 @@ export class EnvironmentMapper {
     // Load HDR environment texture from image data
     // This would typically use a texture loader like ktx-parse or similar
     // For now, we'll use the procedural environment
-    console.log('Environment texture loading not yet implemented, using procedural');
   }
   
   getBindGroupLayout() {
