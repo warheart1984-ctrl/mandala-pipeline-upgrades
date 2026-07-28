@@ -110,6 +110,7 @@ COPY mrs/adapters/storyforge-boundary/fixtures ./storyforge-boundary/fixtures
 # Proton raster pipeline (Node) for RenderRequest route=proton-raster.
 COPY mrs/adapters/proton-raster-bridge/run_proton_pipeline.mjs ./proton-raster-bridge/
 COPY mrs/adapters/proton-raster-bridge/mintCir.js ./proton-raster-bridge/
+COPY mrs/adapters/proton-raster-bridge/resolveDualLayout.mjs ./proton-raster-bridge/
 COPY mrs/adapters/proton-raster-bridge/package.json ./proton-raster-bridge/
 
 # Face fixture GLBs (synthetic; not production anatomy).
@@ -126,6 +127,18 @@ RUN node --version \
       --prompt "docker build smoke" --seed 1 \
       --width 64 --height 64 --samples 1 --output /tmp/smoke.png > /dev/null \
  && rm -f /tmp/smoke.png
+
+# Proton dual-layout smoke: flattened /app must resolve mintCir + proton index
+# (not monorepo mrs/adapters|packages relatives). Default-off at runtime; build-only.
+RUN node /app/proton-raster-bridge/run_proton_pipeline.mjs --demo \
+      --width 32 --height 32 --output /tmp/proton-pipeline-smoke.png > /tmp/proton-pipeline-smoke.json \
+ && node /app/renderer-core/scripts/render-proton-splat.mjs --demo \
+      --width 32 --height 32 --output /tmp/proton-splat-smoke.png > /dev/null \
+ && test -f /tmp/proton-pipeline-smoke.png \
+ && test -f /tmp/proton-splat-smoke.png \
+ && rm -f /tmp/proton-pipeline-smoke.png /tmp/proton-pipeline-smoke.json \
+      /tmp/proton-pipeline-smoke.evidence.json \
+      /tmp/proton-splat-smoke.png /tmp/proton-splat-smoke.evidence.json
 
 # Scene-spec smoke: a tiny render-scene run exercises render-scene.mjs, its
 # scene-spec import graph, capability validation, and the shared PNG encoder —
