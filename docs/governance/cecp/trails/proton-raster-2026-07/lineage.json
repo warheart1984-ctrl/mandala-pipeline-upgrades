@@ -19,8 +19,22 @@
       "artifact": "05-inspector-acceptance.md",
       "predecessor": "reviewer",
       "verdict": "PASS_WITH_GAPS"
+    },
+    {
+      "stage": "esfr",
+      "artifact": "06-engineer-standards.md",
+      "predecessor": "inspector",
+      "verdict": "PASS_WITH_GAPS",
+      "handoff": "PROMOTE_WITH_GAPS — gaps listed in 06 and lineage.esfr.json (partial backfill)"
     }
   ],
+  "acceptance": {
+    "decision": "accepted_with_gaps",
+    "inspectorVerdict": "PASS_WITH_GAPS",
+    "esfrVerdict": "PASS_WITH_GAPS",
+    "promotionEligible": "PROMOTE_WITH_GAPS",
+    "notes": "ESFR backfill cites Inspector gaps; esfrRunStatus partial in docs/governance/esfr/lineage.esfr.json"
+  },
   "statusTags": {
     "cecpReference": "partial",
     "sceneToProtonField": "enforced",

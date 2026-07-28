@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mandala-rendering.local/governance/cecp/lineage.schema.json",
   "title": "CECP Omega lineage record",
-  "description": "Lean machine-readable handoff for a CECP trail. Status: declared shape; not CI-validated unless a consumer is added. New trails should include engineer_standards (stage 06); historical 01–05 trails remain valid without it.",
+  "description": "Lean machine-readable handoff for a CECP trail. Status: declared shape; not CI-validated unless a consumer is added. New trails should include engineer_standards / esfr (stage 06); historical 01–05 trails remain valid without it. ESFR package: docs/governance/esfr/.",
   "type": "object",
   "required": ["trailId", "protocol", "stages"],
   "additionalProperties": false,
@@ -20,7 +20,7 @@
     "lineage": {
       "type": "string",
       "description": "Human lineage label",
-      "default": "Architecture → Build → Implementation → Review → Inspection → Standards Acceptance"
+      "default": "Architecture → Build → Implementation → Review → Inspection → ESFR"
     },
     "stages": {
       "type": "array",
@@ -44,9 +44,26 @@
           "type": "string",
           "enum": ["PASS", "PASS_WITH_GAPS", "FAIL"]
         },
+        "esfrVerdict": {
+          "type": "string",
+          "enum": ["PASS", "PASS_WITH_GAPS", "HOLD", "REJECT", "N/A"]
+        },
         "engineerStandardsVerdict": {
           "type": "string",
-          "enum": ["PASS", "PASS_WITH_NOTES", "FAIL", "N/A"]
+          "description": "Alias of esfrVerdict for older consumers",
+          "enum": [
+            "PASS",
+            "PASS_WITH_GAPS",
+            "PASS_WITH_NOTES",
+            "HOLD",
+            "REJECT",
+            "FAIL",
+            "N/A"
+          ]
+        },
+        "promotionEligible": {
+          "type": "string",
+          "enum": ["PROMOTE", "PROMOTE_WITH_GAPS", "HOLD", "REJECT", "N/A"]
         },
         "notes": { "type": "string" }
       }
@@ -67,6 +84,7 @@
             "reviewer",
             "inspector",
             "engineer_standards",
+            "esfr",
             "acceptance"
           ]
         },
@@ -96,6 +114,8 @@
             "PASS",
             "PASS_WITH_GAPS",
             "PASS_WITH_NOTES",
+            "HOLD",
+            "REJECT",
             "FAIL",
             "N/A"
           ]

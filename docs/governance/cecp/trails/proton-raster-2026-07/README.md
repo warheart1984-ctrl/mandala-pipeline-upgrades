@@ -11,10 +11,13 @@
 | `feature` | Prompt→Scene→4D-ProtonRaster (six-mod CECP reference) |
 | `requestedBy` | CECP Crew FOREMAN (refined north star) |
 | `started` | 2026-07-27 |
-| `lineage` | Architecture → Build → Implementation → Review → Inspection → Acceptance |
+| `lineage` | Architecture → Build → Implementation → Review → Inspection → ESFR |
 | `overallStatus` | **partial** (six mods **enforced**; Genblaze host **partial**; roadmap **declared**) |
 | `inspectorVerdict` | **PASS_WITH_GAPS** |
+| `esfrVerdict` | **PASS_WITH_GAPS** (**partial** backfill) |
+| `promotionEligibility` | **PROMOTE_WITH_GAPS** |
 | `protocol` | `docs/governance/CECP_OMEGA_PROTOCOL.md` |
+| `esfrPackage` | `docs/governance/esfr/` |
 | `package` | `mrs/packages/renderer-core/src/render/rt4d/proton/` |
 | `contract` | `mrs/adapters/proton-raster-bridge/CONTRACT.md` |
 | `landmarkCommit` | `8fa2bc3` |
@@ -27,6 +30,7 @@
 - [x] `03-implementor-notes.md`
 - [x] `04-reviewer-conformance.md`
 - [x] `05-inspector-acceptance.md`
+- [x] `06-engineer-standards.md` (ESFR — **partial** backfill)
 - [x] `lineage.json`
 - [x] `README.md`
 

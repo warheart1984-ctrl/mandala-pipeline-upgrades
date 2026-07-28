@@ -1,12 +1,19 @@
-# 06 — Engineer Standards (ship gate)
+# 06 — Engineer Standards / ESFR (ship gate)
 
 **Trail:** `judge-wow-2026-07`  
-**Stage:** Engineer Standards  
-**Status:** complete  
+**Stage:** Engineer Standards (ESFR stage 06)  
+**Status:** complete (pre-matrix formalization)  
 **Predecessor:** `05-inspector-acceptance.md` (PASS_WITH_GAPS)  
 **Also noted:** Reviewer PASS_WITH_NOTES; foreman post-Inspector wow visibility retune  
 **Date:** 2026-07-27  
 **Role constraint:** read-only (no product/source edits by Standards role)
+
+> **ESFR enum mapping (protocol formalization):** recorded verdict
+> `PASS_WITH_NOTES` maps to ESFRVerdict `PASS_WITH_GAPS` and
+> PromotionEligibility `PROMOTE_WITH_GAPS`. Full
+> `docs/governance/esfr/test-matrix.esfr.md` + `probes.esfr.md` tables are
+> required on subsequent ESFR re-runs; this artifact was authored before those
+> files were first-class. Do not treat as a fabricated green `PROMOTE`.
 
 ---
 
@@ -15,6 +22,8 @@
 Shipable as a governed composition package. Non-blocking notes on CI coverage,
 ops env docs, trail meta freshness, and merge hygiene. No blocking standards,
 license, or claim-overreach FAIL.
+
+**ESFR alias:** `PASS_WITH_GAPS` · **PromotionEligibility alias:** `PROMOTE_WITH_GAPS`
 
 ---
 
@@ -48,7 +57,8 @@ None.
 
 ## 4. Ship gate decision
 
-**Ready to merge/ship as scoped, with listed notes.**
+**Ready to merge/ship as scoped, with listed notes.**  
+(ESFR: `PROMOTE_WITH_GAPS`)
 
 - **Enforced today:** star→proton triptych AOVs, `aovEncode`, Genblaze mocked HTTP, `--scene-spec` CLI, `shadeRasterFragment` hook, P4 `frameSha256`, wow enrich + skipLighting visibility path (`protonCount=50` @256).
 - **Partial / declared:** Genblaze live Node-in-Docker, TextureSampler, prompt-string one-shot, bake polish.
@@ -59,3 +69,4 @@ None.
 
 - Inspector `05`: proton suite; pytest proton_raster; engine3d raster; demo @256.
 - Foreman retune: `judgeWow.test.js` → 5 pass; demo `protonCount=50` beauty/depth/normal.
+- New formal ESFR probes 01–08: see `docs/governance/esfr/probes.esfr.md` (apply on re-run).

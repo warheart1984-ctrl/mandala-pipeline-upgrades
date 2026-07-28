@@ -8,7 +8,9 @@ docs/governance/cecp/trails/<trail-id>/
 
 Fill every section with paths and commands. Prefer weaker verbs when evidence is incomplete (Drive-G-1).
 
-**New trails** must include stage 06. Historical trails that closed at 05 are not rewritten.
+**New trails** must include stage 06 (**ESFR**). Historical trails that closed at 05 are not rewritten unless an honest ESFR backfill is added.
+
+ESFR package: `docs/governance/esfr/`.
 
 ---
 
@@ -20,7 +22,7 @@ Fill every section with paths and commands. Prefer weaker verbs when evidence is
 | `feature` | |
 | `requestedBy` | |
 | `started` | YYYY-MM-DD |
-| `lineage` | Architecture → Build → Implementation → Review → Inspection → Standards Acceptance |
+| `lineage` | Architecture → Build → Implementation → Review → Inspection → ESFR |
 | `overallStatus` | **partial** / **enforced** / **declared** (pick one; justify) |
 | `protocol` | `docs/governance/CECP_OMEGA_PROTOCOL.md` |
 
@@ -33,7 +35,7 @@ Fill every section with paths and commands. Prefer weaker verbs when evidence is
 - [ ] `03-implementor-notes.md`
 - [ ] `04-reviewer-conformance.md`
 - [ ] `05-inspector-acceptance.md`
-- [ ] `06-engineer-standards.md` (required for new trails)
+- [ ] `06-engineer-standards.md` (ESFR — required for new trails)
 - [ ] `lineage.json` (optional)
 - [ ] `README.md` (index)
 
@@ -95,7 +97,7 @@ Required headings:
 1. Scope reviewed
 2. Principles P1–P5 findings
 3. Policy / ban / boundary findings
-4. Constitutional / contract findings (lawbook focus; leave ship-quality to stage 06)
+4. Constitutional / contract findings (lawbook focus; leave ship-quality to stage 06 / ESFR)
 5. Violations (or “none found” with evidence)
 6. Boundary verdict (e.g. Boundary OK)
 7. Handoff to Inspector
@@ -115,21 +117,27 @@ Required headings:
 5. Gaps for Implementor
 6. Claim wording to downgrade (if any)
 7. **Acceptance** — accepted / rejected as governed integration point; list gaps honestly
-8. Handoff to Engineer Standards (new trails)
+8. Handoff to ESFR (new trails)
 
 ---
 
-## 06 — Engineer Standards (ship gate)
+## 06 — ESFR (Engineer Standards Final Reviewer / ship gate)
 
 **File:** `06-engineer-standards.md`
 
 Required headings:
 
-1. Verdict: `PASS` | `PASS_WITH_NOTES` | `FAIL`
-2. Standards checklist (coding/API, Drive-G-1, Drive-G-2, CI/tests, Docker/ops notes, deps/license, no drive-by scope)
-3. Findings (blocking vs notes)
-4. Ship gate decision (ready / blocked / ship with notes)
-5. Distinct from Reviewer — do not re-litigate P1–P5 unless a standards finding depends on it
+1. ESFRVerdict: `PASS` | `PASS_WITH_GAPS` | `HOLD` | `REJECT`
+2. PromotionEligibility: `PROMOTE` | `PROMOTE_WITH_GAPS` | `HOLD` | `REJECT` (cite promotion rules 01–06)
+3. **Test matrix** — full table from `docs/governance/esfr/test-matrix.esfr.md` (all six categories)
+4. **Evidence probes** — probes 01–08 from `docs/governance/esfr/probes.esfr.md` with citations
+5. Standards checklist (coding/API, Drive-G-1, Drive-G-2, CI/tests, Docker/ops notes, deps/license, no drive-by scope)
+6. Findings (blocking vs gaps)
+7. Evidence alignment with Inspector (no override)
+8. Ship gate / promotion decision
+9. Distinct from Reviewer — do not re-litigate P1–P5 unless a standards finding depends on it
+
+CHEA / CCR / CDGF matrix rows and probes 03–05: evaluate **declared** layers until registries exist.
 
 ---
 
@@ -143,5 +151,6 @@ Required headings:
 **Enforced today:** …
 **Partial / skeleton gaps:** …
 **Declared non-goals:** …
-**Standards Acceptance (stage 06):** PASS | PASS_WITH_NOTES | FAIL | N/A (historical trail)
+**ESFR (stage 06):** PASS | PASS_WITH_GAPS | HOLD | REJECT | N/A (historical trail)
+**PromotionEligibility:** PROMOTE | PROMOTE_WITH_GAPS | HOLD | REJECT | N/A
 ```
