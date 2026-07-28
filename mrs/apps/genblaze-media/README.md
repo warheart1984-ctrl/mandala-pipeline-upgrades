@@ -32,6 +32,24 @@ Optionally, set `GENBLAZE_IMAGE_BACKEND=rt4d` to skip NVIDIA entirely and produc
 
 This does **not** mean Genblaze's NVIDIA path renders 4D scenes.
 
+### Digital Printer vs NIM (assist ≠ SoT)
+
+`/printer/*` is the **Digital Printer** path: deterministic RT4D / scene-spec /
+engine3d / proton plates under a normalized `PrintRequest` (CPU SoT). See
+`mrs/adapters/storyforge-boundary/CONTRACT_DIGITAL_PRINT.md` and
+`docs/governance/cecp/PRINTER_SERVICE_API.md`.
+
+| Asset | Role | May be print beauty SoT? |
+|-------|------|--------------------------|
+| NIM FLUX / Cosmos / fal polish PNG | Creative assist / look-dev | **No** |
+| NIM vision → SceneSpecification | Draft assist (human-validate) | **No** until declared SceneSpec + RT4D print |
+| `/printer/print` beauty.png | Governed print plate | **Yes** (evidence + hashes) |
+
+**Invariant:** no code path copies FLUX (or other GenAI) bytes into printer
+`beauty.png` SoT. Sovereignty rejects smuggled `promptSpec` / `modelBackend`
+bodies on print intake. Design:
+`docs/superpowers/specs/2026-07-28-digital-printer-gpu-quality-speed-design.md`.
+
 ### Image → MRS scene (hackathon D path)
 
 `POST /api/image-to-scene` accepts an uploaded still (`image_base64`), an ingest `id`, or a prior generate `run_id`, emits a **SceneSpecification** (NVIDIA NIM multimodal when `NVIDIA_API_KEY` is set; otherwise or on failure a **heuristic** builder), validates via Node SoT (`validate-scene-spec.mjs`), and by default path-traces a **full MRS frame** under `{prefix}/image-to-scene/{run_id}/`.

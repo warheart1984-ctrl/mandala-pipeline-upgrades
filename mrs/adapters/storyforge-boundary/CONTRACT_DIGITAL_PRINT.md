@@ -69,6 +69,9 @@ improve *perceived* noise within a fixed budget; they are not extra unbiased
 samples. GPU acceleration of the same math is a separate, parity-gated path
 (`docs/superpowers/specs/2026-07-28-digital-printer-gpu-quality-speed-design.md`).
 
+**Genblaze NIM / FLUX** are creative assist only — never Digital Printer beauty
+SoT. See Genblaze README § “Digital Printer vs NIM”.
+
 ## Timeout
 
 `MRS_PRINT_TIMEOUT_SECONDS` (fallback `MRS_RENDER_TIMEOUT_SECONDS`, default 900) — **enforced** on printer HTTP + CLI.
