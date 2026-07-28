@@ -102,7 +102,14 @@ def test_proton_route_is_skeleton_ok():
 
 def test_adapter_modules_do_not_import_storyforge_packages():
     """Adapter runtime must not import StoryForge packages (ownership)."""
-    for name in ("validate_request.py", "route.py"):
+    for name in (
+        "validate_request.py",
+        "route.py",
+        "execute.py",
+        "paths.py",
+        "run_pipeline.py",
+        "smoke_pipeline.py",
+    ):
         text = (_DIR / name).read_text(encoding="utf-8")
         assert "import story_forge" not in text
         assert "from story_forge" not in text

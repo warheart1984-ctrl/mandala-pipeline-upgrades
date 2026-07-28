@@ -47,8 +47,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     ENGINE3D_SEQUENCE_ENABLED=1 \
     PROMPT_SCENE_BRIDGE_SCRIPT=/app/prompt-scene-bridge/run_bridge.py \
     ENGINE3D_EXPAND_SCRIPT=/app/engine3d-core/scripts/expand-world-document.mjs \
-    PROMPT_SCENE_EXPAND_WORLD=0
+    PROMPT_SCENE_EXPAND_WORLD=0 \
+    STORYFORGE_BOUNDARY_DIR=/app/storyforge-boundary \
+    RENDER_REQUEST_PIPELINE_SCRIPT=/app/storyforge-boundary/run_pipeline.py \
+    RENDER_REQUEST_API_ENABLED=0 \
+    MRS_RENDER_REQUEST_EXECUTE=0 \
+    PROTON_PIPELINE_SCRIPT=/app/proton-raster-bridge/run_proton_pipeline.mjs \
+    MRS_RENDER_OUTPUT_DIR=/app/data/output \
+    MRS_RENDER_TIMEOUT_SECONDS=120
 # PROMPT_SCENE_EXPAND_WORLD=0: expand remains opt-in (set 1 or pass --expand at runtime).
+# MRS_RENDER_REQUEST_EXECUTE=0: RenderRequest deep execute opt-in (CLI --execute or set 1).
+# RENDER_REQUEST_API_ENABLED=0: Genblaze POST /api/render-request opt-in.
 
 # genblaze-core 0.3.7 declares pillow<12; overlay Pillow 12.3.0 for CVE fixes
 COPY mrs/apps/genblaze-media/requirements-docker.txt .
@@ -85,6 +94,21 @@ COPY mrs/packages/engine3d-core/src ./engine3d-core/src
 COPY mrs/adapters/prompt-scene-bridge/run_bridge.py ./prompt-scene-bridge/
 COPY mrs/adapters/prompt-scene-bridge/mrs_map.py ./prompt-scene-bridge/
 COPY mrs/adapters/prompt-scene-bridge/schemas ./prompt-scene-bridge/schemas
+
+# StoryForge Runtime crossing (RenderRequest→RenderResult). No SF packages.
+COPY mrs/adapters/storyforge-boundary/validate_request.py ./storyforge-boundary/
+COPY mrs/adapters/storyforge-boundary/route.py ./storyforge-boundary/
+COPY mrs/adapters/storyforge-boundary/execute.py ./storyforge-boundary/
+COPY mrs/adapters/storyforge-boundary/paths.py ./storyforge-boundary/
+COPY mrs/adapters/storyforge-boundary/run_pipeline.py ./storyforge-boundary/
+COPY mrs/adapters/storyforge-boundary/smoke_pipeline.py ./storyforge-boundary/
+COPY mrs/adapters/storyforge-boundary/schemas ./storyforge-boundary/schemas
+COPY mrs/adapters/storyforge-boundary/fixtures ./storyforge-boundary/fixtures
+
+# Proton raster pipeline (Node) for RenderRequest route=proton-raster.
+COPY mrs/adapters/proton-raster-bridge/run_proton_pipeline.mjs ./proton-raster-bridge/
+COPY mrs/adapters/proton-raster-bridge/mintCir.js ./proton-raster-bridge/
+COPY mrs/adapters/proton-raster-bridge/package.json ./proton-raster-bridge/
 
 # Face fixture GLBs (synthetic; not production anatomy).
 # Optional operator overrides: do NOT COPY production GLBs into the image.
@@ -138,6 +162,15 @@ RUN python /app/prompt-scene-bridge/run_bridge.py \
       --prompt "docker expand smoke" --json --expand > /tmp/prompt-scene-expand-smoke.json \
  && python -c "import json; d=json.load(open('/tmp/prompt-scene-expand-smoke.json')); o=(d.get('engine3dWorldDocument') or {}).get('objects') or []; assert len(o)>0, 'expand smoke: objects empty'" \
  && rm -f /tmp/prompt-scene-expand-smoke.json
+
+# RenderRequest boundary smoke (scene-spec → PNG). Opt-in execute for build proof.
+RUN mkdir -p /app/data/output \
+ && MRS_RENDER_REQUEST_EXECUTE=1 MRS_RENDER_OUTPUT_DIR=/tmp/sf-out \
+      python /app/storyforge-boundary/run_pipeline.py \
+      -r /app/storyforge-boundary/fixtures/sample-render-request-executable.json \
+      --execute --out-dir /tmp/sf-out --result /tmp/sf-result.json \
+ && python -c "import json; from pathlib import Path; d=json.load(open('/tmp/sf-result.json')); assert d.get('status')=='ok', d; arts=d.get('artifacts') or []; assert any(a.get('role')=='beauty-png' for a in arts), d" \
+ && rm -rf /tmp/sf-out /tmp/sf-result.json
 
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh

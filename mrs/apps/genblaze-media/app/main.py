@@ -50,6 +50,10 @@ from app.proton_raster_provider import (
     generate_proton_raster,
     proton_raster_availability,
 )
+from app.render_request_provider import (
+    render_request_availability,
+    run_render_request,
+)
 from app.face_polish_defaults import (
     resolve_face_polish_prompt,
     resolve_face_polish_strength,
@@ -685,6 +689,12 @@ def health() -> dict:
             "POST /api/proton-raster runs six-mod proton soft-splat when "
             "PROTON_RASTER_ENABLED=1 (default off). Sibling to Engine3D "
             "triangle soft-raster."
+        ),
+        "render_request": render_request_availability(settings),
+        "render_request_note": (
+            "POST /api/render-request accepts RenderRequest JSON (MRS crossing). "
+            "Opt-in: RENDER_REQUEST_API_ENABLED=1. Upstream Story→PromptSpec "
+            "remains outside this host."
         ),
         "engine3d_sequence": engine3d_sequence_availability(settings),
         "engine3d_sequence_note": (
@@ -1535,6 +1545,31 @@ def api_engine3d_still(body: Engine3dStillRequest) -> dict:
             payload["polish_error"] = str(exc)
 
     return payload
+
+
+@app.post("/api/render-request")
+def api_render_request(body: dict[str, Any]) -> dict:
+    """MRS crossing: RenderRequest JSON → RenderResult (optional PNG).
+
+    Opt-in via RENDER_REQUEST_API_ENABLED=1. Does not implement upstream
+    Story→PromptSpec stages (those remain outside this host).
+    """
+    settings = get_settings()
+    avail = render_request_availability(settings)
+    if not avail.get("enabled"):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "RenderRequest API disabled. Set RENDER_REQUEST_API_ENABLED=1 "
+                "and ensure the boundary run_pipeline.py is discoverable."
+            ),
+        )
+    try:
+        return run_render_request(body, settings, execute=True)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.post("/api/proton-raster")

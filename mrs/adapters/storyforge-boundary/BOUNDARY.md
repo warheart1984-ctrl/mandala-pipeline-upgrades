@@ -38,7 +38,7 @@ CROS kinds as substitutes for this boundary’s schemas.
 | `mrs/adapters/prompt-scene-bridge/` (prompt → SceneSpecification) | **partial** precursor — not RenderRequest |
 | Engine3D expand via prompt-scene bridge | **partial** / route target |
 | `mrs/adapters/proton-raster-bridge/` | **partial** / route target |
-| This adapter (`storyforge-boundary`) | **partial** — schema + validate + skeleton route |
+| This adapter (`storyforge-boundary`) | **partial** — schema + validate + optional deep execute (PNG/hashes) |
 
 ## Genblaze ban
 
