@@ -1,0 +1,40 @@
+# Sovereign X Router — GPU-Assisted Capabilities
+
+## Overview
+
+Sovereign X Router now supports governed, assist-only GPU capabilities for look-dev, SceneSpec assistance, and AI services, while preserving CPU PathTracer4D as the sole print source-of-truth.
+
+**Status (Drive-G-1):** registration + contract stubs **partial**; live GPU invoke **declared**/not shipped; print GPU **banned**.
+
+## GPU Capability Classes
+
+- `gpu.gen.nvidia.nim_flux` — NVIDIA NIM/FLUX image/video generation (assist).
+- `gpu.inference.nvidia.tao` — TAO-hosted LLM/VLM/inference (assist).
+- `gpu.compute.nvidia.cuda` — CUDA compute (denoise, upscale, parity) (assist).
+- `gpu.inference.amd.rocm` — ROCm-hosted inference (assist).
+- `gpu.compute.amd.hip` — HIP compute (assist).
+- `cpu.rt4d.print` — deterministic PathTracer4D print (authoritative).
+
+## Determinism & Governance
+
+- Deterministic intents (`determinismRequired=true`) must route to `cpu.rt4d.print`.
+- GPU outputs are tagged `assistOnly=true`, `nonAuthoritative=true`.
+- Only CPU RT4D participates in the Digital Printer evidence chain.
+
+## Modules
+
+- `router/modules/gpu/gpuAssistModule.js` — multi-vendor GPU assist routing.
+- `router/modules/gpu/assist/lookDevEngine.js` — GPU-powered look-dev engine.
+- `router/contracts/gpuDispatchContract.js` — dispatch rules for GPU vs CPU.
+- `router/registry/gpuSkillsRegistry.json` — binding to NVIDIA/AMD skills.
+
+## Package entry
+
+npm package `@mrs/sovereign-x-router` re-exports from this tree (`sovereign-x/` is canonical SoT).
+
+## Skills (reload after install)
+
+- `~/.agents/skills/nvidia-gpu-assist/`
+- `~/.agents/skills/amd-gpu-assist/`
+
+For constitutional details, see `docs/governance/cecp/trails/vendor-gpu-integration-2026-07/`.

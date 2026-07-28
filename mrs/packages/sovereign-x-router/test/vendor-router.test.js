@@ -20,6 +20,7 @@ const NVIDIA_IDS = [
   "gpu.optimize.nvidia.dynamo",
   "gpu.sim.nvidia.tilegym",
   "ai.gen.nvidia.flux",
+  "gpu.gen.nvidia.nim_flux",
   "ai.gen.nvidia.cosmos",
   "ai.vision.nvidia.llama",
 ];
@@ -28,6 +29,19 @@ const AMD_IDS = [
   "gpu.compute.amd.rocm",
   "gpu.compute.amd.hip",
   "gpu.inference.amd.rocm",
+];
+
+/** Prior IDs kept; nim_flux is alias row (still listed upstream). */
+const UPSTREAM_ALLOW_IDS = [
+  "gpu.inference.nvidia.tao",
+  "gpu.compute.nvidia.cuda",
+  "gpu.optimize.nvidia.dynamo",
+  "gpu.sim.nvidia.tilegym",
+  "ai.gen.nvidia.flux",
+  "gpu.gen.nvidia.nim_flux",
+  "ai.gen.nvidia.cosmos",
+  "ai.vision.nvidia.llama",
+  ...AMD_IDS,
 ];
 
 const FORBIDDEN_PRINT_IDS = [
@@ -49,11 +63,22 @@ describe("SovereignX vendor capability registry", () => {
     assert.equal(doc.status, "declared");
     assert.ok(doc.related?.digitalPrinterContract);
     assert.ok(doc.related?.vendorSkillsInstallNote);
-    assert.equal(doc.capabilities.length, NVIDIA_IDS.length + AMD_IDS.length);
+    assert.equal(doc.capabilities.length, UPSTREAM_ALLOW_IDS.length);
+    assert.ok(doc.aliases?.["gpu.gen.nvidia.nim_flux"]);
+    assert.deepEqual(
+      (doc.canonicalCapabilityClasses ?? []).slice(0, 5),
+      [
+        "gpu.inference.nvidia.tao",
+        "gpu.compute.nvidia.cuda",
+        "gpu.gen.nvidia.nim_flux",
+        "gpu.inference.amd.rocm",
+        "gpu.compute.amd.hip",
+      ],
+    );
   });
 
   it("maps every NVIDIA + AMD architecture ID to skillNames and upstream|forbidden_for_print", () => {
-    for (const id of [...NVIDIA_IDS, ...AMD_IDS]) {
+    for (const id of UPSTREAM_ALLOW_IDS) {
       const cap = getCapability(id);
       assert.ok(cap, `missing capability ${id}`);
       assert.equal(cap.lane, "upstream");
@@ -75,7 +100,7 @@ describe("SovereignX vendor capability registry", () => {
 
 describe("SovereignX vendor dispatch stubs", () => {
   it("ALLOWs registered upstream IDs", () => {
-    for (const id of [...NVIDIA_IDS, ...AMD_IDS]) {
+    for (const id of UPSTREAM_ALLOW_IDS) {
       const result = dispatchVendorCapability(id, {
         intentId: "test-upstream",
         intentLane: "upstream",
@@ -140,6 +165,6 @@ describe("SovereignX vendor dispatch stubs", () => {
 
   it("lists all upstream IDs from architecture", () => {
     const ids = listUpstreamCapabilityIds().sort();
-    assert.deepEqual(ids, [...NVIDIA_IDS, ...AMD_IDS].sort());
+    assert.deepEqual(ids, [...UPSTREAM_ALLOW_IDS].sort());
   });
 });

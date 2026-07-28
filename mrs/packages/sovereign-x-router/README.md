@@ -1,15 +1,22 @@
 # @mrs/sovereign-x-router
 
-Thin **Sovereign X** multi-vendor capability registry + dispatch stubs.
+Sovereign X multi-vendor capability registry + **GPU assist** dispatch stubs.
 
-**Status:** **partial** — registry load and reject/allow decisions are covered by
-unit tests; vendor runtimes are **not** invoked; Digital Printer beauty SoT is
-never allowed.
+**Status:** **partial** — registry load, vendor dispatch, and GpuDispatchContract
+rules are covered by unit tests; vendor runtimes are **not** invoked; Digital
+Printer beauty SoT is never allowed.
+
+**Version:** 0.2.0
 
 ## What this is
 
-Machine-readable mapping of NVIDIA/AMD vendor-skill capability IDs → skill names
-→ `upstream` / `forbidden_for_print` → `declared` | `partial`.
+- Machine-readable NVIDIA/AMD capability IDs → skills → `upstream` /
+  `forbidden_for_print`
+- Canonical classes (user SoT §A) + alias `gpu.gen.nvidia.nim_flux` ↔
+  `ai.gen.nvidia.flux`
+- `GpuAssistModule`: `routeLookDev`, `routeSceneSpecAssist`, `routeEmbeddings`
+- `GpuDispatchContract`: validate + bind (determinism→CPU; auto→NVIDIA→AMD→CPU)
+- `SovereignLookDevEngine` planner skeleton (Steps 1–4; final print CPU RT4D)
 
 ## What this is not
 
@@ -23,21 +30,30 @@ Machine-readable mapping of NVIDIA/AMD vendor-skill capability IDs → skill nam
 ```js
 import {
   dispatchVendorCapability,
-  loadVendorCapabilityRegistry,
+  routeLookDev,
+  validateGpuDispatchContract,
+  planLookDevPipeline,
 } from "@mrs/sovereign-x-router";
 
-const allow = dispatchVendorCapability("ai.gen.nvidia.flux", {
-  intentLane: "lookdev",
-});
-// allow.ok === true
+dispatchVendorCapability("gpu.gen.nvidia.nim_flux", { intentLane: "lookdev" });
+// ok — alias of ai.gen.nvidia.flux
 
-const ban = dispatchVendorCapability("gpu.print.beauty", {});
-// ban.ok === false, code PRINT_SOT_BANNED
-
-const printSmuggle = dispatchVendorCapability("ai.gen.nvidia.flux", {
-  asPrintSoT: true,
+routeLookDev({
+  intentId: "i1",
+  modality: "image",
+  determinismRequired: false,
+  vendorPreference: "auto",
 });
-// printSmuggle.ok === false, code FORBIDDEN_FOR_PRINT
+// assistProvenance only; never printProvenance
+
+routeLookDev({
+  intentId: "i2",
+  modality: "image",
+  determinismRequired: false,
+  vendorPreference: "auto",
+  route: "/printer/beauty",
+});
+// rejected — PRINTER_ROUTE_BANNED
 ```
 
 ## Tests
@@ -46,11 +62,13 @@ const printSmuggle = dispatchVendorCapability("ai.gen.nvidia.flux", {
 npm test --prefix mrs/packages/sovereign-x-router
 ```
 
-## Trail
+## Trails
 
-`docs/governance/cecp/trails/sovereign-x-vendor-router-2026-07/`
+- `docs/governance/cecp/trails/sovereign-x-gpu-assist-2026-07/` (this blueprint)
+- `docs/governance/cecp/trails/sovereign-x-vendor-router-2026-07/` (prior registration)
 
 ## Related
 
+- `docs/governance/GPU_ASSISTED_COMPUTE_INTEGRATION_CHARTER.md`
+- `docs/superpowers/specs/2026-07-28-sovereign-lookdev-engine-plan.md`
 - `docs/superpowers/specs/2026-07-28-vendor-skills-install-note.md`
-- `docs/governance/cecp/trails/vendor-skills-fixup-2026-07/`

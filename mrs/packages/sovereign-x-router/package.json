@@ -1,17 +1,25 @@
 {
   "name": "@mrs/sovereign-x-router",
-  "version": "0.1.0",
-  "description": "Thin Sovereign X vendor capability registry + dispatch stubs (upstream-only; print SoT rejected)",
+  "version": "0.3.0",
+  "description": "Sovereign X vendor capability registry + GPU assist (re-exports sovereign-x/ SoT; print = cpu.rt4d.print)",
   "type": "module",
   "private": true,
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
     "./registry": "./src/registry.js",
-    "./dispatch": "./src/dispatch.js"
+    "./dispatch": "./src/dispatch.js",
+    "./GpuDispatchContract": "./src/GpuDispatchContract.js",
+    "./GpuAssistModule": "./src/GpuAssistModule.js",
+    "./lookdev": "./src/lookdev/SovereignLookDevEngine.js",
+    "./modules/gpuAssistModule": "./src/modules/gpuAssistModule.js",
+    "./modules/gpuDispatchContract": "./src/modules/gpuDispatchContract.js",
+    "./modules/lookDevEngine": "./src/modules/lookDevEngine.js"
   },
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "test:parity": "node --test ../../../sovereign-x/tests/gpuParitySuite.test.js",
+    "sx:capabilities": "node ../../../sovereign-x/cli/sx-capabilities.js"
   },
   "engines": {
     "node": ">=20"
