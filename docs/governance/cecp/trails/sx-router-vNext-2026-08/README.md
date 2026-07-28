@@ -42,6 +42,19 @@ Superpowers: writing-plans / verification-before-completion.
 | **3** | Live assist invoke + parity plates (non-print) | **Draft** / **declared** | No GPU print SoT |
 | **4** | Determinism promotion path (receipts) | **Draft** / **declared** | Continues in `gpu-determinism-2026-09` |
 
+## Roadmap Phases 5–8 (2027) — appended
+
+**Status:** **declared** / **Draft** long-horizon. Canonical write-up:
+`../sx-router-vNext-2027/README.md`. Phase I materials:
+`../gpu-determinism-phase1-2026-08/`.
+
+| Phase | Title | Status |
+|-------|-------|--------|
+| **5** | GPU Determinism Consolidation (Q1–Q2 2027) | **Draft** / **declared** |
+| **6** | GPU Print Candidate Evaluation (Q3 2027) | **Draft** / **declared** |
+| **7** | GPU Print Promotion (Q4 2027) | **Draft** / **declared** (future charter Article IV) |
+| **8** | Multi-Backend Print Sovereignty (Beyond 2027) | **Draft** / **declared** |
+
 ## Stage checklist
 
 - [x] `01-architect-adr.md`
@@ -60,4 +73,7 @@ Superpowers: writing-plans / verification-before-completion.
 
 - Phase 1: `../vendor-gpu-integration-2026-07/`
 - Determinism plan: `../gpu-determinism-2026-09/`
+- Phase I (PR#84-oriented): `../gpu-determinism-phase1-2026-08/`
+- 2027 Phases 5–8: `../sx-router-vNext-2027/`
+- Announcement draft: `../pr84-announcement.md`
 - Lineage tree: `../vendor-gpu-integration-2026-07/ciems-lineage-tree-vendor-gpu.md`

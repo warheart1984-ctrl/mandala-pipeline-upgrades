@@ -6,7 +6,10 @@
  *
  * Seed contract (declared): mulberry32 PRNG + stratified sample indices.
  * Drive-G-1: assistOnly; nonAuthoritative; does not participate in Digital Printer evidence.
+ * Receipt hashes below are **stub** (same-host deterministic from seed) — not live GPU plates.
  */
+
+import { createHash } from "node:crypto";
 
 /**
  * Mulberry32 — deterministic uint32→[0,1) PRNG from a 32-bit seed.
@@ -22,6 +25,15 @@ export function mulberry32(seed) {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+/**
+ * Stub receipt hash — deterministic from payload string (not live GPU frame).
+ * @param {string} payload
+ * @returns {string}
+ */
+export function stubReceiptHash(payload) {
+  return createHash("sha256").update(String(payload)).digest("hex");
 }
 
 /**
@@ -70,6 +82,12 @@ export function integrateDeterministicAssist(request = {}) {
     });
   }
 
+  const sampleDigest = samples
+    .map((s) => `${s.i}:${s.u.toFixed(8)}:${s.stratified}`)
+    .join("|");
+  const frameHash = stubReceiptHash(`frame|${seed}|${sampleCount}|${sampleDigest}`);
+  const replayHash = stubReceiptHash(`replay|${seed}|${sampleCount}|${sampleDigest}`);
+
   return {
     ok: true,
     capabilityId: "gpu.integrator.deterministic",
@@ -85,6 +103,26 @@ export function integrateDeterministicAssist(request = {}) {
     seed,
     sampleCount,
     samples,
+    /** Assist plate stub — not a print frame */
+    plate: {
+      kind: "assistStubPlate",
+      status: "skeleton",
+      seed,
+      sampleCount,
+    },
+    receipt: {
+      seed,
+      frameHash,
+      replayHash,
+      deviceInfo: {
+        vendor: "neutral",
+        model: "stub",
+        driver: "none",
+        status: "skeleton",
+      },
+      status: "skeleton",
+      note: "Stub same-host hashes from seed — not live GPU parity evidence",
+    },
     message:
       "Prototype deterministic GPU integrator assist (no live GPU; never print SoT)",
     provenanceKind: "assistProvenance",
@@ -94,5 +132,6 @@ export function integrateDeterministicAssist(request = {}) {
 export default {
   mulberry32,
   stratifiedIndex,
+  stubReceiptHash,
   integrateDeterministicAssist,
 };

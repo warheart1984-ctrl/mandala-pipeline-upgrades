@@ -9,6 +9,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validate as validateDispatchContract } from "./contracts/gpuDispatchContract.js";
+import { integrateDeterministicAssist } from "./modules/gpu/integrator/deterministicGpuIntegrator.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const requireJson = createRequire(import.meta.url);
@@ -140,6 +141,11 @@ export async function route(capabilityId, request = {}) {
       request,
       provenanceKind: "printProvenance",
     };
+  }
+
+  // Deterministic integrator prototype — assist-only; never print SoT
+  if (resolved.capabilityId === "gpu.integrator.deterministic") {
+    return integrateDeterministicAssist(request);
   }
 
   // GPU assist stub — never claims live GPU

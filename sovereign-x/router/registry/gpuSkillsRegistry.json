@@ -6,7 +6,9 @@
   "trail": "docs/governance/cecp/trails/vendor-gpu-integration-2026-07/",
   "relatedTrails": [
     "docs/governance/cecp/trails/sx-router-vNext-2026-08/",
-    "docs/governance/cecp/trails/gpu-determinism-2026-09/"
+    "docs/governance/cecp/trails/gpu-determinism-2026-09/",
+    "docs/governance/cecp/trails/gpu-determinism-phase1-2026-08/",
+    "docs/governance/cecp/trails/sx-router-vNext-2027/"
   ],
   "authoritativePrint": "cpu.rt4d.print",
   "skills": {
