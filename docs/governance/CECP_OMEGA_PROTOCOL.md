@@ -42,7 +42,7 @@ reference implementation** with replayable stage artifacts.
 
 | Stage | Role | Writes product code? | Required trail artifact(s) |
 |-------|------|----------------------|----------------------------|
-| 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface + boundary. Optional **crew modes** (20 lenses: Sage…Bard + Oracle…Visionary): on **any** stage role — **not** new stages. Index: `docs/governance/cecp/CREW_MODES.md` (**partial**). Sage: `SAGE_MODE.md`. Precedence: bans > Sage > lens. CHEA/CCR/CDGF remain **declared**. |
+| 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface + boundary. Optional **Cognitive Ecology Profiles** (`COGNITIVE_ECOLOGY.md`, **partial** docs/skills) and optional **crew modes** (20 lenses: Sage…Bard + Oracle…Visionary): on **any** stage role — **not** new stages. Modes: `CREW_MODES.md` (**partial**). Sage: `SAGE_MODE.md`. Precedence: **Constitution/role bans > Evidence > Profile > Mode**. CHEA/CCR/CDGF remain **declared**. |
 | 2 | **Builder** | Stubs / scaffolds only | `02-builder-scaffold-manifest.md` — scaffold manifest, dependency graph, build-artifacts inventory. Optional Builder Sage. |
 | 3 | **Implementor** | Yes | `03-implementor-notes.md` — production notes + test inventory. Optional Implementor Sage. |
 | 4 | **Reviewer** | No | `04-reviewer-conformance.md` — constitutional conformance (P1–P5). Optional Reviewer Sage. |
@@ -70,6 +70,12 @@ when the trail closed.
 
 Reusable templates: `docs/governance/cecp/EVIDENCE_TRAIL_TEMPLATE.md`,
 `docs/governance/cecp/lineage.schema.json`.
+
+**Cognitive Ecology Ω∞ (optional):** Profiles answer “how should I think?” while
+CECP Roles answer “what am I responsible for?” Canonical:
+`docs/governance/cecp/COGNITIVE_ECOLOGY.md` (**partial** — docs/skills; not
+runtime-enforced; metrics **declared** until trail-measured). Modes stay in
+`CREW_MODES.md` and map to Profiles where overlap exists. Do not add stages.
 
 Reference implementations (registry): see **§9** below. Layer stack context:
 `docs/governance/CONSTITUTIONAL_LAYER_STACK.md` (CECP / CHEA / CCR / CDGF).
@@ -139,18 +145,20 @@ CECP Ω∞ does **not**:
 - Imply cross-org runtime gates (Research OS, PARAGON One, Sovereign X OS, CIEMS, DAR-Z)
 - Guarantee that chat-only crew runs are complete — **trail files are the completion criterion**
 - Substitute for the 16 MRS conformance checks on constitutional engine subsystems
+- Runtime-enforce Cognitive Ecology Profiles or self-certifying cognitive metrics
+  (`COGNITIVE_ECOLOGY.md` remains **partial** / metrics **declared**)
 
 ## 7. MRS crew skills ↔ CECP stages
 
 | CECP stage | Cursor skill | OpenCode agent | Protocol duty |
 |------------|--------------|----------------|---------------|
-| Architect | `mrs-architect` (+ `SAGE.md`) | `architect.md` (`sage_mode` / `modes: optional`) | `01-architect-adr.md`. Optional mode lenses: `CREW_MODES.md` (**partial**). |
+| Architect | `mrs-architect` (+ `SAGE.md`) | `architect.md` (`sage_mode` / `modes: optional`) | `01-architect-adr.md`. Optional Profiles: `COGNITIVE_ECOLOGY.md`. Optional mode lenses: `CREW_MODES.md` (**partial**). |
 | Builder | `mrs-builder` | `builder.md` (`sage_mode` / `modes: optional`) | `02-builder-scaffold-manifest.md` (+ optional modes) |
 | Implementor | `mrs-implementor` | `implementor.md` (`sage_mode` / `modes: optional`) | `03-implementor-notes.md` (+ optional modes) |
 | Reviewer | `mrs-reviewer` | `reviewer.md` (`sage_mode` / `modes: optional`) | `04-reviewer-conformance.md` (+ optional modes) |
 | Inspector | `mrs-inspector` | `inspector.md` (`sage_mode` / `modes: optional`) | `05-inspector-acceptance.md` (+ optional modes) |
 | **ESFR** (Engineer Standards) | `mrs-engineer-standards` | `engineer-standards.md` (`sage_mode` / `modes: optional`) | `06-engineer-standards.md` (+ optional modes); final ship gate |
-| Foreman | `mrs-crew` (+ modes hub) | — | Trail dir; stage files; select default vs Sage/mode lens per stage |
+| Foreman | `mrs-crew` (+ profiles / modes hub) | — | Trail dir; stage files; assign Role + optional Profile + optional Mode per stage |
 
 **Foreman rule:** after each role returns, ensure the corresponding trail file exists under
 `docs/governance/cecp/trails/<id>/` before starting the next stage. Full protocol text lives

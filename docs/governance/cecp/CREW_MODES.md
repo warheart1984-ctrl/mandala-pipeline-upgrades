@@ -6,6 +6,13 @@
 >
 > **Roster:** 20 modes (waves 1–2). Sage detail: `docs/governance/cecp/SAGE_MODE.md`  
 > Foreman: `.cursor/skills/mrs-crew/SKILL.md` · `.cursor/skills/mrs-crew/SAGE.md`
+>
+> **Cognitive Ecology:** Profiles (higher-order “how should I think?”) live in
+> `docs/governance/cecp/COGNITIVE_ECOLOGY.md` (**partial** — docs/skills only).
+> Modes remain named lenses; where names overlap they **map** to Profiles
+> (Sage→Sage, Diplomat→Diplomat, Visionary→Visionary, Trickster→Skeptic-ish,
+> etc.) — Modes are **not** deleted. Precedence:
+> **Constitution/role bans > Evidence > Profile lens > Mode lens**.
 
 ---
 
@@ -16,8 +23,9 @@
 | What | Optional **lens** on Architect / Builder / Implementor / Reviewer / Inspector / ESFR |
 | What not | No stage 07+; no replacement of Architect→…→ESFR; no new OpenCode agents |
 | Hard bans | **Always win** — mode never grants write authority a role lacks |
-| Precedence | **Base role bans > Sage rigor > mode lens** |
-| Compose | Modes may stack with Sage (e.g. “Sage + Physicist Architect”) |
+| Precedence | **Constitution/role bans > Evidence > Profile lens > Mode lens** (legacy shorthand: bans > Sage rigor > mode still holds when no Profile is set) |
+| Compose | Modes may stack with Sage and/or a Cognitive Ecology Profile |
+| Profiles | Higher-order cognitive layer — `COGNITIVE_ECOLOGY.md`; Modes may alias/map |
 | Capability | **partial** / skill-declared |
 
 ---
@@ -153,9 +161,10 @@ Propose new worlds, paradigms, or constitutional layers with explicit **Anti-ove
 ## Foreman checklist
 
 1. Keep pipeline order Architect → … → ESFR  
-2. Pick at most one primary lens per stage (plus optional Sage)  
-3. Remind bans + precedence in the Task prompt  
-4. Point agents at this file (and `SAGE_MODE.md` if Sage)  
-5. Record `lens:` / `mode: sage` in trail metadata when used  
+2. Optionally assign a Cognitive Ecology **Profile** (`COGNITIVE_ECOLOGY.md`)  
+3. Pick at most one primary **Mode** lens per stage (plus optional Sage)  
+4. Remind bans + precedence (bans > evidence > profile > mode) in the Task prompt  
+5. Point agents at this file, `COGNITIVE_ECOLOGY.md` when Profile set, and `SAGE_MODE.md` if Sage  
+6. Record `cognitive-profile:` / `lens:` / `mode: sage` / switches in trail metadata when used  
 
 Do **not** invent twenty new agents or new stages.

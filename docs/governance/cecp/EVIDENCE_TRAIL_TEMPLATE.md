@@ -25,6 +25,8 @@ ESFR package: `docs/governance/esfr/`.
 | `lineage` | Architecture → Build → Implementation → Review → Inspection → ESFR |
 | `overallStatus` | **partial** / **enforced** / **declared** (pick one; justify) |
 | `protocol` | `docs/governance/CECP_OMEGA_PROTOCOL.md` |
+| `cognitive-profile` | (optional) primary Profile from `COGNITIVE_ECOLOGY.md` |
+| `cognitive-switches` | (optional) logged Profile switches + evidence cites |
 
 ---
 
@@ -63,7 +65,13 @@ Cross-reference ledger (§9), and Risks to sovereignty / determinism. See
 
 **Optional crew mode suite:** 20 lenses (Sage…Bard; Oracle…Visionary) may apply
 to any stage role without adding stages — `docs/governance/cecp/CREW_MODES.md`
-(**partial**). Precedence: base role bans > Sage > mode lens.
+(**partial**).
+
+**Optional Cognitive Ecology Profile:** Tier I/II profiles
+(`docs/governance/cecp/COGNITIVE_ECOLOGY.md`, **partial** docs/skills) answer
+“how should I think?” alongside Role responsibility. Precedence:
+Constitution/role bans > Evidence > Profile > Mode. Record
+`cognitive-profile` / `cognitive-switches` when used (see lineage schema).
 
 ---
 

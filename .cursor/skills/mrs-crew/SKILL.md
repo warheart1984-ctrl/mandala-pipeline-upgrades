@@ -27,6 +27,12 @@ You are the **foreman**. Prefer dispatching role work over doing every role your
 `docs/governance/cecp/CREW_MODES.md` and `.cursor/skills/mrs-crew/SAGE.md`.
 Modes are **not** new stages or agents. Status: **partial**.
 
+**Optional Cognitive Ecology Profiles** (“how should I think?”): see
+`docs/governance/cecp/COGNITIVE_ECOLOGY.md`. Profiles compose with Roles; Modes
+may map to Profiles where names overlap. Status: **partial** (docs/skills) —
+not runtime-enforced. Precedence:
+**Constitution/role bans > Evidence > Profile > Mode**.
+
 ESFR package: `docs/governance/esfr/`. ESFR **is** stage-06 Engineer Standards —
 not a parallel seventh role.
 
@@ -35,6 +41,7 @@ not a parallel seventh role.
 Protocol: `docs/governance/CECP_OMEGA_PROTOCOL.md`  
 Template: `docs/governance/cecp/EVIDENCE_TRAIL_TEMPLATE.md`  
 ESFR: `docs/governance/esfr/protocol.esfr.md`  
+Cognitive Ecology: `docs/governance/cecp/COGNITIVE_ECOLOGY.md`  
 Modes suite: `docs/governance/cecp/CREW_MODES.md`  
 Sage detail: `docs/governance/cecp/SAGE_MODE.md`
 
@@ -46,9 +53,8 @@ Sage detail: `docs/governance/cecp/SAGE_MODE.md`
 6. **ESFR** → `06-engineer-standards.md`;
    PromotionEligibility: PROMOTE / PROMOTE_WITH_GAPS / HOLD / REJECT  
 
-Any stage may add an optional **mode lens** from the 20-mode suite in
-`docs/governance/cecp/CREW_MODES.md` (Sage…Bard + Oracle…Visionary) without
-changing order.
+Any stage may add an optional **Profile** (`COGNITIVE_ECOLOGY.md`) and/or
+**mode lens** (`CREW_MODES.md`) without changing order or adding stages.
 
 **Permanent trail (required):** before finishing the crew run, ensure
 `docs/governance/cecp/trails/<trail-id>/` exists with the six stage files (+
@@ -61,10 +67,32 @@ Reference registry: `docs/governance/CECP_OMEGA_PROTOCOL.md` §9
 (#1 Prompt→Scene, #2 Proton Raster; follow-ons listed there).
 Layer stack: `docs/governance/CONSTITUTIONAL_LAYER_STACK.md`.
 
+## Role + Profile + Mode (foreman assignment)
+
+| Layer | Answers | Required? | Source |
+|-------|---------|-----------|--------|
+| **Role** | What am I responsible for? | Yes (stage) | Architect…ESFR |
+| **Profile** | How should I think? | Optional | `COGNITIVE_ECOLOGY.md` Tier I/II |
+| **Mode** | Optional named lens | Optional | `CREW_MODES.md` (20) |
+
+**Assign:** Role always; Profile when cognitive framing helps; Mode when a named
+lens from the suite fits (or maps via `COGNITIVE_ECOLOGY.md` §6).
+
+**Invoke:**
+- `Scientist Inspector` / `Architect + Systems Architect + Sage`
+- `Trickster Implementor` (Mode; maps Skeptic-ish)
+- `ESFR + Guardian + Steward` (Role + Profiles)
+- `Sage + Cartographer Architect` (Mode stack; Profile optional)
+
+**Log:** `cognitive-profile`, optional `cognitive-switches`, `lens` / `mode` on
+the trail (`lineage.schema.json`, stage notes). Switches only via explicit
+evidence (`COGNITIVE_ECOLOGY.md` §8) — pattern status **declared**.
+
 ## Crew modes (optional lenses)
 
-**Precedence:** base role hard bans > Sage rigor > mode lens.
+**Precedence:** Constitution/role bans > Evidence > Profile lens > Mode lens.
 **Roster:** 20 modes — full index `docs/governance/cecp/CREW_MODES.md`.
+**Profiles:** `docs/governance/cecp/COGNITIVE_ECOLOGY.md`.
 
 | Mode | One-line |
 |------|----------|
@@ -103,7 +131,8 @@ For each role, launch a `Task` (`generalPurpose` or `explore` for read-only):
 2. Put the full role instructions in the Task prompt under **Role law**
 3. Attach the prior role’s artifact (Architect plan → Builder, etc.)
 4. Require the role’s **Output** format in the return
-5. If mode/Sage: name it, attach `CREW_MODES.md` (+ `SAGE_MODE.md` if Sage)
+5. If Profile: name it, attach `COGNITIVE_ECOLOGY.md`; record on trail
+6. If mode/Sage: name it, attach `CREW_MODES.md` (+ `SAGE_MODE.md` if Sage)
 
 For **ESFR** specifically: attach Inspector verdict + module paths + trail id;
 require `ESFRVerdict`, full test-matrix table, probes 01–08 citations, and

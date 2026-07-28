@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mandala-rendering.local/governance/cecp/lineage.schema.json",
   "title": "CECP Omega lineage record",
-  "description": "Lean machine-readable handoff for a CECP trail. Status: declared shape; not CI-validated unless a consumer is added. New trails should include engineer_standards / esfr (stage 06); historical 01–05 trails remain valid without it. ESFR package: docs/governance/esfr/.",
+  "description": "Lean machine-readable handoff for a CECP trail. Status: declared shape; not CI-validated unless a consumer is added. Optional cognitiveProfile / cognitiveSwitches record Cognitive Ecology Ω∞ Profile assignment (docs/governance/cecp/COGNITIVE_ECOLOGY.md) — partial docs/skills, not runtime-enforced. New trails should include engineer_standards / esfr (stage 06); historical 01–05 trails remain valid without it. ESFR package: docs/governance/esfr/.",
   "type": "object",
   "required": ["trailId", "protocol", "stages"],
   "additionalProperties": false,
@@ -26,6 +26,15 @@
       "type": "array",
       "minItems": 1,
       "items": { "$ref": "#/$defs/stage" }
+    },
+    "cognitiveProfile": {
+      "type": "string",
+      "description": "Optional primary Cognitive Ecology Profile (docs/governance/cecp/COGNITIVE_ECOLOGY.md). Trail field alias: cognitive-profile. Status: partial docs/skills — not runtime-enforced."
+    },
+    "cognitiveSwitches": {
+      "type": "array",
+      "description": "Optional logged Profile switches; each entry needs an evidence cite. Trail field alias: cognitive-switches. Adaptive switching is a declared pattern until measured.",
+      "items": { "$ref": "#/$defs/cognitiveSwitch" }
     },
     "acceptance": {
       "type": "object",
@@ -70,6 +79,31 @@
     }
   },
   "$defs": {
+    "cognitiveSwitch": {
+      "type": "object",
+      "required": ["from", "to", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": ["string", "null"],
+          "description": "Prior Profile name, or null at first assignment"
+        },
+        "to": {
+          "type": "string",
+          "description": "New Profile name from COGNITIVE_ECOLOGY.md"
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Explicit evidence cite (path, test, probe, or stage artifact) — required for every switch"
+        },
+        "stage": {
+          "type": "string",
+          "description": "Optional CECP stage when the switch occurred"
+        },
+        "notes": { "type": "string" }
+      }
+    },
     "stage": {
       "type": "object",
       "required": ["stage", "artifact"],
@@ -100,6 +134,18 @@
         "evidence": {
           "type": "array",
           "items": { "type": "string" }
+        },
+        "cognitiveProfile": {
+          "type": "string",
+          "description": "Optional Profile for this stage (cognitive-profile)"
+        },
+        "mode": {
+          "type": "string",
+          "description": "Optional CREW_MODES.md lens name (e.g. sage)"
+        },
+        "lens": {
+          "type": "string",
+          "description": "Optional mode/lens alias recorded on trail"
         },
         "statusTags": {
           "type": "object",
