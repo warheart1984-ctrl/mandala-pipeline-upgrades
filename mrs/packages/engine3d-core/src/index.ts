@@ -110,6 +110,11 @@ export {
   type Rt4dVertexTuple,
 } from "./scene/Rt4dAdapter.js";
 export {
+  createWorldGenerator,
+  generateWorldFromGenerator,
+  hashWorldGenerator,
+} from "./world/WorldGenerator.js";
+export {
   hashStaticMesh,
   hashStaticMeshTable,
   instantiateStaticMesh,
@@ -330,6 +335,7 @@ export {
   hashCanonical,
   renderEngine3dFrame,
   renderEngine3dStill,
+  defaultCamera,
   defaultFaceRiggedGlbPath,
   ENGINE3D_FRAME_RECEIPT_MODE,
   ENGINE3D_STRUCTURE_RECORD_SCHEMA,

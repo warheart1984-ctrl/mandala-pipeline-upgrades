@@ -17,9 +17,9 @@ from pydantic import BaseModel, Field, ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.chatgpt_plugin import (
-    PLUGIN_PROTECTED_PREFIXES,
     build_ai_plugin_manifest,
     build_plugin_openapi,
+    is_plugin_protected_path,
     plugin_availability,
     resolve_public_base,
 )
@@ -236,7 +236,7 @@ class _ChatgptPluginAuthMiddleware(BaseHTTPMiddleware):
         if not expected:
             return await call_next(request)
         path = request.url.path
-        if path not in PLUGIN_PROTECTED_PREFIXES:
+        if not is_plugin_protected_path(path):
             return await call_next(request)
         auth = request.headers.get("authorization") or ""
         expected_header = f"Bearer {expected}"
@@ -254,7 +254,9 @@ class _ChatgptPluginAuthMiddleware(BaseHTTPMiddleware):
 
 # CORS: local operator UIs by default; widen only when GENBLAZE_CORS_ALLOW_ALL=1.
 # CHATGPT_PLUGIN_KEY enables bearer auth only — it does not auto-open CORS.
-# Prefer GENBLAZE_CORS_ORIGINS=https://chatgpt.com,... when needed.
+# Warning: allow_origins=["*"] lets any website trigger spendy render/polish
+# POSTs (fal/NIM). Prefer GENBLAZE_CORS_ORIGINS=https://chatgpt.com,... when
+# possible; use "*" only for short-lived ngrok demos.
 _cors_settings = get_settings()
 _cors_origins: list[str] | str
 _cors_origins_env = (os.getenv("GENBLAZE_CORS_ORIGINS") or "").strip()
