@@ -54,3 +54,20 @@ jobs:
           node-version: "22"
       - name: Package type consistency
         run: node scripts/check-package-types.mjs
+
+  mandala-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Constitutional lint
+        run: node mandala-agent-pack/lint/run-lint.js
+      - name: Generate drift radar
+        run: node mandala-agent-pack/drift-radar/generate-report.js
+      - name: Upload drift radar
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-radar
+          path: drift-radar.json
