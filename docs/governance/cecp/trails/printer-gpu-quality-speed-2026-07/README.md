@@ -11,6 +11,16 @@
 **Spec:** `docs/superpowers/specs/2026-07-28-digital-printer-gpu-quality-speed-design.md`  
 **Plan:** `docs/superpowers/plans/2026-07-28-digital-printer-gpu-quality-speed.md`
 
+## Design approval
+
+| Field | Value |
+|-------|-------|
+| Spec status | **APPROVED** |
+| Approved by | user |
+| Approved date | 2026-07-28 |
+| Spec path | `docs/superpowers/specs/2026-07-28-digital-printer-gpu-quality-speed-design.md` |
+| Execution | Tasks 1→7 of plan (SDD + MRS crew Implementor) |
+
 ## Stage checklist
 
 - [x] `01-architect-adr.md`

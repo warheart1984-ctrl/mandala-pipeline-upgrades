@@ -39,12 +39,12 @@
 
 **Deliverable:** Documented + tested metric for one print fixture (variance or MSE vs spp ladder).
 
-- [ ] Write failing test that records beauty stats at spp 8/24/48/64 for a fixed seed fixture
-- [ ] Run test — confirm fail (metric helper missing)
-- [ ] Add minimal metric helper (e.g. mean variance or proxy from adaptive sampler logs)
-- [ ] Run test — pass
-- [ ] Add short ops note to `CONTRACT_DIGITAL_PRINT.md` (quality ladder, not free lunch)
-- [ ] Commit: `test(printer): add quality-per-sample ladder fixture`
+- [x] Write failing test that records beauty stats at spp 8/24/48/64 for a fixed seed fixture
+- [x] Run test — confirm fail (metric helper missing)
+- [x] Add minimal metric helper (e.g. mean variance or proxy from adaptive sampler logs)
+- [x] Run test — pass
+- [x] Add short ops note to `CONTRACT_DIGITAL_PRINT.md` (quality ladder, not free lunch)
+- [x] Commit: `test(printer): add quality-per-sample ladder fixture`
 
 **Verify:** named test green; no profile param changes unless justified.
 

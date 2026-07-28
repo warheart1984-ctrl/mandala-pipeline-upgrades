@@ -391,7 +391,7 @@ export function renderSceneFromSpec(spec, frameSel = {}) {
     note: "SceneSpecification-driven RT4D still. NOT text-to-image / not diffusion.",
   };
 
-  return { png, provenance, worldDocument, rt4d };
+  return { png, provenance, worldDocument, rt4d, rgba: beautyRgba };
 }
 
 const VALUE_OPTIONS = new Set([

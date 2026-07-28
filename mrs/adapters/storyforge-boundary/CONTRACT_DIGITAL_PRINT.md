@@ -58,6 +58,17 @@ python mrs/adapters/storyforge-boundary/demo_digital_print.py \
 `print_fast` | `print_hq` | `print_cinematic` | `print_reference` — all **enforced**
 (deterministic params; wall-clock is ops). Denoise/softPenumbra gated by profile.
 
+### Quality then speed (ops — not free lunch)
+
+Climb the profile ladder for quality first (`print_hq` → `print_cinematic` →
+`print_reference`); do not silently cut spp to “feel fast.” Monte Carlo noise
+falls with samples — measured by the quality-per-sample ladder
+(`mrs/packages/renderer-core/src/render/rt4d/compare/qualityPerSample.js`,
+test: `scripts/test/quality-per-sample.test.js`). Adaptive sampling / denoise
+improve *perceived* noise within a fixed budget; they are not extra unbiased
+samples. GPU acceleration of the same math is a separate, parity-gated path
+(`docs/superpowers/specs/2026-07-28-digital-printer-gpu-quality-speed-design.md`).
+
 ## Timeout
 
 `MRS_PRINT_TIMEOUT_SECONDS` (fallback `MRS_RENDER_TIMEOUT_SECONDS`, default 900) — **enforced** on printer HTTP + CLI.
