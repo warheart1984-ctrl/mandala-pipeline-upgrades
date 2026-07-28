@@ -54,9 +54,9 @@
 
 **Deliverable:** Docs + optional CLI help text pointing operators to `print_hq` → `print_cinematic` → `print_reference`.
 
-- [ ] Update `PRINTER_SERVICE_API.md` with quality-then-speed section citing profiles table
-- [ ] Link design spec + this plan
-- [ ] Commit: `docs(printer): quality-then-speed operator guidance`
+- [x] Update `PRINTER_SERVICE_API.md` with quality-then-speed section citing profiles table
+- [x] Link design spec + this plan
+- [x] Commit: `docs(printer): quality-then-speed operator guidance`
 
 **Verify:** no code path silently lowers spp.
 

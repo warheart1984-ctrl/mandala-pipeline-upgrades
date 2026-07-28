@@ -41,10 +41,30 @@ Runs the deterministic print pipeline.
 
 **Quality profiles (all enforced params):** `print_fast` | `print_hq` | `print_cinematic` | `print_reference`
 
-| Profile | denoise | softPenumbra |
-|---------|---------|--------------|
-| print_fast | false | false |
-| print_hq / cinematic / reference | true | true |
+| Profile | dims | spp | depth | denoise | softPenumbra |
+|---------|------|-----|-------|---------|--------------|
+| print_fast | 256² | 8 | 4 | false | false |
+| print_hq (default) | 512² | 24 | 6 | true | true |
+| print_cinematic | 768² | 48 | 8 | true | true |
+| print_reference | 768² | 64 | 10 | true | true |
+
+### Quality then speed (operator guidance)
+
+Prefer quality first, then accept wall-clock as ops — there is no free Monte Carlo lunch.
+
+1. Smoke / intake: `print_fast`
+2. Delivery default: `print_hq`
+3. Higher plate quality: `print_cinematic` → `print_reference`
+4. Keep `seed` fixed when comparing profiles
+5. Do not silently lower `samples` to “feel fast”; use a lower named profile instead
+
+Design / plan:
+
+- `docs/superpowers/specs/2026-07-28-digital-printer-gpu-quality-speed-design.md`
+- `docs/superpowers/plans/2026-07-28-digital-printer-gpu-quality-speed.md`
+- Trail: `docs/governance/cecp/trails/printer-gpu-quality-speed-2026-07/`
+
+Default `backend` is `cpu` (SoT). Ungated `webgpu` / `cuda` / `hip` are rejected until parity receipts exist.
 
 **Response:**
 
