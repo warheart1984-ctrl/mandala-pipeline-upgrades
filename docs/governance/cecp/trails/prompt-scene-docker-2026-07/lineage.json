@@ -1,0 +1,71 @@
+{
+  "trailId": "prompt-scene-docker-2026-07",
+  "feature": "Bundle prompt-scene-bridge into Genblaze repo-root Docker /app layout",
+  "protocol": "docs/governance/CECP_OMEGA_PROTOCOL.md",
+  "predecessorTrail": "engine3d-expand-2026-07",
+  "overallStatus": "fail",
+  "lineage": "Architecture → Build → Implementation → Review → Inspection → Acceptance",
+  "inspectedAt": "2026-07-27",
+  "inspectedHead": "6b3f37897c04e2126de0d0ce857d0e0bf6367a76",
+  "inspectedBranch": "tmp/cecp-docker-rebase",
+  "remoteNote": "origin/feat/engine3d-genblaze-cinematic-plugin ls-remote empty (appears deleted); local tracking tip 6d1a569 was rebase base; no push",
+  "stages": [
+    {
+      "stage": "architect",
+      "artifact": "01-architect-adr.md",
+      "verdict": "N/A",
+      "statusTags": { "dockerBundle": "declared" }
+    },
+    {
+      "stage": "builder",
+      "artifact": "02-builder-scaffold-manifest.md",
+      "verdict": "N/A",
+      "statusTags": { "scaffold": "skeleton" }
+    },
+    {
+      "stage": "implementor",
+      "artifact": "03-implementor-notes.md",
+      "verdict": "N/A",
+      "statusTags": {
+        "dualLayoutDefaults": "enforced",
+        "dockerCopyEnvSmoke": "partial",
+        "liveRenderHealth": "declared"
+      },
+      "evidence": [
+        "Implementor claimed test_mrs_map + test_prompt_to_scene + ban pytest green",
+        "Inspector re-run: mrs_map 16 passed; Genblaze collection FAIL (missing lattice_polish_defaults)"
+      ]
+    },
+    {
+      "stage": "reviewer",
+      "artifact": "04-reviewer-conformance.md",
+      "verdict": "PASS_WITH_NOTES",
+      "statusTags": { "boundary": "enforced", "claimHonesty": "ok" }
+    },
+    {
+      "stage": "inspector",
+      "artifact": "05-inspector-acceptance.md",
+      "verdict": "FAIL",
+      "statusTags": {
+        "dualLayoutDefaults": "enforced",
+        "dockerCopyEnvSmoke": "partial",
+        "genblazeImportGraph": "fail",
+        "imageBuildHealth": "unverified",
+        "liveRenderHealth": "declared",
+        "storyForgeBanStatic": "pass"
+      },
+      "evidence": [
+        "pytest mrs/adapters/prompt-scene-bridge/test_mrs_map.py → 16 passed, 3 skipped",
+        "pytest test_prompt_to_scene / ban nodeids → collection ModuleNotFoundError app.lattice_polish_defaults",
+        "static ban scan app/*.py → 0 story_forge offenders",
+        "docker info / docker build → daemon unavailable (dockerDesktopLinuxEngine pipe missing)",
+        "Dockerfile static COPY L85-87 + ENV L48-50 + RUN smokes L131-140"
+      ]
+    }
+  ],
+  "acceptance": {
+    "decision": "not_accepted",
+    "inspectorVerdict": "FAIL",
+    "notes": "Blocking: missing lattice_polish_defaults breaks Genblaze tests; Docker daemon down blocks image/health proof. Dockerfile contract and mrs_map dual-layout remain green statically/unit."
+  }
+}
