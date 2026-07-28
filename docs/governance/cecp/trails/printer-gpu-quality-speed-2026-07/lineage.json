@@ -1,0 +1,23 @@
+{
+  "trailId": "printer-gpu-quality-speed-2026-07",
+  "feature": "digital-printer-gpu-quality-speed-design",
+  "started": "2026-07-28",
+  "parentTrail": "digital-printer-v2-2026-07",
+  "pr": 83,
+  "branch": "feat/engine3d-genblaze-cinematic-plugin",
+  "overallStatus": "declared",
+  "ESFRVerdict": "PASS_WITH_GAPS",
+  "PromotionEligibility": "HOLD",
+  "spec": "docs/superpowers/specs/2026-07-28-digital-printer-gpu-quality-speed-design.md",
+  "plan": "docs/superpowers/plans/2026-07-28-digital-printer-gpu-quality-speed.md",
+  "tools": {
+    "superpowers": true,
+    "mrsCrew": true,
+    "amdCursorMcp": false,
+    "nvidiaCursorMcp": false,
+    "inRepoNvidiaGenblaze": true,
+    "amdRocmHipInRepo": false
+  },
+  "softwareCreationMode": ["Pipeline-Conductor", "Boundary-Guardian", "Optimizer"],
+  "actorMode": ["Anchor"]
+}
