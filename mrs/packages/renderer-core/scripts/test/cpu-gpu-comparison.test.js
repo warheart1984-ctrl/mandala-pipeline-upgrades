@@ -19,6 +19,7 @@ import {
 
 import {
   probeWebGpuAvailability,
+  probeVendorGpuHonesty,
   printParitySceneConfig,
 } from "../../src/render/rt4d/compare/printParity.js";
 
@@ -250,6 +251,16 @@ describe("printParity — WebGPU probe honesty", () => {
     assert.equal(probe.available, false);
     assert.equal(probe.statusTag, "partial");
     assert.match(probe.reason, /skip/);
+  });
+
+  test("vendor honesty map marks CUDA/HIP print absent and cuTile N/A", () => {
+    const honesty = probeVendorGpuHonesty();
+    assert.equal(honesty.cudaPrintPath.statusTag, "absent");
+    assert.equal(honesty.hipPrintPath.statusTag, "absent");
+    assert.equal(honesty.cutile.statusTag, "na");
+    assert.equal(honesty.nim.statusTag, "assist");
+    assert.equal(honesty.nvenc.statusTag, "partial");
+    assert.equal(honesty.webgpu.available, false);
   });
 });
 

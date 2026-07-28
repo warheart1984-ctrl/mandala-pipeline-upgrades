@@ -66,3 +66,10 @@ npx skills add mohitmishra786/low-level-dev-skills --skill hip-rocm --global --y
 ## Reload
 
 Reload Cursor / restart the agent so newly copied skills appear in the skill picker.
+
+## Follow-up trail (2026-07-28)
+
+Applied skills to in-repo surfaces:  
+`docs/governance/cecp/trails/vendor-skills-fixup-2026-07/`  
+(inventory `00-skill-inventory.md`, NIM `/health` ops checklist, check-only GPU host + detect scripts).
+

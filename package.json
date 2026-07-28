@@ -39,7 +39,14 @@
     "flux:smoke": "node mrs/apps/genblaze-media/scripts/flux-smoke.mjs",
     "flux:smoke:py": "cd mrs/apps/genblaze-media && .venv/Scripts/python.exe scripts/flux_smoke.py",
     "operator:face-install": "node scripts/operator-face-install.mjs",
-    "test:face": "npm run test:face --prefix mrs/packages/engine3d-core"
+    "test:face": "npm run test:face --prefix mrs/packages/engine3d-core",
+    "test:governance": "node --test engine/governance/test/*.test.js",
+    "sync:surfaces": "node scripts/sync-surface-meshes.mjs",
+    "build:renderer-web": "npm run build --prefix mrs/packages/renderer-web",
+    "test:all": "node scripts/test-all.mjs && npm run test:governance && npm run test:conformance",
+    "check:types": "node scripts/check-package-types.mjs",
+    "check:nvidia-gpu-host": "node scripts/check-nvidia-gpu-host.mjs",
+    "detect:gpu-backend": "python scripts/detect-gpu-backend.py"
   },
   "dependencies": {
     "4d-renderer": "file:./4d-renderer",

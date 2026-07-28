@@ -95,7 +95,12 @@ from app.image_to_scene import (
     resolve_image_bytes,
 )
 from app.index_store import AssetIndex
-from app.nvidia_errors import format_generation_failure, nvidia_nim_status_from_warmup
+from app.nvidia_errors import (
+    format_generation_failure,
+    nim_ops_checklist,
+    nvidia_nim_status_from_warmup,
+    resolve_nvidia_help,
+)
 from app.nvidia_http import (
     NvidiaGenaiTimeouts,
     NvidiaVideoTimeouts,
@@ -112,6 +117,11 @@ from app.rt4d_provider import (
     RT4D_PROVIDER_ID,
     generate_image_rt4d,
     rt4d_availability,
+)
+from app.lemonade_provider import (
+    LEMONADE_PROVIDER_ID,
+    generate_image_lemonade,
+    lemonade_availability,
 )
 from app.rt4d_to_nvidia import (
     NvidiaUnavailableError,
@@ -621,7 +631,11 @@ def health() -> dict:
         "b2_probe_skipped": b2_probe_skipped,
         "b2_probe": b2_probe,
         "b2_error": b2_error,
-        "nvidia_help": None if settings.nvidia_configured else NVIDIA_SETUP_HELP,
+        "nvidia_help": resolve_nvidia_help(
+            nvidia_configured=settings.nvidia_configured,
+            missing_key_help=NVIDIA_SETUP_HELP,
+            warmup=_nvidia_warmup_state,
+        ),
         "seedance_help": (
             None
             if settings.video_backend != "seedance" or settings.seedance_configured
@@ -647,15 +661,32 @@ def health() -> dict:
         "nvidia_warmup": _nvidia_warmup_state or {"ran": False},
         # Derived from startup evidence; /health does not invoke NVIDIA again.
         "nvidia_nim_status": nvidia_nim_status_from_warmup(_nvidia_warmup_state),
+        # Ordered debug layers (dynamo-troubleshoot pattern) — no extra NIM calls.
+        "nim_ops_checklist": nim_ops_checklist(
+            nvidia_configured=settings.nvidia_configured,
+            warmup=_nvidia_warmup_state,
+            empty_504_retry=settings.empty_504_retry,
+            nvcf_poll_seconds=nvidia_timeouts.nvcf_poll_seconds,
+        ),
         # Ingest routes ship in app code; a 404 on Render means that deploy
         # predates the ingest commit — redeploy this service to pick them up.
         "image_ingest_routes": True,
         # Drive-G-1 capability disclosure: NVIDIA FLUX + optional RT4D renderer.
         # Seedance/fal remains video-only (no fal image fallback).
         "image_backend": settings.image_backend,
-        "image_backends": ["nvidia-genai", RT4D_PROVIDER_ID],
+        "image_backends": [
+            "nvidia-genai",
+            RT4D_PROVIDER_ID,
+            LEMONADE_PROVIDER_ID,
+        ],
         "image_fallback_to_rt4d": settings.image_fallback_to_rt4d,
         "rt4d": rt4d_availability(settings),
+        "lemonade": lemonade_availability(settings),
+        "lemonade_note": (
+            "Set GENBLAZE_IMAGE_BACKEND=lemonade to generate concept stills via "
+            "local Lemonade Server (default SD-Turbo on localhost:13305). "
+            "No NVIDIA API key required. First run may pull the model."
+        ),
         "rt4d_note": (
             "Deterministic procedural 4D path-traced stills via renderer-core. "
             "NOT text-to-image / not diffusion. Prompt selects a scene archetype; "
@@ -742,6 +773,7 @@ def _dispatch_image(settings: Any, prompt: str, quality: str | None = None):
     """Select the image backend and, when enabled, fall back to RT4D.
 
     - ``GENBLAZE_IMAGE_BACKEND=rt4d`` → deterministic RT4D render (no API).
+    - ``GENBLAZE_IMAGE_BACKEND=lemonade`` → local Lemonade diffusion (AMD).
     - default NVIDIA; if it fails and ``GENBLAZE_IMAGE_FALLBACK_TO_RT4D=1`` and
       the RT4D CLI/node are available, render deterministically instead of
       surfacing the NVIDIA failure (blank still, empty 504, etc.).
@@ -750,6 +782,8 @@ def _dispatch_image(settings: Any, prompt: str, quality: str | None = None):
     """
     if settings.rt4d_selected:
         return generate_image_rt4d(settings, prompt, quality=quality)
+    if getattr(settings, "lemonade_selected", False):
+        return generate_image_lemonade(settings, prompt)
     try:
         return generate_image(settings, prompt)
     except ValueError:

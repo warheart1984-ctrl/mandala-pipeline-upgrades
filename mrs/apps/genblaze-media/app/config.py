@@ -176,6 +176,13 @@ class Settings:
     # --- RT4D deterministic renderer backend (defaults keep NVIDIA the default) ---
     image_backend: str = "nvidia"
     image_fallback_to_rt4d: bool = False
+    # --- Local Lemonade (AMD) OpenAI-compatible image API ---
+    lemonade_base_url: str = "http://127.0.0.1:13305/api/v1"
+    lemonade_model: str | None = None
+    lemonade_size: str = "512x512"
+    lemonade_steps: int = 4
+    lemonade_timeout_seconds: float = 600.0
+    lemonade_api_key: str | None = None
     rt4d_node_path: str = "node"
     rt4d_script_path: str | None = None
     scene_spec_script_path: str | None = None
@@ -277,6 +284,11 @@ class Settings:
     def rt4d_selected(self) -> bool:
         """True when RT4D is the primary image backend (GENBLAZE_IMAGE_BACKEND=rt4d)."""
         return self.image_backend == "rt4d"
+
+    @property
+    def lemonade_selected(self) -> bool:
+        """True when Lemonade local diffusion is the primary image backend."""
+        return self.image_backend == "lemonade"
 
     @property
     def resolved_rt4d_script(self) -> str:
@@ -400,7 +412,31 @@ def get_settings() -> Settings:
 
     # --- RT4D deterministic renderer backend -------------------------------
     backend_choice = (os.getenv("GENBLAZE_IMAGE_BACKEND") or "nvidia").strip().lower()
-    image_backend = "rt4d" if backend_choice in {"rt4d", "renderer", "mrs"} else "nvidia"
+    if backend_choice in {"rt4d", "renderer", "mrs"}:
+        image_backend = "rt4d"
+    elif backend_choice in {"lemonade", "local", "amd", "sd-turbo"}:
+        image_backend = "lemonade"
+    else:
+        image_backend = "nvidia"
+
+    lemonade_base_url = (
+        os.getenv("LEMONADE_BASE_URL") or "http://127.0.0.1:13305/api/v1"
+    ).strip()
+    lemonade_model = (os.getenv("GENBLAZE_LEMONADE_MODEL") or "").strip() or None
+    lemonade_size = (os.getenv("GENBLAZE_LEMONADE_SIZE") or "512x512").strip() or "512x512"
+    try:
+        lemonade_steps = int((os.getenv("GENBLAZE_LEMONADE_STEPS") or "4").strip() or "4")
+    except ValueError:
+        lemonade_steps = 4
+    lemonade_steps = max(1, min(50, lemonade_steps))
+    try:
+        lemonade_timeout = float(
+            (os.getenv("GENBLAZE_LEMONADE_TIMEOUT") or "600").strip() or "600"
+        )
+    except ValueError:
+        lemonade_timeout = 600.0
+    lemonade_timeout = max(30.0, min(3600.0, lemonade_timeout))
+    lemonade_api_key = (os.getenv("LEMONADE_API_KEY") or "").strip() or None
     # Default OFF: explicit opt-in so a blank/504 NVIDIA still falls back to the
     # deterministic RT4D render instead of surfacing the failure.
     image_fallback_to_rt4d = (
@@ -631,6 +667,12 @@ def get_settings() -> Settings:
         dotenv_loaded=tuple(loaded),
         image_backend=image_backend,
         image_fallback_to_rt4d=image_fallback_to_rt4d,
+        lemonade_base_url=lemonade_base_url,
+        lemonade_model=lemonade_model,
+        lemonade_size=lemonade_size,
+        lemonade_steps=lemonade_steps,
+        lemonade_timeout_seconds=lemonade_timeout,
+        lemonade_api_key=lemonade_api_key,
         rt4d_node_path=rt4d_node_path,
         rt4d_script_path=rt4d_script_override,
         scene_spec_script_path=scene_spec_script_override,

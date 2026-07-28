@@ -35,6 +35,50 @@ export function probeWebGpuAvailability() {
 }
 
 /**
+ * Honest vendor capability map for print SoT (Drive-G-1).
+ * Does **not** probe the host GPU or claim CUDA/HIP/NVENC print acceleration.
+ * Operator host checks live in `scripts/check-nvidia-gpu-host.mjs` and
+ * `scripts/detect-gpu-backend.py` (check-only / diagnose; not printer SoT).
+ *
+ * @returns {Record<string, { statusTag: string, note: string, available?: boolean }>}
+ */
+export function probeVendorGpuHonesty() {
+  const webgpu = probeWebGpuAvailability();
+  return {
+    webgpu: {
+      statusTag: webgpu.statusTag,
+      available: webgpu.available,
+      note: webgpu.reason,
+    },
+    cudaPrintPath: {
+      statusTag: "absent",
+      note:
+        "No CUDA printer kernel SoT — tao-setup-nvidia-gpu-host is host check only; " +
+        "tilegym/cuTile N/A for Digital Printer beauty",
+    },
+    hipPrintPath: {
+      statusTag: "absent",
+      note:
+        "No HIP/ROCm printer path — rocm-setup/rocm-doctor/hip-rocm are diagnose/scaffold only",
+    },
+    nvenc: {
+      statusTag: "partial",
+      note:
+        "NVENCEncoder exists for video encode assist when ffmpeg reports nvenc; " +
+        "not Digital Printer beauty SoT",
+    },
+    cutile: {
+      statusTag: "na",
+      note: "No in-repo CUDA kernel candidate for printer SoT — cuTile skill unused",
+    },
+    nim: {
+      statusTag: "assist",
+      note: "Genblaze NIM/FLUX is creative assist — never printer beauty SoT",
+    },
+  };
+}
+
+/**
  * Build a print-sized scene config for parity receipts (not a full GLB path).
  * Used by unit tests with synthetic RGBA plates.
  */
