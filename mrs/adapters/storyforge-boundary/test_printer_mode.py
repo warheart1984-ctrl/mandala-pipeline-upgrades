@@ -116,6 +116,46 @@ def test_backend_cuda_hip_denied():
         assert ei.value.state == PrintErrorState.SURFACE_INVALID
 
 
+def test_backend_webgpu_allowed_with_parity_env(tmp_path, monkeypatch):
+    receipt = {
+        "sceneConfigHash": "a" * 64,
+        "backends": {
+            "cpu": {"name": "PathTracer4D_CPU", "executionHash": "b" * 64},
+            "gpu": {"name": "PathTracer4D_GPU", "executionHash": "c" * 64},
+        },
+        "comparison": {"status": "pass", "mse": 0},
+    }
+    receipt_path = tmp_path / "parity-receipt.json"
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    monkeypatch.setenv("MRS_PRINT_WEBGPU", "1")
+    monkeypatch.setenv("MRS_PRINT_PARITY_RECEIPT", str(receipt_path))
+    p = normalize_print_request({"backend": "webgpu", "quality": "print_hq"})
+    assert p["backend"] == "webgpu"
+    assert p["samples"] == 24  # print_hq unchanged
+
+
+def test_backend_webgpu_denied_when_env_without_receipt(monkeypatch):
+    monkeypatch.setenv("MRS_PRINT_WEBGPU", "1")
+    monkeypatch.delenv("MRS_PRINT_PARITY_RECEIPT", raising=False)
+    with pytest.raises(PrintError) as ei:
+        normalize_print_request({"backend": "webgpu"})
+    assert ei.value.state == PrintErrorState.SURFACE_INVALID
+
+
+def test_evidence_records_backend(tmp_path):
+    pr = normalize_print_request({"quality": "print_hq"})
+    ev = write_evidence_bundle(
+        out_dir=tmp_path,
+        print_request=pr,
+        render_request=_base_rr(),
+        route_result={"status": "ok", "routeUsed": "scene-spec", "artifacts": []},
+        print_state="OK",
+    )
+    assert ev["backend"]["requested"] == "cpu"
+    assert ev["backend"]["executionBackend"] == "cpu"
+    assert ev["backend"]["statusTag"] == "enforced"
+
+
 def test_surface_contract_timeout_and_profiles():
     c = load_surface_contract()
     assert c["timeoutGovernance"]["env"] == "MRS_PRINT_TIMEOUT_SECONDS"

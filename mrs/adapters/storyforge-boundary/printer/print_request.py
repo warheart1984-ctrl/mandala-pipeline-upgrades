@@ -184,9 +184,10 @@ ALLOWED_QUALITY = frozenset(QUALITY_PROFILES.keys())
 
 
 
-# cpu SoT only until parity-gated WebGPU (Task 5). cuda/hip remain absent.
+# cpu SoT always. webgpu only via parity_gate (MRS_PRINT_WEBGPU + receipt).
+# cuda/hip remain absent — do not stub.
 
-ALLOWED_BACKEND = frozenset({"cpu"})
+from printer.parity_gate import allowed_backends as _allowed_backends
 
 
 
@@ -356,7 +357,9 @@ def normalize_print_request(raw: dict[str, Any] | None = None) -> dict[str, Any]
 
     backend = str(out.get("backend") or "cpu").strip().lower() or "cpu"
 
-    if backend not in ALLOWED_BACKEND:
+    allowed = _allowed_backends()
+
+    if backend not in allowed:
 
         from printer.errors import PrintError, PrintErrorState
 
@@ -366,7 +369,7 @@ def normalize_print_request(raw: dict[str, Any] | None = None) -> dict[str, Any]
 
             f"print backend {backend!r} denied until CPU/GPU parity receipts "
 
-            f"(allowed: {sorted(ALLOWED_BACKEND)})",
+            f"(allowed: {sorted(allowed)})",
 
         )
 

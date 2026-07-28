@@ -92,10 +92,10 @@
 
 **Deliverable:** Capability-gated execute path; status **partial** until budgets enforced in CI.
 
-- [ ] Implement behind env `MRS_PRINT_WEBGPU=1` AND parity receipt present
-- [ ] Evidence bundle records `backend: webgpu`
-- [ ] Named tests for deny-without-parity and allow-with-parity (mock)
-- [ ] Commit: `feat(printer): optional webgpu backend behind parity gate`
+- [x] Implement behind env `MRS_PRINT_WEBGPU=1` AND parity receipt present
+- [x] Evidence bundle records `backend: webgpu`
+- [x] Named tests for deny-without-parity and allow-with-parity (mock)
+- [x] Commit: `feat(printer): optional webgpu backend behind parity gate`
 
 **Verify:** default install still CPU SoT.
 
