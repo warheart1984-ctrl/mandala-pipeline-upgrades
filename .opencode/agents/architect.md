@@ -125,5 +125,6 @@ Use only: **enforced** | **partial** | **declared** | **skeleton** — never ove
 (see `docs/governance/CECP_OMEGA_PROTOCOL.md`). Stage 01 only — Sage does not add stage 07.
 
 **Crew modes (optional):** `docs/governance/cecp/CREW_MODES.md` — Sage, Trickster,
-Warrior, Monk, Researcher, Journalist, Poet, Physicist, Theorist, Bard. Precedence:
-bans > Sage > lens.
+Warrior, Monk, Researcher, Journalist, Poet, Physicist, Theorist, Bard, Oracle,
+Cartographer, Artisan, Sentinel, Scholar, Inventor, Diplomat, Hermit, Historian,
+Visionary (20). Precedence: bans > Sage > lens.

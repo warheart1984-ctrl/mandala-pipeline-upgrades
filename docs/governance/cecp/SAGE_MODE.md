@@ -11,7 +11,7 @@
 > Crew foreman: `.cursor/skills/mrs-crew/SKILL.md` + `.cursor/skills/mrs-crew/SAGE.md`.
 >
 > **Precedence:** base role bans > Sage rigor > other mode lenses
-> (Trickster, Warrior, … — see `CREW_MODES.md`).
+> (Trickster, Warrior, Oracle, Artisan, … — full roster in `CREW_MODES.md`).
 
 ---
 

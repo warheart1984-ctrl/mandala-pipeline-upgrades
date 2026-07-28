@@ -42,7 +42,7 @@ reference implementation** with replayable stage artifacts.
 
 | Stage | Role | Writes product code? | Required trail artifact(s) |
 |-------|------|----------------------|----------------------------|
-| 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface + boundary. Optional **crew modes** (Sage, Trickster, Warrior, Monk, Researcher, Journalist, Poet, Physicist, Theorist, Bard): lenses on **any** stage role — **not** new stages. Index: `docs/governance/cecp/CREW_MODES.md` (**partial**). Sage detail: `SAGE_MODE.md`. Precedence: bans > Sage > lens. CHEA/CCR/CDGF remain **declared**. |
+| 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface + boundary. Optional **crew modes** (20 lenses: Sage…Bard + Oracle…Visionary): on **any** stage role — **not** new stages. Index: `docs/governance/cecp/CREW_MODES.md` (**partial**). Sage: `SAGE_MODE.md`. Precedence: bans > Sage > lens. CHEA/CCR/CDGF remain **declared**. |
 | 2 | **Builder** | Stubs / scaffolds only | `02-builder-scaffold-manifest.md` — scaffold manifest, dependency graph, build-artifacts inventory. Optional Builder Sage. |
 | 3 | **Implementor** | Yes | `03-implementor-notes.md` — production notes + test inventory. Optional Implementor Sage. |
 | 4 | **Reviewer** | No | `04-reviewer-conformance.md` — constitutional conformance (P1–P5). Optional Reviewer Sage. |

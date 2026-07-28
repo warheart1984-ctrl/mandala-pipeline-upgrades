@@ -5,7 +5,7 @@ description: >-
   reviewer, inspector, ESFR / engineer-standards). Use when the user asks to use
   the crew, subagents, or to design→build→implement→review→inspect→standards /
   ESFR a feature instead of doing all roles in one pass. Optional crew modes
-  (Sage, Trickster, Warrior, …) are lenses on roles — not new pipeline stages.
+  (Sage…Visionary, 20 lenses) are flavors on roles — not new pipeline stages.
 ---
 
 # MRS Crew Orchestrator
@@ -46,8 +46,9 @@ Sage detail: `docs/governance/cecp/SAGE_MODE.md`
 6. **ESFR** → `06-engineer-standards.md`;
    PromotionEligibility: PROMOTE / PROMOTE_WITH_GAPS / HOLD / REJECT  
 
-Any stage may add an optional **mode lens** (Sage, Trickster, Warrior, Monk,
-Researcher, Journalist, Poet, Physicist, Theorist, Bard) without changing order.
+Any stage may add an optional **mode lens** from the 20-mode suite in
+`docs/governance/cecp/CREW_MODES.md` (Sage…Bard + Oracle…Visionary) without
+changing order.
 
 **Permanent trail (required):** before finishing the crew run, ensure
 `docs/governance/cecp/trails/<trail-id>/` exists with the six stage files (+
@@ -63,22 +64,33 @@ Layer stack: `docs/governance/CONSTITUTIONAL_LAYER_STACK.md`.
 ## Crew modes (optional lenses)
 
 **Precedence:** base role hard bans > Sage rigor > mode lens.
+**Roster:** 20 modes — full index `docs/governance/cecp/CREW_MODES.md`.
 
 | Mode | One-line |
 |------|----------|
 | Sage | Elevated rigor, §9, anti-overclaim |
 | Trickster | Constructive adversarial edges |
 | Warrior | Minimal scope, ship-gate focus |
-| Monk | Simplicity, calm determinism |
+| Monk | Calm simplicity, quiet determinism |
 | Researcher | Cite evidence; hypothesis→tests |
 | Journalist | Who/what/when/evidence voice |
 | Poet | Honest metaphor; no capability fiction |
 | Physicist | Units, conservation, RT4D math |
 | Theorist | Invariants, formal design properties |
 | Bard | Judge-facing narrative without false claims |
+| Oracle | Long-horizon foresight (declared risks) |
+| Cartographer | System/trail/pipeline maps |
+| Artisan | Pixel/tonemap/beauty craft |
+| Sentinel | Guard determinism & boundaries |
+| Scholar | Docs/contracts/evidence mastery |
+| Inventor | Novel mechanisms; dual-tag declared vs shipped |
+| Diplomat | Multi-party coherence; honest layer tags |
+| Hermit | Deeper purity/withdrawal (≠ Monk) |
+| Historian | Lineage/archival continuity |
+| Visionary | Bold leaps + mandatory anti-overclaim |
 
-**Invoke:** “\<Mode\> \<Role\>” (e.g. Physicist Architect), “\<Mode\> mode”, or
-foreman picks per stage. Compose: “Sage + Physicist”.
+**Invoke:** “\<Mode\> \<Role\>” (e.g. Artisan Architect), “\<Mode\> mode”, or
+foreman picks per stage. Compose: “Sage + Cartographer”.
 
 When mode selected: load `CREW_MODES.md`; if Sage, also `SAGE_MODE.md`; remind
 bans; record `lens:` / `mode: sage` on trail.
