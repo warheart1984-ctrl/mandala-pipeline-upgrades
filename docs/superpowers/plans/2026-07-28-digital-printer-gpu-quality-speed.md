@@ -79,10 +79,10 @@
 
 **Deliverable:** Extend `compare-backends` / imageMetrics / replayReceipt so a Node (or browser) job can compare CPU vs WebGPU for a tiny scene; mark **partial** if WebGPU unavailable (skip ≠ pass).
 
-- [ ] Failing test when WebGPU mock present: receipt verifies
-- [ ] Wire existing `cpu-gpu-comparison.test.js` patterns to a print-sized fixture
-- [ ] Document skip behavior when `navigator.gpu` missing
-- [ ] Commit: `test(rt4d): print-oriented cpu-gpu parity harness`
+- [x] Failing test when WebGPU mock present: receipt verifies
+- [x] Wire existing `cpu-gpu-comparison.test.js` patterns to a print-sized fixture
+- [x] Document skip behavior when `navigator.gpu` missing
+- [x] Commit: `test(rt4d): print-oriented cpu-gpu parity harness`
 
 **Verify:** CI does not false-PASS live WebGPU on Node without GPU.
 
