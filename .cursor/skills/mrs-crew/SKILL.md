@@ -5,7 +5,8 @@ description: >-
   reviewer, inspector, ESFR / engineer-standards). Use when the user asks to use
   the crew, subagents, or to design→build→implement→review→inspect→standards /
   ESFR a feature instead of doing all roles in one pass. Optional crew modes
-  (Sage…Visionary, 20 lenses) are flavors on roles — not new pipeline stages.
+  (Sage…Visionary + Actor Modes Navigator…Mythweaver, 30 lenses) and Cognitive
+  Ecology Profiles are flavors on roles — not new pipeline stages.
 ---
 
 # MRS Crew Orchestrator
@@ -24,14 +25,16 @@ You are the **foreman**. Prefer dispatching role work over doing every role your
 | **ESFR** (Engineer Standards) | `.opencode/agents/engineer-standards.md` | `mrs-engineer-standards` | No |
 
 **Optional crew modes** (lenses on any role): see
-`docs/governance/cecp/CREW_MODES.md` and `.cursor/skills/mrs-crew/SAGE.md`.
-Modes are **not** new stages or agents. Status: **partial**.
+`docs/governance/cecp/CREW_MODES.md` (waves 1–2) and
+`docs/governance/cecp/CECP_ACTOR_MODES.md` (Wave 3). Also
+`.cursor/skills/mrs-crew/SAGE.md`. Modes are **not** new stages or agents.
+Status: **partial**. **30 modes total.**
 
 **Optional Cognitive Ecology Profiles** (“how should I think?”): see
 `docs/governance/cecp/COGNITIVE_ECOLOGY.md`. Profiles compose with Roles; Modes
-may map to Profiles where names overlap. Status: **partial** (docs/skills) —
-not runtime-enforced. Precedence:
-**Constitution/role bans > Evidence > Profile > Mode**.
+may map to Profiles where names overlap (**Strategist Mode ≠ Strategist
+Profile**). Status: **partial** (docs/skills) — not runtime-enforced.
+Precedence: **role bans > Constitution > Evidence > Profile > Mode**.
 
 ESFR package: `docs/governance/esfr/`. ESFR **is** stage-06 Engineer Standards —
 not a parallel seventh role.
@@ -43,6 +46,7 @@ Template: `docs/governance/cecp/EVIDENCE_TRAIL_TEMPLATE.md`
 ESFR: `docs/governance/esfr/protocol.esfr.md`  
 Cognitive Ecology: `docs/governance/cecp/COGNITIVE_ECOLOGY.md`  
 Modes suite: `docs/governance/cecp/CREW_MODES.md`  
+Actor Modes: `docs/governance/cecp/CECP_ACTOR_MODES.md`  
 Sage detail: `docs/governance/cecp/SAGE_MODE.md`
 
 1. **Architect** → `01-architect-adr.md`
@@ -54,7 +58,7 @@ Sage detail: `docs/governance/cecp/SAGE_MODE.md`
    PromotionEligibility: PROMOTE / PROMOTE_WITH_GAPS / HOLD / REJECT  
 
 Any stage may add an optional **Profile** (`COGNITIVE_ECOLOGY.md`) and/or
-**mode lens** (`CREW_MODES.md`) without changing order or adding stages.
+**mode lens** (`CREW_MODES.md` or Actor Mode) without changing order or adding stages.
 
 **Permanent trail (required):** before finishing the crew run, ensure
 `docs/governance/cecp/trails/<trail-id>/` exists with the six stage files (+
@@ -67,31 +71,33 @@ Reference registry: `docs/governance/CECP_OMEGA_PROTOCOL.md` §9
 (#1 Prompt→Scene, #2 Proton Raster; follow-ons listed there).
 Layer stack: `docs/governance/CONSTITUTIONAL_LAYER_STACK.md`.
 
-## Role + Profile + Mode (foreman assignment)
+## Role + Profile + Mode (+ Actor Mode)
 
 | Layer | Answers | Required? | Source |
 |-------|---------|-----------|--------|
 | **Role** | What am I responsible for? | Yes (stage) | Architect…ESFR |
 | **Profile** | How should I think? | Optional | `COGNITIVE_ECOLOGY.md` Tier I/II |
-| **Mode** | Optional named lens | Optional | `CREW_MODES.md` (20) |
+| **Mode** | Optional named lens | Optional | `CREW_MODES.md` (20) **or** Actor Modes (10) |
 
-**Assign:** Role always; Profile when cognitive framing helps; Mode when a named
-lens from the suite fits (or maps via `COGNITIVE_ECOLOGY.md` §6).
+**Assign:** Role always; Profile when cognitive framing helps; Mode (crew or
+Actor) when a named lens fits. Prefer one primary Mode per stage (+ optional Sage).
 
 **Invoke:**
 - `Scientist Inspector` / `Architect + Systems Architect + Sage`
-- `Trickster Implementor` (Mode; maps Skeptic-ish)
+- `Trickster Implementor` (crew Mode; maps Skeptic-ish)
+- `Navigator Architect` / `Librarian Inspector` / `Anchor ESFR` (Actor Modes)
 - `ESFR + Guardian + Steward` (Role + Profiles)
 - `Sage + Cartographer Architect` (Mode stack; Profile optional)
+- Distinguish: `Strategist Profile Architect` vs `Actor Strategist Reviewer`
 
-**Log:** `cognitive-profile`, optional `cognitive-switches`, `lens` / `mode` on
-the trail (`lineage.schema.json`, stage notes). Switches only via explicit
-evidence (`COGNITIVE_ECOLOGY.md` §8) — pattern status **declared**.
+**Log:** `cognitive-profile`, optional `cognitive-switches`, `lens` / `mode` /
+`actorMode` on the trail. Switches only via explicit evidence
+(`COGNITIVE_ECOLOGY.md` §8) — pattern status **declared**.
 
 ## Crew modes (optional lenses)
 
-**Precedence:** Constitution/role bans > Evidence > Profile lens > Mode lens.
-**Roster:** 20 modes — full index `docs/governance/cecp/CREW_MODES.md`.
+**Precedence:** role bans > Constitution > Evidence > Profile lens > Mode lens.
+**Roster:** 30 modes — waves 1–2 in `CREW_MODES.md`; Wave 3 in `CECP_ACTOR_MODES.md`.
 **Profiles:** `docs/governance/cecp/COGNITIVE_ECOLOGY.md`.
 
 | Mode | One-line |
@@ -116,12 +122,24 @@ evidence (`COGNITIVE_ECOLOGY.md` §8) — pattern status **declared**.
 | Hermit | Deeper purity/withdrawal (≠ Monk) |
 | Historian | Lineage/archival continuity |
 | Visionary | Bold leaps + mandatory anti-overclaim |
+| **Navigator** *(Actor)* | CECP pathfinding / multi-step pipelines |
+| **Architect-Shadow** *(Actor)* | Negative-space gaps & assumptions |
+| **Catalyst** *(Actor)* | Accelerate; collapse chains with evidence |
+| **Librarian** *(Actor)* | Trail/contract/lineage indexing |
+| **Strategist** *(Actor)* | Multi-actor coordination (**≠** Profile) |
+| **Artisan-Logic** *(Actor)* | Beauty-through-math / structure |
+| **Mirror** *(Actor)* | Perspective inversion |
+| **Frontier** *(Actor)* | Boundary-pushing exploration |
+| **Anchor** *(Actor)* | Constitutional grounding / anti-drift |
+| **Mythweaver** *(Actor)* | Symbolic narrative + anti-overclaim |
 
-**Invoke:** “\<Mode\> \<Role\>” (e.g. Artisan Architect), “\<Mode\> mode”, or
-foreman picks per stage. Compose: “Sage + Cartographer”.
+**Invoke:** “\<Mode\> \<Role\>” (e.g. Artisan Architect), “\<ActorMode\> \<Role\>”
+(e.g. Navigator Architect), “\<Mode\> mode”, or foreman picks per stage.
+Compose: “Sage + Cartographer”, “Scientist + Librarian Inspector”.
 
-When mode selected: load `CREW_MODES.md`; if Sage, also `SAGE_MODE.md`; remind
-bans; record `lens:` / `mode: sage` on trail.
+When mode selected: load `CREW_MODES.md`; if Actor Mode, also
+`CECP_ACTOR_MODES.md`; if Sage, also `SAGE_MODE.md`; remind bans; record
+`lens:` / `mode:` / `actorMode:` on trail.
 
 ## How to dispatch (Cursor)
 
@@ -133,6 +151,7 @@ For each role, launch a `Task` (`generalPurpose` or `explore` for read-only):
 4. Require the role’s **Output** format in the return
 5. If Profile: name it, attach `COGNITIVE_ECOLOGY.md`; record on trail
 6. If mode/Sage: name it, attach `CREW_MODES.md` (+ `SAGE_MODE.md` if Sage)
+7. If Actor Mode: name it, attach `CECP_ACTOR_MODES.md`; record `actorMode:`
 
 For **ESFR** specifically: attach Inspector verdict + module paths + trail id;
 require `ESFRVerdict`, full test-matrix table, probes 01–08 citations, and

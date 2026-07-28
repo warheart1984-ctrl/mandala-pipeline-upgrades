@@ -27,6 +27,8 @@ ESFR package: `docs/governance/esfr/`.
 | `protocol` | `docs/governance/CECP_OMEGA_PROTOCOL.md` |
 | `cognitive-profile` | (optional) primary Profile from `COGNITIVE_ECOLOGY.md` |
 | `cognitive-switches` | (optional) logged Profile switches + evidence cites |
+| `mode` / `lens` | (optional) wave 1–2 crew Mode |
+| `actorMode` | (optional) Wave 3 Actor Mode (`CECP_ACTOR_MODES.md`) |
 
 ---
 
@@ -63,15 +65,17 @@ Cross-reference ledger (§9), and Risks to sovereignty / determinism. See
 `docs/governance/cecp/SAGE_MODE.md` and `.cursor/skills/mrs-architect/SAGE.md`
 (capability **partial**). Optional Sage applies similarly to stages 02–06.
 
-**Optional crew mode suite:** 20 lenses (Sage…Bard; Oracle…Visionary) may apply
-to any stage role without adding stages — `docs/governance/cecp/CREW_MODES.md`
-(**partial**).
+**Optional crew mode suite:** 20 lenses (Sage…Bard; Oracle…Visionary) plus
+Wave 3 Actor Modes (Navigator…Mythweaver) — **30** total — may apply to any
+stage role without adding stages — `docs/governance/cecp/CREW_MODES.md` +
+`docs/governance/cecp/CECP_ACTOR_MODES.md` (**partial**).
 
 **Optional Cognitive Ecology Profile:** Tier I/II profiles
 (`docs/governance/cecp/COGNITIVE_ECOLOGY.md`, **partial** docs/skills) answer
 “how should I think?” alongside Role responsibility. Precedence:
-Constitution/role bans > Evidence > Profile > Mode. Record
-`cognitive-profile` / `cognitive-switches` when used (see lineage schema).
+role bans > Constitution > Evidence > Profile > Mode. Record
+`cognitive-profile` / `cognitive-switches` / `actorMode` when used
+(see lineage schema).
 
 ---
 

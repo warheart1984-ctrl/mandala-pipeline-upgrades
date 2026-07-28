@@ -42,7 +42,7 @@ reference implementation** with replayable stage artifacts.
 
 | Stage | Role | Writes product code? | Required trail artifact(s) |
 |-------|------|----------------------|----------------------------|
-| 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface + boundary. Optional **Cognitive Ecology Profiles** (`COGNITIVE_ECOLOGY.md`, **partial** docs/skills) and optional **crew modes** (20 lenses: Sage…Bard + Oracle…Visionary): on **any** stage role — **not** new stages. Modes: `CREW_MODES.md` (**partial**). Sage: `SAGE_MODE.md`. Precedence: **Constitution/role bans > Evidence > Profile > Mode**. CHEA/CCR/CDGF remain **declared**. |
+| 1 | **Architect** | No | `01-architect-adr.md` — ADR + interface + boundary. Optional **Cognitive Ecology Profiles** (`COGNITIVE_ECOLOGY.md`, **partial** docs/skills) and optional **modes** (**30** lenses: waves 1–2 in `CREW_MODES.md` + Wave 3 Actor Modes in `CECP_ACTOR_MODES.md`): on **any** stage role — **not** new stages. Sage: `SAGE_MODE.md`. Precedence: **role bans > Constitution > Evidence > Profile > Mode**. CHEA/CCR/CDGF remain **declared**. |
 | 2 | **Builder** | Stubs / scaffolds only | `02-builder-scaffold-manifest.md` — scaffold manifest, dependency graph, build-artifacts inventory. Optional Builder Sage. |
 | 3 | **Implementor** | Yes | `03-implementor-notes.md` — production notes + test inventory. Optional Implementor Sage. |
 | 4 | **Reviewer** | No | `04-reviewer-conformance.md` — constitutional conformance (P1–P5). Optional Reviewer Sage. |
@@ -74,8 +74,10 @@ Reusable templates: `docs/governance/cecp/EVIDENCE_TRAIL_TEMPLATE.md`,
 **Cognitive Ecology Ω∞ (optional):** Profiles answer “how should I think?” while
 CECP Roles answer “what am I responsible for?” Canonical:
 `docs/governance/cecp/COGNITIVE_ECOLOGY.md` (**partial** — docs/skills; not
-runtime-enforced; metrics **declared** until trail-measured). Modes stay in
-`CREW_MODES.md` and map to Profiles where overlap exists. Do not add stages.
+runtime-enforced; metrics **declared** until trail-measured). Modes (**30**):
+waves 1–2 in `CREW_MODES.md` + Wave 3 Actor Modes in `CECP_ACTOR_MODES.md`;
+map to Profiles where overlap exists (**Strategist Mode ≠ Strategist Profile**).
+Do not add stages.
 
 Reference implementations (registry): see **§9** below. Layer stack context:
 `docs/governance/CONSTITUTIONAL_LAYER_STACK.md` (CECP / CHEA / CCR / CDGF).
@@ -152,7 +154,7 @@ CECP Ω∞ does **not**:
 
 | CECP stage | Cursor skill | OpenCode agent | Protocol duty |
 |------------|--------------|----------------|---------------|
-| Architect | `mrs-architect` (+ `SAGE.md`) | `architect.md` (`sage_mode` / `modes: optional`) | `01-architect-adr.md`. Optional Profiles: `COGNITIVE_ECOLOGY.md`. Optional mode lenses: `CREW_MODES.md` (**partial**). |
+| Architect | `mrs-architect` (+ `SAGE.md`) | `architect.md` (`sage_mode` / `modes: optional`) | `01-architect-adr.md`. Optional Profiles: `COGNITIVE_ECOLOGY.md`. Optional modes: `CREW_MODES.md` + `CECP_ACTOR_MODES.md` (**partial**, 30). |
 | Builder | `mrs-builder` | `builder.md` (`sage_mode` / `modes: optional`) | `02-builder-scaffold-manifest.md` (+ optional modes) |
 | Implementor | `mrs-implementor` | `implementor.md` (`sage_mode` / `modes: optional`) | `03-implementor-notes.md` (+ optional modes) |
 | Reviewer | `mrs-reviewer` | `reviewer.md` (`sage_mode` / `modes: optional`) | `04-reviewer-conformance.md` (+ optional modes) |

@@ -143,9 +143,13 @@
           "type": "string",
           "description": "Optional CREW_MODES.md lens name (e.g. sage)"
         },
+        "actorMode": {
+          "type": "string",
+          "description": "Optional Wave 3 CECP Actor Mode (docs/governance/cecp/CECP_ACTOR_MODES.md), e.g. navigator, librarian. Distinct from cognitiveProfile."
+        },
         "lens": {
           "type": "string",
-          "description": "Optional mode/lens alias recorded on trail"
+          "description": "Optional mode/lens alias recorded on trail (crew or Actor Mode)"
         },
         "statusTags": {
           "type": "object",

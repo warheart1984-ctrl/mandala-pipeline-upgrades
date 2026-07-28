@@ -4,15 +4,18 @@
 > Modes are **flavors**, not pipeline stages, not new agents, and not CI-enforced.
 > CHEA / CCR / CDGF remain **declared** (`docs/governance/CONSTITUTIONAL_LAYER_STACK.md`).
 >
-> **Roster:** 20 modes (waves 1–2). Sage detail: `docs/governance/cecp/SAGE_MODE.md`  
+> **Roster:** **30 modes** — waves 1–2 (20) + Wave 3 Actor Modes (10).
+> Waves 1–2: this file. Wave 3: `docs/governance/cecp/CECP_ACTOR_MODES.md`.
+> Sage detail: `docs/governance/cecp/SAGE_MODE.md`  
 > Foreman: `.cursor/skills/mrs-crew/SKILL.md` · `.cursor/skills/mrs-crew/SAGE.md`
 >
 > **Cognitive Ecology:** Profiles (higher-order “how should I think?”) live in
 > `docs/governance/cecp/COGNITIVE_ECOLOGY.md` (**partial** — docs/skills only).
 > Modes remain named lenses; where names overlap they **map** to Profiles
 > (Sage→Sage, Diplomat→Diplomat, Visionary→Visionary, Trickster→Skeptic-ish,
-> etc.) — Modes are **not** deleted. Precedence:
-> **Constitution/role bans > Evidence > Profile lens > Mode lens**.
+> etc.) — Modes are **not** deleted. Actor Modes may also overlap Profiles
+> (e.g. Strategist **Mode** ≠ Strategist **Profile** — see Wave 3 doc).
+> Precedence: **role bans > Constitution > Evidence > Profile lens > Mode lens**.
 
 ---
 
@@ -23,9 +26,10 @@
 | What | Optional **lens** on Architect / Builder / Implementor / Reviewer / Inspector / ESFR |
 | What not | No stage 07+; no replacement of Architect→…→ESFR; no new OpenCode agents |
 | Hard bans | **Always win** — mode never grants write authority a role lacks |
-| Precedence | **Constitution/role bans > Evidence > Profile lens > Mode lens** (legacy shorthand: bans > Sage rigor > mode still holds when no Profile is set) |
+| Precedence | **role bans > Constitution > Evidence > Profile lens > Mode lens** (crew or Actor Mode) |
 | Compose | Modes may stack with Sage and/or a Cognitive Ecology Profile |
 | Profiles | Higher-order cognitive layer — `COGNITIVE_ECOLOGY.md`; Modes may alias/map |
+| Actor Modes | Wave 3 — `CECP_ACTOR_MODES.md` (Navigator…Mythweaver); additive |
 | Capability | **partial** / skill-declared |
 
 ---
@@ -34,10 +38,12 @@
 
 1. **“\<Mode\> \<Role\>”** — e.g. Trickster Implementor, Artisan Architect, Sentinel Reviewer  
 2. **“\<Mode\> mode”** — e.g. Monk mode, Oracle mode (foreman applies to current/next stage)  
-3. **Foreman picks** a mode per stage on hard, math, demo, or governance work  
-4. **Compose with Sage** — “Sage + Cartographer Inspector” (Sage first for rigor sections, then mode lens)
+3. **Actor Mode** — e.g. Navigator Architect, Librarian Inspector — see `CECP_ACTOR_MODES.md`  
+4. **Foreman picks** a mode per stage on hard, math, demo, or governance work  
+5. **Compose with Sage** — “Sage + Cartographer Inspector” (Sage first for rigor sections, then mode lens)
 
-Spellings: **Physicist** (not “Phystist”). Trail metadata may record `mode: sage` and/or `lens: <name>`.
+Spellings: **Physicist** (not “Phystist”). Trail metadata may record `mode: sage`,
+`lens: <name>`, and/or `actorMode: <name>`.
 
 ---
 
@@ -74,6 +80,27 @@ Spellings: **Physicist** (not “Phystist”). Trail metadata may record `mode: 
 | 20 | **Visionary** | Bold conceptual leaps; new worlds/layers — **must** anti-overclaim | Vision as shipped capability; bare “production ready” |
 
 **Monk vs Hermit:** Monk = calm simplicity (fewer knobs, quiet determinism in the working system). Hermit = deeper withdrawal/purity (isolate a minimal pure core; refuse entanglement). Prefer Monk for day-to-day declutter; Hermit when extracting a sovereign subset.
+
+---
+
+## Wave 3 — CECP Actor Modes (10)
+
+Canonical detail: **`docs/governance/cecp/CECP_ACTOR_MODES.md`** (**partial**).
+
+| # | Actor Mode | One-line |
+|---|------------|----------|
+| 21 | **Navigator** | Pathfinding / multi-step CECP + pipeline guidance |
+| 22 | **Architect-Shadow** | Negative space — missing invariants & assumptions |
+| 23 | **Catalyst** | Accelerate runs; collapse chains without dropping evidence |
+| 24 | **Librarian** | Archival precision — trails, contracts, lineage indexes |
+| 25 | **Strategist** | Multi-actor coordination (**≠** Tier II Strategist Profile) |
+| 26 | **Artisan-Logic** | Beauty-through-math; structure elegance (relates to Artisan) |
+| 27 | **Mirror** | Perspective inversion for robustness |
+| 28 | **Frontier** | Boundary-pushing exploration (Pioneer/Visionary-adjacent) |
+| 29 | **Anchor** | Constitutional grounding; anti-drift (Sentinel/Guardian-adjacent) |
+| 30 | **Mythweaver** | Symbolic founding narrative — Drive-G-1 anti-overclaim |
+
+Waves 1–2 remain fully in force. Actor Modes are additive Mode-layer lenses.
 
 ---
 
@@ -155,6 +182,12 @@ Propose new worlds, paradigms, or constitutional layers with explicit **Anti-ove
 | Inventor Implementor | Novel kernel with declared tags |
 | Bard / Journalist Inspector | Demo narrative + factual ledger |
 | Sage + Cartographer | Rigor + topology (Sage first) |
+| Navigator Architect | Multi-module CECP pathfinding |
+| Architect-Shadow Reviewer | Negative-space gaps in ADR/implement |
+| Librarian Inspector | Trail/contract index + probes |
+| Anchor ESFR | Ship gate anti-drift |
+| Artisan-Logic Implementor | Kernel/tonemap elegance + math |
+| Mythweaver Architect | Founding narrative with honest tags |
 
 ---
 
@@ -162,9 +195,9 @@ Propose new worlds, paradigms, or constitutional layers with explicit **Anti-ove
 
 1. Keep pipeline order Architect → … → ESFR  
 2. Optionally assign a Cognitive Ecology **Profile** (`COGNITIVE_ECOLOGY.md`)  
-3. Pick at most one primary **Mode** lens per stage (plus optional Sage)  
-4. Remind bans + precedence (bans > evidence > profile > mode) in the Task prompt  
-5. Point agents at this file, `COGNITIVE_ECOLOGY.md` when Profile set, and `SAGE_MODE.md` if Sage  
-6. Record `cognitive-profile:` / `lens:` / `mode: sage` / switches in trail metadata when used  
+3. Pick at most one primary **Mode** per stage (wave 1–2 **or** Actor Mode; plus optional Sage)  
+4. Remind bans + precedence (bans > Constitution > evidence > profile > mode) in the Task prompt  
+5. Point agents at this file, `CECP_ACTOR_MODES.md` when Actor Mode set, `COGNITIVE_ECOLOGY.md` when Profile set, and `SAGE_MODE.md` if Sage  
+6. Record `cognitive-profile:` / `lens:` / `mode:` / `actorMode:` / switches in trail metadata when used  
 
-Do **not** invent twenty new agents or new stages.
+Do **not** invent thirty new agents or new stages.
