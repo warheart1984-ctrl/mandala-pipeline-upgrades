@@ -37,7 +37,9 @@ Template: `docs/governance/cecp/EVIDENCE_TRAIL_TEMPLATE.md`
 `README.md`). If a read-only subagent cannot write, the foreman writes the trail
 from that role’s return. Skip roles only when the user explicitly narrows scope.
 
-Reference trail: `docs/governance/cecp/trails/prompt-scene-adapter-2026-07/`.
+Reference registry: `docs/governance/CECP_OMEGA_PROTOCOL.md` §9
+(#1 Prompt→Scene, #2 Proton Raster; follow-ons listed there).
+Layer stack: `docs/governance/CONSTITUTIONAL_LAYER_STACK.md`.
 
 ## How to dispatch (Cursor)
 

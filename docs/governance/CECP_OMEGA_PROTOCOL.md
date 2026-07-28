@@ -57,7 +57,8 @@ docs/governance/cecp/trails/<trail-id>/
 Reusable templates: `docs/governance/cecp/EVIDENCE_TRAIL_TEMPLATE.md`,
 `docs/governance/cecp/lineage.schema.json`.
 
-Reference trail (first): `docs/governance/cecp/trails/prompt-scene-adapter-2026-07/`.
+Reference implementations (registry): see **§9** below. Layer stack context:
+`docs/governance/CONSTITUTIONAL_LAYER_STACK.md` (CECP / CHEA / CCR / CDGF).
 
 ## 4. Handoff / lineage schema
 
@@ -82,6 +83,17 @@ Each stage record SHOULD include:
 | `verdict` | Inspector only: `PASS` \| `PASS_WITH_GAPS` \| `FAIL` |
 
 Machine shape: see `docs/governance/cecp/lineage.schema.json`.
+
+### 4.1 PASS_WITH_GAPS is intended constitutional behavior
+
+`PASS_WITH_GAPS` is **not** a soft failure. It is the preferred Inspector outcome when:
+
+1. Core acceptance criteria for the trail are met with cited probes, **and**
+2. Remaining gaps are listed explicitly with status tags and a promotion path.
+
+Prefer accumulating evidence-backed CECP references (and closing gaps in later trails)
+over one-off “green” features that hide incompleteness. Promote gaps only when new
+tests/code evidence justify a stronger tag (Drive-G-1).
 
 ## 5. Status tags
 
@@ -133,7 +145,7 @@ skills, and evidence, treat this section as **declared** roadmap only:
 
 | Project / OS | Adoption status |
 |--------------|-----------------|
-| Mandala Rendering Software (MRS) | **partial** (this document + skills + reference trail) |
+| Mandala Rendering Software (MRS) | **partial** (this document + skills + reference trails) |
 | Research OS | **declared** |
 | PARAGON One | **declared** |
 | Sovereign X OS | **declared** |
@@ -142,16 +154,24 @@ skills, and evidence, treat this section as **declared** roadmap only:
 
 Do not claim “CECP enforced across Drive G” without per-repo artifacts.
 
-## 9. First reference implementation
+## 9. Reference implementations registry
 
-**Prompt → Scene adapter** (Genblaze out-of-process bridge + MRS SceneSpecification mapping):
+CECP Ω∞ prefers **accumulating governed references** (full five-stage trails + honest
+tags) over one-off features. Registry below is evidence-bound (Drive-G-1).
 
-- Trail: `docs/governance/cecp/trails/prompt-scene-adapter-2026-07/`
-- Contract: `mrs/adapters/prompt-scene-bridge/CONTRACT.md`
-- Inspector posture on that trail: **PASS_WITH_GAPS** (Engine3D empty generator stub;
-  `expand_world_request` skeleton identity)
+| # | Reference | Trail | SoT / contract | Inspector | Notes |
+|---|-----------|-------|----------------|-----------|-------|
+| **1** | Prompt→Scene adapter | `docs/governance/cecp/trails/prompt-scene-adapter-2026-07/` | `mrs/adapters/prompt-scene-bridge/` · `CONTRACT.md` | **PASS_WITH_GAPS** | First CECP Ω∞ reference. Mapping + Genblaze HTTP **enforced**; contemporaneous expand stub **skeleton** (see follow-ons). |
+| 1a | Engine3D world expand (follow-on) | `docs/governance/cecp/trails/engine3d-expand-2026-07/` | `engine3d-core` expand CLI + bridge opt-in | **PASS** | Closes empty-world gap from #1 for star/mandala when Node/`dist` present; default stub still **partial**. |
+| 1b | Prompt→Scene Docker wiring (follow-on) | `docs/governance/cecp/trails/prompt-scene-docker-2026-07/` | repo-root `Dockerfile` + Genblaze `/app` layout | **PASS_WITH_GAPS** | Operator image path; live daemon/Render gaps listed. |
+| **2** | Prompt→Scene→4D-ProtonRaster (six mods) | `docs/governance/cecp/trails/proton-raster-2026-07/` | `mrs/packages/renderer-core/src/render/rt4d/proton/` · `mrs/adapters/proton-raster-bridge/CONTRACT.md` | **PASS_WITH_GAPS** | Second CECP Ω∞ reference. Six CPU mods + PNG **enforced**; Genblaze host **partial**; anisotropic/GPU/roadmap mods **declared**. Landmark commit: `8fa2bc3`. |
 
-Accepted as a **governed integration point** with listed gaps — not as full world expansion.
+**Promotion rule:** a new feature becomes a numbered reference only when it has a
+complete trail (01–05 + README), claim↔evidence rows, and an Inspector verdict.
+Gaps stay tagged until a follow-on trail promotes them.
+
+Layer framing (how CECP relates to CHEA / CCR / CDGF):  
+`docs/governance/CONSTITUTIONAL_LAYER_STACK.md`.
 
 ---
 
