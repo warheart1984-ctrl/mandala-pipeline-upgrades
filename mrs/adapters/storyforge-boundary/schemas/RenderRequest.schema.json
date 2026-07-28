@@ -82,8 +82,9 @@
             "seed": { "type": "integer" },
             "quality": {
               "type": "string",
-              "enum": ["draft", "final"],
-              "default": "draft"
+              "enum": ["draft", "final", "high"],
+              "default": "draft",
+              "description": "draft=smoke dims; final|high unlock denser HQ proton / larger stills"
             }
           }
         },

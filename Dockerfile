@@ -53,6 +53,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     RENDER_REQUEST_API_ENABLED=0 \
     MRS_RENDER_REQUEST_EXECUTE=0 \
     PROTON_PIPELINE_SCRIPT=/app/proton-raster-bridge/run_proton_pipeline.mjs \
+    PROTON_SPLAT_SCRIPT=/app/renderer-core/scripts/render-proton-splat.mjs \
     MRS_RENDER_OUTPUT_DIR=/app/data/output \
     MRS_RENDER_TIMEOUT_SECONDS=120
 # PROMPT_SCENE_EXPAND_WORLD=0: expand remains opt-in (set 1 or pass --expand at runtime).
@@ -102,6 +103,7 @@ COPY mrs/adapters/storyforge-boundary/execute.py ./storyforge-boundary/
 COPY mrs/adapters/storyforge-boundary/paths.py ./storyforge-boundary/
 COPY mrs/adapters/storyforge-boundary/run_pipeline.py ./storyforge-boundary/
 COPY mrs/adapters/storyforge-boundary/smoke_pipeline.py ./storyforge-boundary/
+COPY mrs/adapters/storyforge-boundary/demo_full_run.py ./storyforge-boundary/
 COPY mrs/adapters/storyforge-boundary/schemas ./storyforge-boundary/schemas
 COPY mrs/adapters/storyforge-boundary/fixtures ./storyforge-boundary/fixtures
 

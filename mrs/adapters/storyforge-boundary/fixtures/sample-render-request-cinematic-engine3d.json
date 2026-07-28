@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "rr-cecp-engine3d",
+  "intentId": "intent-cecp-full-run-engine3d",
+  "worldId": "world-mythar-ascension-cinematic",
+  "timelineId": "timeline-cecp-full-run",
+  "timeSeconds": 0,
+  "parameters": {
+    "purpose": "storyforge-4d-full-run",
+    "cinematicPrompt": "Engine3D soft-raster structure plate of Mythar star field",
+    "stage": "RenderRequest→engine3d-world"
+  },
+  "provenance": {
+    "promptSpecHash": "sha256:cecpfullrunprompt000000000000003",
+    "renderIntentHash": "sha256:cecpfullrunintent000000000000003",
+    "source": "fixture-sf-output"
+  },
+  "payload": {
+    "route": "engine3d-world",
+    "render": {
+      "width": 256,
+      "height": 256,
+      "samples": 2,
+      "maxDepth": 3,
+      "seed": 42,
+      "quality": "high"
+    },
+    "engine3dWorldDocument": {
+      "id": "cecp-engine3d-star",
+      "schemaVersion": "1.0",
+      "kind": "Engine3DWorldDocument",
+      "camera": {
+        "id": "cam-main",
+        "eye": [0, 0.6, 4.2],
+        "lookAt": [0, 0.2, 0],
+        "up": [0, 1, 0],
+        "fovY": 0.85,
+        "near": 0.1,
+        "far": 40
+      },
+      "primitives": [
+        {
+          "id": "core",
+          "type": "sphere",
+          "center": [0, 0.2, 0],
+          "radius": 0.55,
+          "color": [0.35, 0.85, 1.0]
+        },
+        {
+          "id": "arm-0",
+          "type": "sphere",
+          "center": [1.4, 0.2, 0.1],
+          "radius": 0.22,
+          "color": [1.0, 0.55, 0.2]
+        },
+        {
+          "id": "arm-1",
+          "type": "sphere",
+          "center": [-1.2, 0.15, -0.2],
+          "radius": 0.2,
+          "color": [0.45, 1.0, 0.5]
+        }
+      ]
+    }
+  }
+}

@@ -68,7 +68,7 @@ def test_execute_scene_spec_mocked(tmp_path, monkeypatch):
     (tmp_path / "node.exe").write_text("stub", encoding="utf-8")
 
     deep = execute_scene_spec(data, out_dir=tmp_path, run_fn=fake_run)
-    assert deep["statusTag"] == "partial"
+    assert deep["statusTag"] == "enforced"
     assert deep["artifacts"][0]["role"] == "beauty-png"
     assert len(deep["hashes"]["pngSha256"]) == 64
 
@@ -106,6 +106,43 @@ def test_execute_proton_mocked(tmp_path, monkeypatch):
     deep = execute_proton_raster(data, out_dir=tmp_path, run_fn=fake_run)
     assert deep["artifacts"][0]["sha256"]
     assert deep["mappedTo"].endswith("run_proton_pipeline.mjs")
+    assert deep["statusTag"] == "enforced"
+
+
+def test_execute_proton_hq_mocked(tmp_path, monkeypatch):
+    data = json.loads(FIXTURE_EXEC.read_text(encoding="utf-8"))
+    data["payload"]["route"] = "proton-raster"
+    data["payload"]["render"]["quality"] = "high"
+    data["payload"]["render"]["width"] = 512
+    data["payload"]["render"]["height"] = 512
+
+    def fake_run(argv, **kwargs):
+        assert "--star-demo" in argv
+        assert "--quality" in argv
+        out_dir = None
+        for i, a in enumerate(argv):
+            if a == "--out-dir" and i + 1 < len(argv):
+                out_dir = Path(argv[i + 1])
+        assert out_dir is not None
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "beauty.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x22" * 16)
+        (out_dir / "depth.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x33" * 8)
+        (out_dir / "normal.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x44" * 8)
+        (out_dir / "evidence.json").write_text("{}", encoding="utf-8")
+        return subprocess.CompletedProcess(argv, 0, stdout="{}", stderr="")
+
+    monkeypatch.setenv("PROTON_SPLAT_SCRIPT", str(tmp_path / "render-proton-splat.mjs"))
+    (tmp_path / "render-proton-splat.mjs").write_text("// stub\n", encoding="utf-8")
+    monkeypatch.setenv("RT4D_NODE_PATH", str(tmp_path / "node.exe"))
+    (tmp_path / "node.exe").write_text("stub", encoding="utf-8")
+
+    deep = execute_proton_raster(data, out_dir=tmp_path, run_fn=fake_run)
+    roles = {a["role"] for a in deep["artifacts"]}
+    assert "beauty-png" in roles
+    assert "depth-png" in roles
+    assert "normal-png" in roles
+    assert "star-demo" in deep["mappedTo"]
+    assert deep["statusTag"] == "enforced"
 
 
 def test_execute_missing_script_errors(tmp_path, monkeypatch):

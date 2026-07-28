@@ -89,6 +89,25 @@ def proton_pipeline_script() -> Path | None:
     )
 
 
+def proton_splat_script() -> Path | None:
+    """HQ six-mod proton CLI (beauty + depth/normal AOVs)."""
+    env = os.environ.get("PROTON_SPLAT_SCRIPT")
+    if env:
+        p = Path(env)
+        return p if p.is_file() else None
+    root = repo_root()
+    return _first_existing(
+        root / "mrs" / "packages" / "renderer-core" / "scripts" / "render-proton-splat.mjs",
+        root / "renderer-core" / "scripts" / "render-proton-splat.mjs",
+        Path("/app/renderer-core/scripts/render-proton-splat.mjs"),
+        _ADAPTER_DIR.parents[1]
+        / "packages"
+        / "renderer-core"
+        / "scripts"
+        / "render-proton-splat.mjs",
+    )
+
+
 def engine3d_still_script() -> Path | None:
     env = os.environ.get("ENGINE3D_STILL_SCRIPT_PATH")
     if env:

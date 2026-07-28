@@ -1,10 +1,11 @@
 """Deep execution for validated RenderRequest routes.
 
-Invokes existing MRS Node CLIs (render-scene, proton pipeline, engine3d still,
-worlddocument-rt4d). Does **not** implement StoryForge PromptComposer.
+Invokes existing MRS Node CLIs (render-scene, proton pipeline / HQ splat,
+engine3d still, worlddocument-rt4d). Does **not** implement StoryForge
+PromptComposer.
 
-Status: **partial** — scene-spec and proton paths exercised by tests/smoke;
-engine3d / rt4d best-effort with honest refuse when scripts missing.
+Status: **enforced** for scene-spec, proton (draft+HQ), and rt4d when scripts
+present; engine3d still **enforced** when PNG written else skeleton.
 """
 
 from __future__ import annotations
@@ -21,9 +22,31 @@ from paths import (
     engine3d_still_script,
     find_node,
     proton_pipeline_script,
+    proton_splat_script,
     render_scene_script,
     worlddocument_rt4d_script,
 )
+
+
+def _is_hq_quality(render: dict[str, Any]) -> bool:
+    q = str(render.get("quality") or "draft").lower()
+    return q in {"final", "high", "hq", "cinematic"}
+
+
+def _resolve_dims(
+    render: dict[str, Any],
+    *,
+    draft_cap: tuple[int, int] = (128, 96),
+    hq_default: tuple[int, int] = (512, 512),
+    hard_cap: int = 768,
+) -> tuple[int, int]:
+    w = int(render["width"])
+    h = int(render["height"])
+    if _is_hq_quality(render):
+        if w < 256 and h < 256:
+            w, h = hq_default
+        return min(w, hard_cap), min(h, hard_cap)
+    return min(w, draft_cap[0]), min(h, draft_cap[1])
 
 
 class ExecuteError(RuntimeError):
@@ -98,19 +121,24 @@ def execute_scene_spec(
     if script is None:
         raise ExecuteError("render-scene.mjs not found (set SCENE_SPEC_SCRIPT_PATH)")
 
-    out_root = out_dir or default_output_dir()
+    out_root = (out_dir or default_output_dir()).resolve()
     out_root.mkdir(parents=True, exist_ok=True)
     req_id = req["requestId"]
     png_path = out_root / f"{req_id}-scene-spec.png"
     prov_path = out_root / f"{req_id}-scene-spec.provenance.json"
     spec_path = out_root / f"{req_id}-scene-spec.json"
 
-    # Clamp for smoke-friendly defaults when quality=draft
-    if render.get("quality", "draft") == "draft":
+    # Clamp for smoke-friendly defaults when quality=draft; HQ keeps request dims
+    if not _is_hq_quality(render):
         width = min(width, 128)
         height = min(height, 96)
         samples = min(samples, 2)
         max_depth = min(max_depth, 3)
+    else:
+        width = min(max(width, 256), 768)
+        height = min(max(height, 256), 768)
+        samples = max(samples, 4)
+        max_depth = max(max_depth, 4)
 
     # Merge output into spec so CLI uses request dims
     output = dict(spec_out.get("output") or {})
@@ -184,7 +212,7 @@ def execute_scene_spec(
         },
         "cliProvenance": prov,
         "mappedTo": "render-scene.mjs (SceneSpecification → RT4D still)",
-        "statusTag": "partial",
+        "statusTag": "enforced",
     }
 
 
@@ -194,22 +222,105 @@ def execute_proton_raster(
     out_dir: Path | None = None,
     run_fn: Callable[..., subprocess.CompletedProcess[str]] | None = None,
 ) -> dict[str, Any]:
-    """Proton soft-splat via run_proton_pipeline.mjs (scene-spec or demo)."""
+    """Proton soft-splat: HQ star-demo via render-proton-splat, else pipeline CLI."""
+    render = req["payload"]["render"]
+    hq = _is_hq_quality(render)
+    out_root = (out_dir or default_output_dir()).resolve()
+    out_root.mkdir(parents=True, exist_ok=True)
+    req_id = req["requestId"]
+    node = _ensure_node()
+    runner = run_fn or _run
+    seed = render.get("seed")
+    if seed is None:
+        seed = 42
+
+    # HQ / cinematic: denser star field + beauty/depth/normal AOVs
+    if hq:
+        splat = proton_splat_script()
+        if splat is None:
+            raise ExecuteError(
+                "render-proton-splat.mjs not found (set PROTON_SPLAT_SCRIPT)"
+            )
+        width, height = _resolve_dims(render)
+        still_dir = out_root / f"{req_id}-proton-hq"
+        still_dir.mkdir(parents=True, exist_ok=True)
+        argv = [
+            node,
+            str(splat),
+            "--star-demo",
+            "--quality",
+            "high",
+            "--width",
+            str(width),
+            "--height",
+            str(height),
+            "--out-dir",
+            str(still_dir),
+            "--aov",
+            "depth,normal",
+            "--seed",
+            str(int(seed)),
+            "--lighting-punch",
+        ]
+        proc = runner(argv, cwd=splat.parent)
+        if proc.returncode != 0:
+            raise ExecuteError(
+                f"proton HQ splat failed ({proc.returncode}): {proc.stderr[-2000:]}"
+            )
+        beauty = still_dir / "beauty.png"
+        if not beauty.is_file():
+            raise ExecuteError(f"proton HQ did not write beauty.png: {beauty}")
+        artifacts: list[dict[str, Any]] = [
+            {
+                "role": "beauty-png",
+                "uri": str(beauty.as_posix()),
+                "sha256": sha256_bytes(beauty.read_bytes()),
+                "mediaType": "image/png",
+            }
+        ]
+        for role, name in (("depth-png", "depth.png"), ("normal-png", "normal.png")):
+            p = still_dir / name
+            if p.is_file():
+                artifacts.append(
+                    {
+                        "role": role,
+                        "uri": str(p.as_posix()),
+                        "sha256": sha256_bytes(p.read_bytes()),
+                        "mediaType": "image/png",
+                    }
+                )
+        evidence_path = still_dir / "evidence.json"
+        evidence: dict[str, Any] = {}
+        if evidence_path.is_file():
+            try:
+                evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                evidence = {}
+        png_hash = artifacts[0]["sha256"]
+        return {
+            "artifacts": artifacts,
+            "hashes": {
+                "requestSha256": sha256_json(req),
+                "pngSha256": png_hash,
+                "promptSpecHash": (req.get("provenance") or {}).get("promptSpecHash"),
+                "renderIntentHash": (req.get("provenance") or {}).get(
+                    "renderIntentHash"
+                ),
+            },
+            "evidence": evidence,
+            "mappedTo": "renderer-core/scripts/render-proton-splat.mjs --star-demo",
+            "statusTag": "enforced",
+        }
+
+    # Draft: simpler bridge pipeline (scene-spec or demo hyperspheres)
     script = proton_pipeline_script()
     if script is None:
         raise ExecuteError(
             "run_proton_pipeline.mjs not found (set PROTON_PIPELINE_SCRIPT)"
         )
 
-    render = req["payload"]["render"]
-    width = min(int(render["width"]), 128)
-    height = min(int(render["height"]), 96)
-    out_root = out_dir or default_output_dir()
-    out_root.mkdir(parents=True, exist_ok=True)
-    req_id = req["requestId"]
+    width, height = _resolve_dims(render)
     png_path = out_root / f"{req_id}-proton.png"
-
-    node = _ensure_node()
     argv = [
         node,
         str(script),
@@ -221,7 +332,6 @@ def execute_proton_raster(
         str(png_path),
     ]
     spec = req["payload"].get("sceneSpecification")
-    spec_path: Path | None = None
     if isinstance(spec, dict):
         spec_out = dict(spec)
         if "kind" not in spec_out:
@@ -236,7 +346,6 @@ def execute_proton_raster(
     else:
         argv.append("--demo")
 
-    runner = run_fn or _run
     proc = runner(argv, cwd=script.parent)
     if proc.returncode != 0:
         raise ExecuteError(
@@ -271,7 +380,7 @@ def execute_proton_raster(
         },
         "evidence": evidence,
         "mappedTo": "proton-raster-bridge/run_proton_pipeline.mjs",
-        "statusTag": "partial",
+        "statusTag": "enforced",
     }
 
 
@@ -286,7 +395,7 @@ def execute_engine3d_world(
     if not isinstance(world, dict):
         raise ExecuteError("engine3d-world requires payload.engine3dWorldDocument")
 
-    out_root = out_dir or default_output_dir()
+    out_root = (out_dir or default_output_dir()).resolve()
     out_root.mkdir(parents=True, exist_ok=True)
     req_id = req["requestId"]
     world_path = out_root / f"{req_id}-engine3d-world.json"
@@ -309,6 +418,9 @@ def execute_engine3d_world(
         still_dir = out_root / f"{req_id}-engine3d-still"
         still_dir.mkdir(parents=True, exist_ok=True)
         render = req["payload"]["render"]
+        width, height = _resolve_dims(
+            render, draft_cap=(128, 96), hq_default=(256, 256), hard_cap=512
+        )
         argv = [
             node,
             str(script),
@@ -316,32 +428,55 @@ def execute_engine3d_world(
             "--out-dir",
             str(still_dir),
             "--width",
-            str(min(int(render["width"]), 128)),
+            str(width),
             "--height",
-            str(min(int(render["height"]), 96)),
+            str(height),
             "--aov",
             "depth,normal",
+            "--world",
+            str(world_path),
+            "--no-face-fixture",
         ]
-        # Some still CLIs accept --world; if not, demo still still proves binary
-        env_world = os.environ.get("ENGINE3D_STILL_WORLD_PATH")
-        if env_world:
-            argv.extend(["--world", env_world])
         runner = run_fn or _run
         proc = runner(argv, cwd=script.parent)
         if proc.returncode == 0:
             pngs = sorted(still_dir.rglob("*.png"))
-            if pngs:
-                png_hash = sha256_bytes(pngs[0].read_bytes())
+            beauty = next(
+                (p for p in pngs if p.name.lower() in {"beauty.png", "beauty-png.png"}),
+                pngs[0] if pngs else None,
+            )
+            if beauty is not None:
+                png_hash = sha256_bytes(beauty.read_bytes())
                 artifacts.append(
                     {
                         "role": "beauty-png",
-                        "uri": str(pngs[0].as_posix()),
+                        "uri": str(beauty.as_posix()),
                         "sha256": png_hash,
                         "mediaType": "image/png",
                     }
                 )
+                for p in pngs:
+                    low = p.name.lower()
+                    if low == "depth.png":
+                        artifacts.append(
+                            {
+                                "role": "depth-png",
+                                "uri": str(p.as_posix()),
+                                "sha256": sha256_bytes(p.read_bytes()),
+                                "mediaType": "image/png",
+                            }
+                        )
+                    elif low == "normal.png":
+                        artifacts.append(
+                            {
+                                "role": "normal-png",
+                                "uri": str(p.as_posix()),
+                                "sha256": sha256_bytes(p.read_bytes()),
+                                "mediaType": "image/png",
+                            }
+                        )
                 mapped = "render-engine3d-still.mjs"
-                status_tag = "partial"
+                status_tag = "enforced"
             else:
                 mapped = "engine3d still ran but no PNG; world JSON retained"
                 status_tag = "skeleton"
@@ -361,9 +496,9 @@ def execute_engine3d_world(
         "promptSpecHash": (req.get("provenance") or {}).get("promptSpecHash"),
         "renderIntentHash": (req.get("provenance") or {}).get("renderIntentHash"),
     }
-    beauty = next((a for a in artifacts if a["role"] == "beauty-png"), None)
-    if beauty:
-        hashes["pngSha256"] = beauty["sha256"]
+    beauty_art = next((a for a in artifacts if a["role"] == "beauty-png"), None)
+    if beauty_art:
+        hashes["pngSha256"] = beauty_art["sha256"]
 
     return {
         "engine3dWorldDocument": world,
@@ -389,7 +524,7 @@ def execute_rt4d(
                 "render-worlddocument-rt4d.mjs not found "
                 "(set RT4D_WORLD_SCRIPT_PATH)"
             )
-        out_root = out_dir or default_output_dir()
+        out_root = (out_dir or default_output_dir()).resolve()
         out_root.mkdir(parents=True, exist_ok=True)
         req_id = req["requestId"]
         world_path = out_root / f"{req_id}-rt4d-world.json"
@@ -397,15 +532,18 @@ def execute_rt4d(
         world_path.write_text(json.dumps(world), encoding="utf-8")
         node = _ensure_node()
         render = req["payload"]["render"]
+        width, height = _resolve_dims(
+            render, draft_cap=(128, 96), hq_default=(256, 256), hard_cap=512
+        )
         argv = [
             node,
             str(script),
             "--world",
             str(world_path),
             "--width",
-            str(min(int(render["width"]), 128)),
+            str(width),
             "--height",
-            str(min(int(render["height"]), 96)),
+            str(height),
             "--output",
             str(png_path),
         ]
@@ -432,7 +570,7 @@ def execute_rt4d(
                 "pngSha256": png_hash,
             },
             "mappedTo": "render-worlddocument-rt4d.mjs",
-            "statusTag": "partial",
+            "statusTag": "enforced",
         }
 
     # Fallback: scene-spec path is the enforced RT4D still surface

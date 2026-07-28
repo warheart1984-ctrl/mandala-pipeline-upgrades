@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "1.0",
+  "requestId": "rr-cecp-scene-hq",
+  "intentId": "intent-cecp-full-run-scene",
+  "worldId": "world-mythar-ascension-cinematic",
+  "timelineId": "timeline-cecp-full-run",
+  "timeSeconds": 0,
+  "parameters": {
+    "purpose": "storyforge-4d-full-run",
+    "cinematicPrompt": "Cyan neon tesseract reveal — key light high, soft rim",
+    "stage": "RenderRequest→scene-spec→RT4D"
+  },
+  "provenance": {
+    "promptSpecHash": "sha256:cecpfullrunprompt000000000000002",
+    "renderIntentHash": "sha256:cecpfullrunintent000000000000002",
+    "source": "fixture-sf-output"
+  },
+  "payload": {
+    "route": "scene-spec",
+    "render": {
+      "width": 384,
+      "height": 384,
+      "samples": 6,
+      "maxDepth": 5,
+      "seed": 42,
+      "quality": "high"
+    },
+    "sceneSpecification": {
+      "schemaVersion": "1.0",
+      "kind": "SceneSpecification",
+      "id": "cecp-cinematic-tesseract",
+      "name": "Cinematic cyan tesseract",
+      "materials": [
+        {
+          "id": "neon",
+          "color": "#1accff",
+          "opacity": 1
+        }
+      ],
+      "entities": [
+        {
+          "id": "tess",
+          "materialId": "neon",
+          "geometry": {
+            "kind": "surface",
+            "surfaceId": "tesseract"
+          }
+        }
+      ],
+      "camera": {
+        "position4d": [4.3, 1.4, 0.2, 0.1],
+        "target4d": [0, 0.1, 0, 0],
+        "fovX": 52,
+        "fovY": 52,
+        "fovZ": 45,
+        "fovW": 28
+      },
+      "lights": [
+        {
+          "id": "key",
+          "center": [2.4, 3.3, -1.6, 0.7],
+          "radius": 0.95,
+          "emission": [17, 16, 14.5]
+        }
+      ],
+      "output": {
+        "width": 384,
+        "height": 384,
+        "samples": 6,
+        "maxDepth": 5,
+        "seed": 42
+      }
+    }
+  }
+}
