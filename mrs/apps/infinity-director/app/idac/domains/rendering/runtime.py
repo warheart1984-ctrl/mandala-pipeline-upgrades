@@ -104,17 +104,79 @@ class ShadingEngine:
 
 
 class PostFXEngine:
-    status = "declared"
+    """IDAC PostFXEngine — upscale, BRDF, and visibility strategy metadata.
+
+    Status: partial — strategy metadata is tracked and validated; actual
+    post-fx dispatch is not wired (Genblaze full-frame only).
+    """
+
+    status = "partial"
+
+    VALID_UPSCALE_STRATEGIES: frozenset[str] = frozenset({
+        "low_res_edge_aware_upscale",
+        "none_full_res",
+    })
+
+    VALID_BRDF_STRATEGIES: frozenset[str] = frozenset({
+        "piecewise_cheap_tiles",
+        "full_brdf_tiles",
+    })
+
+    VALID_VISIBILITY_STRATEGIES: frozenset[str] = frozenset({
+        "director_tile_grid_only",
+    })
+
+    def __init__(self, settings: Settings | None = None) -> None:
+        self._settings = settings
 
     @staticmethod
-    def describe(domain_plan: dict[str, Any]) -> dict[str, Any]:
+    def validate_upscale(strategy: str | None) -> str:
+        if strategy and strategy not in PostFXEngine.VALID_UPSCALE_STRATEGIES:
+            return "none_full_res"
+        return strategy or "none_full_res"
+
+    @staticmethod
+    def validate_brdf(strategy: str | None) -> str:
+        if strategy and strategy not in PostFXEngine.VALID_BRDF_STRATEGIES:
+            return "full_brdf_tiles"
+        return strategy or "full_brdf_tiles"
+
+    @staticmethod
+    def validate_visibility(strategy: str | None) -> str:
+        if strategy and strategy not in PostFXEngine.VALID_VISIBILITY_STRATEGIES:
+            return "director_tile_grid_only"
+        return strategy or "director_tile_grid_only"
+
+    def describe(self, domain_plan: dict[str, Any]) -> dict[str, Any]:
         rp = domain_plan.get("render_plan") or {}
         ms = rp.get("math_strategies") or {}
         upscale = ms.get("upscale_strategy") or {}
+        brdf = ms.get("brdf_strategy") or {}
+        visibility = ms.get("visibility_strategy") or {}
+        adaptive = ms.get("adaptive_samples") or {}
+
+        upscale_strategy = self.validate_upscale(upscale.get("strategy"))
+        brdf_strategy = self.validate_brdf(brdf.get("strategy"))
+        visibility_strategy = self.validate_visibility(visibility.get("strategy"))
+
         return {
-            "status": "declared",
-            "upscale_strategy": upscale.get("strategy"),
-            "director_today": upscale.get("director_today"),
+            "status": self.status,
+            "upscale_strategy": upscale_strategy,
+            "brdf_strategy": brdf_strategy,
+            "visibility_strategy": visibility_strategy,
+            "adaptive_samples_suggested_spp": adaptive.get("suggested_global_spp"),
+            "adaptive_samples_strategy": adaptive.get("strategy"),
+            "director_today": {
+                "upscale": upscale.get("director_today", "not_dispatched_post_fx_or_upscale"),
+                "brdf": brdf.get("director_today", "classification_in_render_plan_tiles_only"),
+                "visibility": visibility.get("director_today", "tile_grid_and_C_i_only"),
+            },
+            "per_tile_postfx_available": False,
+            "per_tile_note": (
+                "Per-tile post-fx requires Genblaze crop_region or tile API "
+                "(waiver W-TILE-FAITHFUL)"
+            ),
+            "waivers_applied": ["W-TILE-FAITHFUL"],
         }
 
 
@@ -146,7 +208,7 @@ class RenderExecutor:
         self._settings = settings
         self.tile_scheduler = TileScheduler()
         self.shading_engine = ShadingEngine(settings)
-        self.postfx_engine = PostFXEngine()
+        self.postfx_engine = PostFXEngine(settings)
         self.evidence_emitter = EvidenceEmitter()
         self.violation_emitter = ViolationEmitter()
 

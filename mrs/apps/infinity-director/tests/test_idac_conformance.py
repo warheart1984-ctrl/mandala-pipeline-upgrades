@@ -21,7 +21,7 @@ from app.idac.core.constitution import CONSTITUTIONAL_INVARIANTS
 from app.idac.core.learning import record_learning_candidate
 from app.idac.core.router import validate_intent, validate_plan
 from app.idac.domains.rendering.adapters import RenderOptimizerAdapter, RenderValidationAdapter
-from app.idac.domains.rendering.runtime import RenderExecutor, ShadingEngine, TileScheduler
+from app.idac.domains.rendering.runtime import PostFXEngine, RenderExecutor, ShadingEngine, TileScheduler
 from app.idac.runtime import execute_plan
 
 SCHEMAS = Path(__file__).resolve().parents[1] / "schemas"
@@ -299,6 +299,133 @@ class TestDomainAdapterRendering:
         assert ex.tile_scheduler.status == "partial"
         assert ex.shading_engine.status == "partial"
         assert ex.shading_engine._settings is not None
+        assert ex.postfx_engine.status == "partial"
+
+
+class TestPostFXEngineVerified:
+    """PostFXEngine verification — strategy validation, metadata, waiver."""
+
+    def make_engine(self) -> PostFXEngine:
+        return PostFXEngine(Settings(planner_mode="heuristic"))
+
+    def test_upscale_strategy_valid(self):
+        engine = self.make_engine()
+        desc = engine.describe({
+            "render_plan": {
+                "math_strategies": {
+                    "upscale_strategy": {"strategy": "low_res_edge_aware_upscale"},
+                },
+            },
+        })
+        assert desc["upscale_strategy"] == "low_res_edge_aware_upscale"
+        assert desc["status"] == "partial"
+
+    def test_upscale_strategy_defaults_on_unknown(self):
+        engine = self.make_engine()
+        desc = engine.describe({
+            "render_plan": {
+                "math_strategies": {
+                    "upscale_strategy": {"strategy": "ai_super_res"},
+                },
+            },
+        })
+        assert desc["upscale_strategy"] == "none_full_res"
+
+    def test_brdf_strategy_valid(self):
+        engine = self.make_engine()
+        desc = engine.describe({
+            "render_plan": {
+                "math_strategies": {
+                    "brdf_strategy": {"strategy": "piecewise_cheap_tiles"},
+                },
+            },
+        })
+        assert desc["brdf_strategy"] == "piecewise_cheap_tiles"
+
+    def test_brdf_strategy_defaults_on_unknown(self):
+        engine = self.make_engine()
+        desc = engine.describe({
+            "render_plan": {
+                "math_strategies": {
+                    "brdf_strategy": {"strategy": "path_trace_full"},
+                },
+            },
+        })
+        assert desc["brdf_strategy"] == "full_brdf_tiles"
+
+    def test_visibility_strategy_valid(self):
+        engine = self.make_engine()
+        desc = engine.describe({
+            "render_plan": {
+                "math_strategies": {
+                    "visibility_strategy": {"strategy": "director_tile_grid_only"},
+                },
+            },
+        })
+        assert desc["visibility_strategy"] == "director_tile_grid_only"
+
+    def test_visibility_strategy_defaults_on_unknown(self):
+        engine = self.make_engine()
+        desc = engine.describe({
+            "render_plan": {
+                "math_strategies": {
+                    "visibility_strategy": {"strategy": "hierarchical_z_buffer"},
+                },
+            },
+        })
+        assert desc["visibility_strategy"] == "director_tile_grid_only"
+
+    def test_adaptive_samples_from_math_strategies(self):
+        engine = self.make_engine()
+        desc = engine.describe({
+            "render_plan": {
+                "math_strategies": {
+                    "adaptive_samples": {
+                        "strategy": "C_i_inverse",
+                        "suggested_global_spp": 8,
+                    },
+                },
+            },
+        })
+        assert desc["adaptive_samples_strategy"] == "C_i_inverse"
+        assert desc["adaptive_samples_suggested_spp"] == 8
+
+    def test_director_today_shape(self):
+        engine = self.make_engine()
+        desc = engine.describe({"render_plan": {"math_strategies": {}}})
+        dt = desc["director_today"]
+        assert "upscale" in dt
+        assert "brdf" in dt
+        assert "visibility" in dt
+
+    def test_per_tile_waiver(self):
+        engine = self.make_engine()
+        desc = engine.describe({"render_plan": {}})
+        assert desc["per_tile_postfx_available"] is False
+        assert "W-TILE-FAITHFUL" in desc["waivers_applied"]
+
+    def test_empty_domain_plan_defaults(self):
+        engine = self.make_engine()
+        desc = engine.describe({})
+        assert desc["upscale_strategy"] == "none_full_res"
+        assert desc["brdf_strategy"] == "full_brdf_tiles"
+
+    def test_validate_upscale_static_method(self):
+        assert PostFXEngine.validate_upscale("low_res_edge_aware_upscale") == "low_res_edge_aware_upscale"
+        assert PostFXEngine.validate_upscale("none_full_res") == "none_full_res"
+        assert PostFXEngine.validate_upscale("unknown") == "none_full_res"
+        assert PostFXEngine.validate_upscale(None) == "none_full_res"
+
+    def test_validate_brdf_static_method(self):
+        assert PostFXEngine.validate_brdf("piecewise_cheap_tiles") == "piecewise_cheap_tiles"
+        assert PostFXEngine.validate_brdf("full_brdf_tiles") == "full_brdf_tiles"
+        assert PostFXEngine.validate_brdf("unknown") == "full_brdf_tiles"
+        assert PostFXEngine.validate_brdf(None) == "full_brdf_tiles"
+
+    def test_validate_visibility_static_method(self):
+        assert PostFXEngine.validate_visibility("director_tile_grid_only") == "director_tile_grid_only"
+        assert PostFXEngine.validate_visibility("unknown") == "director_tile_grid_only"
+        assert PostFXEngine.validate_visibility(None) == "director_tile_grid_only"
 
 
 class TestRouterHttpIntegrationL1:
