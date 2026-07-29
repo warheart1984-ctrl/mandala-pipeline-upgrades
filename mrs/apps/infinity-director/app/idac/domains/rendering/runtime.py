@@ -39,14 +39,67 @@ class TileScheduler:
 
 
 class ShadingEngine:
-    status = "declared"
+    """IDAC ShadingEngine — full-frame dispatch with tile evidence tracking.
+
+    Status: partial — full_frame_dispatch and full_frame_with_tile_evidence
+    are verified; per_tile shading is blocked on downstream Genblaze API
+    (waiver W-TILE-FAITHFUL).
+    """
+
+    status = "partial"
+
+    VALID_MODES: frozenset[str] = frozenset({
+        "full_frame_dispatch",
+        "full_frame_with_tile_evidence",
+    })
+
+    BLOCKED_MODES: frozenset[str] = frozenset({"per_tile"})
+
+    def __init__(self, settings: Settings | None = None) -> None:
+        self._settings = settings
 
     @staticmethod
-    def describe(domain_plan: dict[str, Any]) -> dict[str, Any]:
+    def validate_mode(mode: str) -> str:
+        """Validate and normalise execution mode.
+
+        Raises PlanViolationError for blocked/per_tile modes with
+        documented waiver cross-ref.
+        """
+        if mode in ShadingEngine.BLOCKED_MODES:
+            raise PlanViolationError(
+                code="shading.per_tile_blocked",
+                message=(
+                    f"Shading execution mode {mode!r} is blocked — "
+                    f"per-tile Genblaze shading requires downstream API "
+                    f"(waiver W-TILE-FAITHFUL)"
+                ),
+                plan_ref="",
+                intent_ref="",
+            )
+        if mode in ShadingEngine.VALID_MODES:
+            return mode
+        return "full_frame_dispatch"
+
+    def describe(self, domain_plan: dict[str, Any]) -> dict[str, Any]:
         rp = domain_plan.get("render_plan") or {}
+        raw_mode = rp.get("execution_mode", "full_frame_dispatch")
+        mode = self.validate_mode(raw_mode)
+
+        tile_evidence = rp.get("tile_execution_evidence") or {}
+        tile_count = tile_evidence.get("tile_count") or 0
+        tile_status = tile_evidence.get("status") or "not_applicable"
+
         return {
-            "status": "declared",
-            "execution_mode": rp.get("execution_mode", "full_frame_dispatch"),
+            "status": self.status,
+            "execution_mode": mode,
+            "tile_count": tile_count,
+            "tile_evidence_status": tile_status,
+            "per_tile_available": False,
+            "per_tile_note": (
+                "Per-tile Genblaze shading requires crop_region API "
+                "(waiver W-TILE-FAITHFUL)"
+            ),
+            "waivers_applied": ["W-TILE-FAITHFUL"] if mode == "full_frame_with_tile_evidence" else [],
         }
 
 
@@ -92,7 +145,7 @@ class RenderExecutor:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self.tile_scheduler = TileScheduler()
-        self.shading_engine = ShadingEngine()
+        self.shading_engine = ShadingEngine(settings)
         self.postfx_engine = PostFXEngine()
         self.evidence_emitter = EvidenceEmitter()
         self.violation_emitter = ViolationEmitter()

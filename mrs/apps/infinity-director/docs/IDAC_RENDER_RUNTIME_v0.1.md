@@ -7,8 +7,8 @@
 | Component | Status | Today |
 |-----------|--------|-------|
 | RenderExecutor | partial | `dispatch_render` |
-| TileScheduler | declared | ATCM tile grid metadata only |
-| ShadingEngine | declared | `execution_mode: full_frame_dispatch` |
+| TileScheduler | partial | ATCM tile grid metadata only |
+| ShadingEngine | **partial** | full_frame_dispatch + full_frame_with_tile_evidence; per_tile blocked (W-TILE-FAITHFUL). Mode validation, waiver cross-ref, tile evidence tracking — 9 verification tests. |
 | PostFXEngine | declared | math_strategies upscale metadata |
 | EvidenceEmitter | partial | EvidenceContract builder |
 | ViolationEmitter | partial | PlanViolation JSON |

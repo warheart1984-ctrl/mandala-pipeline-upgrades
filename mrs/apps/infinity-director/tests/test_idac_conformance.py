@@ -211,23 +211,94 @@ class TestLearningL0:
         assert out["recorded"] is False
 
 
-class TestRenderRuntimeDeclared:
+class TestRenderRuntime:
     def test_tile_scheduler_declared_note(self):
         desc = TileScheduler.describe({"atcm_summary": {"tile_count": 16}})
         assert desc["status"] == "partial"
         assert "full-frame" in desc["note"] or "per-tile" in desc["note"]
 
-    def test_shading_engine_full_frame_with_tile_evidence(self):
-        desc = ShadingEngine.describe(
-            {"render_plan": {"execution_mode": "full_frame_with_tile_evidence"}},
-        )
+
+class TestShadingEngineVerified:
+    """ShadingEngine verification — mode validation, waiver, evidence shape."""
+
+    def make_engine(self) -> ShadingEngine:
+        return ShadingEngine(Settings(planner_mode="heuristic"))
+
+    def test_accepts_full_frame_dispatch(self):
+        engine = self.make_engine()
+        desc = engine.describe({"render_plan": {"execution_mode": "full_frame_dispatch"}})
+        assert desc["execution_mode"] == "full_frame_dispatch"
+        assert desc["status"] == "partial"
+        assert desc["per_tile_available"] is False
+
+    def test_accepts_full_frame_with_tile_evidence(self):
+        engine = self.make_engine()
+        desc = engine.describe({"render_plan": {"execution_mode": "full_frame_with_tile_evidence"}})
         assert desc["execution_mode"] == "full_frame_with_tile_evidence"
+        assert "W-TILE-FAITHFUL" in desc["waivers_applied"]
+        assert desc["per_tile_available"] is False
+
+    def test_rejects_per_tile_mode(self):
+        engine = self.make_engine()
+        with pytest.raises(PlanViolationError) as exc:
+            engine.describe({"render_plan": {"execution_mode": "per_tile"}})
+        assert "W-TILE-FAITHFUL" in str(exc.value)
+        assert exc.value.code == "shading.per_tile_blocked"
+
+    def test_defaults_to_full_frame_when_mode_unknown(self):
+        engine = self.make_engine()
+        desc = engine.describe({"render_plan": {"execution_mode": "quantum_raster"}})
+        assert desc["execution_mode"] == "full_frame_dispatch"
+
+    def test_describe_includes_capability_and_waiver_metadata(self):
+        engine = self.make_engine()
+        desc = engine.describe({"render_plan": {}})
+        assert "status" in desc
+        assert "execution_mode" in desc
+        assert "per_tile_available" in desc
+        assert "per_tile_note" in desc
+        assert "waivers_applied" in desc
+        assert isinstance(desc["waivers_applied"], list)
+
+    def test_handles_empty_domain_plan(self):
+        engine = self.make_engine()
+        desc = engine.describe({})
+        assert desc["execution_mode"] == "full_frame_dispatch"
+        assert desc["tile_count"] == 0
+
+    def test_tile_count_from_tile_evidence(self):
+        engine = self.make_engine()
+        desc = engine.describe({
+            "render_plan": {
+                "execution_mode": "full_frame_with_tile_evidence",
+                "tile_execution_evidence": {"tile_count": 9, "status": "partial"},
+            },
+        })
+        assert desc["tile_count"] == 9
+        assert desc["tile_evidence_status"] == "partial"
+
+    def test_validate_mode_rejects_per_tile(self):
+        engine = self.make_engine()
+        with pytest.raises(PlanViolationError) as exc:
+            engine.validate_mode("per_tile")
+        assert exc.value.code == "shading.per_tile_blocked"
+
+    def test_validate_mode_accepts_valid(self):
+        engine = self.make_engine()
+        assert engine.validate_mode("full_frame_dispatch") == "full_frame_dispatch"
+        assert engine.validate_mode("full_frame_with_tile_evidence") == "full_frame_with_tile_evidence"
+
+    def test_validate_mode_defaults_unknown(self):
+        engine = self.make_engine()
+        assert engine.validate_mode("hyper_raster") == "full_frame_dispatch"
 
 
 class TestDomainAdapterRendering:
     def test_render_executor_components(self, settings):
         ex = RenderExecutor(settings)
         assert ex.tile_scheduler.status == "partial"
+        assert ex.shading_engine.status == "partial"
+        assert ex.shading_engine._settings is not None
 
 
 class TestRouterHttpIntegrationL1:
