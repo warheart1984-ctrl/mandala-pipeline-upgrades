@@ -1488,7 +1488,7 @@ def api_polish_still(body: PolishStillRequest, request: Request) -> dict:
 
 @app.post("/api/prompt-to-scene")
 def api_prompt_to_scene(body: PromptToSceneRequest) -> dict:
-    """Prompt → SceneSpecification + Engine3D world stub (out-of-process bridge).
+    """Prompt → SceneSpecification + gated Engine3D world (out-of-process bridge).
 
     Optional render=true path-traces the SceneSpecification via RT4D.
     Infinity narrative packages stay out-of-process (not imported under app/).
