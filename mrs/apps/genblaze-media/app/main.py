@@ -1593,6 +1593,16 @@ def api_engine3d_still(body: Engine3dStillRequest) -> dict:
     except Engine3dStillPathError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    if body.path_trace:
+        raise HTTPException(
+            status_code=501,
+            detail=(
+                "path_trace=true is not wired for Engine3D still yet "
+                "(generate_engine3d_still has no path_trace CLI). "
+                "Use polish=false soft-raster structure stills, or RT4D /api/generate."
+            ),
+        )
+
     try:
         structure = generate_engine3d_still(
             settings,
@@ -1602,9 +1612,6 @@ def api_engine3d_still(body: Engine3dStillRequest) -> dict:
             aov_normal=body.aov_normal,
             world_path=world_path,
             human_glb=human_glb,
-            path_trace=bool(body.path_trace),
-            samples=body.samples,
-            max_depth=body.max_depth,
         )
     except Engine3dStillPathError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
