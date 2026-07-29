@@ -10,6 +10,11 @@ from app.config import Settings
 from app.dispatch import DispatchError, ENGINE_BY_LANE, build_dispatch_target
 from app.idac.core.contracts import EvidenceContract, ExecutionPlan, IntentContract, PlanViolationError
 from app.idac.domains.rendering.adapters import RenderEvidenceAdapter, RenderValidationAdapter
+from app.idac.domains.rendering.genblaze_tile_dispatch import (
+    dispatch_tile_faithful,
+    refresh_tile_execution_evidence,
+    should_tile_faithful_dispatch,
+)
 from app.models import DirectRequest, DispatchTarget, NormalizedPlan
 from app.render_accel import build_replay_record_skeleton
 
@@ -88,18 +93,26 @@ class ShadingEngine:
         tile_evidence = rp.get("tile_execution_evidence") or {}
         tile_count = tile_evidence.get("tile_count") or 0
         tile_status = tile_evidence.get("status") or "not_applicable"
+        tile_faithful_operational = (
+            tile_status == "enforced"
+            or tile_evidence.get("downstream_dispatch") == "tile_faithful_http_loop"
+        )
+
+        waivers: list[str] = []
+        if mode == "full_frame_with_tile_evidence" and not tile_faithful_operational:
+            waivers.append("W-TILE-FAITHFUL")
 
         return {
             "status": self.status,
             "execution_mode": mode,
             "tile_count": tile_count,
             "tile_evidence_status": tile_status,
-            "per_tile_available": False,
+            "per_tile_available": True,
             "per_tile_note": (
-                "Per-tile Genblaze shading requires crop_region API "
-                "(waiver W-TILE-FAITHFUL)"
+                "Per-tile Genblaze shading uses crop_region on POST /api/engine3d-still "
+                "or POST /api/engine3d-tile-still (full-frame render + ROI crop)"
             ),
-            "waivers_applied": ["W-TILE-FAITHFUL"] if mode == "full_frame_with_tile_evidence" else [],
+            "waivers_applied": waivers,
         }
 
 
@@ -160,7 +173,15 @@ class PostFXEngine:
         visibility_strategy = self.validate_visibility(visibility.get("strategy"))
 
         per_tile_strategy = brdf_strategy == "piecewise_cheap_tiles"
-        waivers = ["W-TILE-FAITHFUL"] if per_tile_strategy else []
+        rp_full = domain_plan.get("render_plan") or {}
+        tee = rp_full.get("tile_execution_evidence") or {}
+        tile_faithful_operational = (
+            tee.get("status") == "enforced"
+            or tee.get("downstream_dispatch") == "tile_faithful_http_loop"
+        )
+        waivers: list[str] = []
+        if per_tile_strategy and not tile_faithful_operational:
+            waivers.append("W-TILE-FAITHFUL")
 
         return {
             "status": self.status,
@@ -174,10 +195,10 @@ class PostFXEngine:
                 "brdf": brdf.get("director_today", "classification_in_render_plan_tiles_only"),
                 "visibility": visibility.get("director_today", "tile_grid_and_C_i_only"),
             },
-            "per_tile_postfx_available": False,
+            "per_tile_postfx_available": True,
             "per_tile_note": (
-                "Per-tile post-fx requires Genblaze crop_region or tile API "
-                "(waiver W-TILE-FAITHFUL)"
+                "Per-tile post-fx may call Genblaze crop_region /engine3d-tile-still "
+                "(full-frame + ROI crop; Director dispatch loop partial)"
             ),
             "waivers_applied": waivers,
         }
@@ -265,10 +286,28 @@ class RenderExecutor:
         try:
             from app.main import dispatch_render as director_dispatch_render
 
-            try:
-                result = director_dispatch_render(self._settings, target, client=http_client)
-            except TypeError:
-                result = director_dispatch_render(self._settings, target)
+            render_plan = domain_plan.get("render_plan") if isinstance(domain_plan.get("render_plan"), dict) else None
+            use_tiles = should_tile_faithful_dispatch(
+                lane=normalized.lane,
+                render_plan=render_plan,
+            )
+            if use_tiles and render_plan is not None:
+                result = dispatch_tile_faithful(
+                    self._settings,
+                    render_plan=render_plan,
+                    base_payload=dict(target.payload),
+                    client=http_client,
+                    dispatch_fn=director_dispatch_render,
+                )
+                updated_tee = refresh_tile_execution_evidence(render_plan, result)
+                render_plan["tile_execution_evidence"] = updated_tee
+                domain_plan["render_plan"] = render_plan
+                runtime_meta["shading_engine"] = self.shading_engine.describe(domain_plan)
+            else:
+                try:
+                    result = director_dispatch_render(self._settings, target, client=http_client)
+                except TypeError:
+                    result = director_dispatch_render(self._settings, target)
         except DispatchError as exc:
             return self.evidence_emitter.build(
                 intent=intent,

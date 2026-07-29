@@ -121,4 +121,4 @@ def test_execute_runs_dispatch_when_plan_valid(monkeypatch):
     )
     assert out.result["structure"]["run_id"] == "ar-exec-1"
     assert out.replay_record["pipeline"] == "AcceleratedRenderer"
-    assert out.replay_record["plan_faithful_execution"]["claimed"] is False
+    assert out.replay_record["plan_faithful_execution"]["claimed"] is True

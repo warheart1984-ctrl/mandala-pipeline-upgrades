@@ -517,14 +517,14 @@ class TestShadingEngineVerified:
         desc = engine.describe({"render_plan": {"execution_mode": "full_frame_dispatch"}})
         assert desc["execution_mode"] == "full_frame_dispatch"
         assert desc["status"] == "partial"
-        assert desc["per_tile_available"] is False
+        assert desc["per_tile_available"] is True
 
     def test_accepts_full_frame_with_tile_evidence(self):
         engine = self.make_engine()
         desc = engine.describe({"render_plan": {"execution_mode": "full_frame_with_tile_evidence"}})
         assert desc["execution_mode"] == "full_frame_with_tile_evidence"
         assert "W-TILE-FAITHFUL" in desc["waivers_applied"]
-        assert desc["per_tile_available"] is False
+        assert desc["per_tile_available"] is True
 
     def test_rejects_per_tile_mode(self):
         engine = self.make_engine()
@@ -599,7 +599,7 @@ class TestDomainAdapterRendering:
         assert pfe.get("status") == "partial"
         assert "upscale_strategy" in pfe
         assert "brdf_strategy" in pfe
-        assert pfe.get("per_tile_postfx_available") is False
+        assert pfe.get("per_tile_postfx_available") is True
 
     def test_postfx_engine_conditional_waiver_in_evidence(self, settings):
         intent = _sample_intent(constraints={"prompt": "flat wall", "atcm": True})
@@ -712,10 +712,10 @@ class TestPostFXEngineVerified:
         assert "brdf" in dt
         assert "visibility" in dt
 
-    def test_per_tile_not_available_without_waiver(self):
+    def test_per_tile_postfx_api_available_without_brdf_waiver(self):
         engine = self.make_engine()
         desc = engine.describe({"render_plan": {}})
-        assert desc["per_tile_postfx_available"] is False
+        assert desc["per_tile_postfx_available"] is True
         assert desc["waivers_applied"] == []
         assert desc["brdf_strategy"] == "full_brdf_tiles"
 

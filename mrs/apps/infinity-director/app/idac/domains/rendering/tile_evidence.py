@@ -25,9 +25,11 @@ def build_staged_tile_execution_evidence(
                 },
                 "complexity_C": tile.get("complexity") or tile.get("C"),
                 "dispatch": {
-                    "status": "skipped",
-                    "reason": "genblaze_no_tile_or_crop_still_api",
-                    "would_require": "POST /api/engine3d-still crop_region or per-tile shade endpoint",
+                    "status": "api_available",
+                    "endpoint": "/api/engine3d-tile-still",
+                    "method": "POST",
+                    "payload_fields": ["crop_region", "width", "height", "tile_index"],
+                    "note": "Full-frame render then ROI crop — not GPU tile-only shader",
                 },
             },
         )

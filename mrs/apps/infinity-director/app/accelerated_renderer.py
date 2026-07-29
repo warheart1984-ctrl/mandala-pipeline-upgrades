@@ -23,6 +23,7 @@ from app.render_accel import (
     build_replay_record_skeleton,
     validate_atcm_prerequisites,
 )
+from app.idac.domains.rendering.genblaze_tile_dispatch import should_tile_faithful_dispatch
 
 SPEC_VERSION = "0.1"
 PIPELINE_NAME = "AcceleratedRenderer"
@@ -258,7 +259,34 @@ def execute(
     _dispatch = dispatch_render_fn or dispatch_render
     _attach_meta = attach_profile_meta_fn or attach_profile_meta
     target = _build_target(lane_plan, body, settings)
-    result = _dispatch(settings, target)
+    if should_tile_faithful_dispatch(lane=lane_plan.lane, render_plan=render_plan):
+        from app.idac.domains.rendering.genblaze_tile_dispatch import (
+            dispatch_tile_faithful,
+            refresh_tile_execution_evidence,
+        )
+
+        result = dispatch_tile_faithful(
+            settings,
+            render_plan=render_plan,
+            base_payload=dict(target.payload),
+            dispatch_fn=_dispatch,
+        )
+        render_plan["tile_execution_evidence"] = refresh_tile_execution_evidence(
+            render_plan,
+            result,
+        )
+        plan_faithful = {
+            "claimed": True,
+            "note": "Tile-faithful HTTP loop with crop_region per tile",
+            "execution_mode": render_plan.get("execution_mode"),
+        }
+    else:
+        result = _dispatch(settings, target)
+        plan_faithful = {
+            "claimed": False,
+            "note": "Full-frame dispatch; tile-faithful loop not used for this lane/mode",
+            "execution_mode": render_plan.get("execution_mode", "full_frame_dispatch"),
+        }
     replay = build_replay_record_skeleton(
         render_plan_id=str(render_plan["id"]),
         complexity_evidence_id=str(complexity_evidence["id"]),
@@ -271,11 +299,7 @@ def execute(
         **replay,
         "pipeline": PIPELINE_NAME,
         "pipelineVersion": SPEC_VERSION,
-        "plan_faithful_execution": {
-            "claimed": False,
-            "note": "Full-frame dispatch; per-tile shade modes not applied downstream",
-            "execution_mode": render_plan.get("execution_mode", "full_frame_dispatch"),
-        },
+        "plan_faithful_execution": plan_faithful,
     }
     return AcceleratedExecuteResult(
         lane_plan=lane_plan,

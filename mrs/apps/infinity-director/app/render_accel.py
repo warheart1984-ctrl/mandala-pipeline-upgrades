@@ -167,8 +167,9 @@ def build_render_plan(*, atcm_report: dict[str, Any], render_plan_id: str | None
         "enforcement": "partial",
         "execution_mode": "full_frame_with_tile_evidence",
         "execution_note": (
-            atcm_report.get("execution_note")
-            or "Single full-frame Genblaze dispatch; staged tile evidence is planning-only"
+            "When execution_mode is full_frame_with_tile_evidence and lane is "
+            "engine3d_still, RenderExecutor dispatches POST /api/engine3d-tile-still "
+            "per ATCM tile (crop_region) and merges FinalFrame."
         ),
         "tile_execution_evidence": build_staged_tile_execution_evidence(tiles=tiles, frame=frame),
         "frame": frame,

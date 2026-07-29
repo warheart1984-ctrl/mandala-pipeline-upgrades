@@ -1,4 +1,4 @@
-"""Conformance Evidence: Genblaze / Engine3D tile ROI API inventory (Cycle 7)."""
+"""Conformance Evidence: Genblaze / Engine3D tile ROI API inventory (Cycle 7+)."""
 
 from __future__ import annotations
 
@@ -7,18 +7,15 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(__file__).resolve().parents[3]
-GENBLAZE_APP = REPO / "apps" / "genblaze-media" / "app"
+REPO = Path(__file__).resolve().parents[4]
+GENBLAZE_APP = REPO / "mrs" / "apps" / "genblaze-media" / "app"
 ENGINE3D_PROVIDER = GENBLAZE_APP / "engine3d_still_provider.py"
 GENBLAZE_MAIN = GENBLAZE_APP / "main.py"
 
 TILE_API_PATTERNS = (
     r"\bcrop_region\b",
     r"\btile_index\b",
-    r"\bregion_x\b",
-    r"\bviewport_crop\b",
-    r"per[-_]tile",
-    r"/api/.*tile",
+    r"/api/engine3d-tile-still",
 )
 
 
@@ -34,24 +31,20 @@ def _scan_for_tile_api(path: Path) -> list[str]:
 
 
 class TestGenblazeTileApiInventory:
-    """Drive-G-1: document absence of per-tile shade API — W-TILE-FAITHFUL stays blocked."""
+    """Drive-G-1: per-tile shade API signals must exist for W-TILE-FAITHFUL clearance."""
 
-    def test_engine3d_still_has_no_tile_crop_parameters(self):
+    def test_engine3d_still_provider_exposes_crop_region(self):
         hits = _scan_for_tile_api(ENGINE3D_PROVIDER)
-        assert hits == [], f"unexpected tile API signals in engine3d_still_provider: {hits}"
+        assert r"\bcrop_region\b" in hits, f"missing crop_region in {ENGINE3D_PROVIDER}"
 
-    def test_genblaze_main_has_no_tile_render_route(self):
+    def test_genblaze_main_has_tile_still_route(self):
         hits = _scan_for_tile_api(GENBLAZE_MAIN)
-        # Allow HTML viewport meta only — exclude if only in static paths
-        filtered = [h for h in hits if h not in {r"per[-_]tile", r"/api/.*tile"}]
-        assert filtered == [], f"unexpected tile API in genblaze main: {filtered}"
+        assert r"/api/engine3d-tile-still" in hits
+        assert r"\bcrop_region\b" in hits
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="W-TILE-FAITHFUL blocked-on-downstream-API — certification requires Genblaze tile still API",
-    )
     def test_tile_faithful_conformance_cleared(self):
-        pytest.fail(
-            "Per-tile Genblaze shading not available; minimum change: "
-            "engine3d-still accepts crop_region {x,y,w,h} or dedicated /api/engine3d-tile-still",
-        )
+        """Minimum API landed: crop_region + dedicated tile route."""
+        provider_hits = _scan_for_tile_api(ENGINE3D_PROVIDER)
+        main_hits = _scan_for_tile_api(GENBLAZE_MAIN)
+        assert r"\bcrop_region\b" in provider_hits
+        assert r"/api/engine3d-tile-still" in main_hits
