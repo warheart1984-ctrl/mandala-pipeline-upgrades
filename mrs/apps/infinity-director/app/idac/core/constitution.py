@@ -18,7 +18,7 @@ CONSTITUTIONAL_INVARIANTS: tuple[str, ...] = (
 
 DIRECTOR_ENFORCEMENT: dict[str, EnforcementLevel] = {
     "no_execution_without_intent": "partial",
-    "no_optimization_without_constitutional_constraints": "declared",
+    "no_optimization_without_constitutional_constraints": "partial",
     "no_execution_without_validated_plan": "partial",
     "no_result_without_replayable_evidence": "partial",
     "no_plan_deviation_without_violation": "partial",
@@ -28,7 +28,7 @@ DIRECTOR_ENFORCEMENT: dict[str, EnforcementLevel] = {
 ARTICLE_STATUS: dict[str, EnforcementLevel] = {
     "I_purpose": "partial",
     "II_supremacy": "partial",
-    "III_mission": "declared",
+    "III_mission": "partial",
     "IV_policy": "partial",
     "V_intent": "partial",
     "VI_optimization": "partial",
