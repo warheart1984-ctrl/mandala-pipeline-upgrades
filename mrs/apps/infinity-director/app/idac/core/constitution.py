@@ -34,6 +34,6 @@ ARTICLE_STATUS: dict[str, EnforcementLevel] = {
     "VI_optimization": "partial",
     "VII_execution": "partial",
     "VIII_evidence": "partial",
-    "IX_validation": "skeleton",
-    "X_learning": "skeleton",
+    "IX_validation": "partial",
+    "X_learning": "partial",
 }

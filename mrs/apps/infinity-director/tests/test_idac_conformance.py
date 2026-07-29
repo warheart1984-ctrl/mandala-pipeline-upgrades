@@ -18,7 +18,7 @@ from app.idac import (
     validate_intent_evidence,
 )
 from app.idac.core.constitution import CONSTITUTIONAL_INVARIANTS
-from app.idac.core.learning import record_learning_candidate
+from app.idac.core.learning import learning_store_path, learning_store_stats, record_learning_candidate
 from app.idac.core.router import validate_intent, validate_plan
 from app.idac.domains.rendering.adapters import RenderOptimizerAdapter, RenderValidationAdapter
 from app.idac.domains.rendering.runtime import PostFXEngine, RenderExecutor, ShadingEngine, TileScheduler
@@ -144,7 +144,7 @@ class TestEvidenceL0:
 
 
 class TestValidationL0:
-    def test_validation_skeleton_bit_identical_skipped(self, settings):
+    def test_bit_identical_replay_skipped(self, settings):
         intent = _sample_intent()
         plan = request_plan(intent, settings=settings)
         with patch(
@@ -155,6 +155,119 @@ class TestValidationL0:
         report = validate_intent_evidence(intent, evidence)
         skipped = [c for c in report["checks"] if c.get("id") == "bit_identical_replay"][0]
         assert skipped.get("skipped") is True
+
+    def test_intent_ref_match_passes(self, settings):
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "v-2"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        report = validate_intent_evidence(intent, evidence)
+        check = [c for c in report["checks"] if c["id"] == "intent_ref_match"][0]
+        assert check["pass"] is True
+
+    def test_intent_ref_match_fails(self, settings):
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "v-3"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        evidence.intent_ref = "wrong-intent"
+        report = validate_intent_evidence(intent, evidence)
+        check = [c for c in report["checks"] if c["id"] == "intent_ref_match"][0]
+        assert check["pass"] is False
+
+    def test_domain_match_passes_render(self, settings):
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "v-4"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        report = validate_intent_evidence(intent, evidence)
+        check = [c for c in report["checks"] if c["id"] == "domain_match"][0]
+        assert check["pass"] is True
+
+    def test_domain_match_accepts_declared_stub(self):
+        intent = _sample_intent(domain="ai")
+        evidence = type("E", (), {
+            "intent_ref": intent.id, "plan_ref": "p-1",
+            "outcome": "declared_stub",
+            "execution_trace": {}, "artifacts": {}, "environment": {},
+        })()
+        report = validate_intent_evidence(intent, evidence)
+        check = [c for c in report["checks"] if c["id"] == "domain_match"][0]
+        assert check["pass"] is True
+
+    def test_plan_ref_present_passes(self, settings):
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "v-5"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        report = validate_intent_evidence(intent, evidence)
+        check = [c for c in report["checks"] if c["id"] == "plan_ref_present"][0]
+        assert check["pass"] is True
+
+    def test_plan_ref_empty_fails(self, settings):
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "v-6"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        evidence.plan_ref = ""
+        report = validate_intent_evidence(intent, evidence)
+        check = [c for c in report["checks"] if c["id"] == "plan_ref_present"][0]
+        assert check["pass"] is False
+
+    def test_render_accel_artifacts_when_atcm(self, settings):
+        intent = _sample_intent(constraints={"prompt": "flat wall", "atcm": True})
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "v-7"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        report = validate_intent_evidence(intent, evidence)
+        check = [c for c in report["checks"] if c["id"] == "render_accel_artifacts_when_atcm"][0]
+        assert check["pass"] is True
+
+    def test_execution_trace_present_passes(self, settings):
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "v-8"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        report = validate_intent_evidence(intent, evidence)
+        check = [c for c in report["checks"] if c["id"] == "execution_trace_present"][0]
+        assert check["pass"] is True
+
+    def test_no_error_in_trace_when_ok(self, settings):
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "v-9"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        report = validate_intent_evidence(intent, evidence)
+        check = [c for c in report["checks"] if c["id"] == "no_error_in_trace_when_ok"][0]
+        assert check["pass"] is True
+
+    def test_verdict_pass_when_all_checks_pass(self, settings):
+        intent = _sample_intent(constraints={"prompt": "flat wall", "atcm": True})
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "v-10"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        report = validate_intent_evidence(intent, evidence)
+        assert report["verdict"] == "pass"
+        assert report["status"] == "partial"
+
+    def test_verdict_fail_when_checks_fail(self, settings):
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "v-11"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        evidence.intent_ref = "wrong"
+        report = validate_intent_evidence(intent, evidence)
+        assert report["verdict"] == "fail"
+
+    def test_non_render_domain_validated_as_stub(self):
+        intent = _sample_intent(domain="compile")
+        evidence = type("E", (), {
+            "intent_ref": intent.id, "plan_ref": "p-1",
+            "outcome": "declared_stub",
+            "execution_trace": {}, "artifacts": {}, "environment": {},
+        })()
+        report = validate_intent_evidence(intent, evidence)
+        assert report["verdict"] == "pass"
 
 
 class TestPlanViolationL0:
@@ -209,6 +322,65 @@ class TestLearningL0:
             validation={"verdict": "fail"},
         )
         assert out["recorded"] is False
+
+    def test_learning_store_path_default(self):
+        path = learning_store_path()
+        assert "data" in str(path)
+        assert path.suffix == ".jsonl"
+
+    def test_learning_store_path_from_env(self, monkeypatch, tmp_path):
+        store = tmp_path / "custom-store.jsonl"
+        monkeypatch.setenv("IDAC_LEARNING_STORE_PATH", str(store))
+        path = learning_store_path()
+        assert str(path) == str(store)
+
+    def test_learning_store_stats_when_no_file(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("IDAC_LEARNING_STORE_PATH", str(tmp_path / "nonexistent.jsonl"))
+        stats = learning_store_stats()
+        assert stats["exists"] is False
+        assert stats["count"] == 0
+        assert stats["status"] == "partial"
+
+    def test_learning_store_stats_with_records(self, tmp_path, monkeypatch):
+        store = tmp_path / "candidates.jsonl"
+        monkeypatch.setenv("IDAC_LEARNING_STORE_PATH", str(store))
+        store.write_text(
+            '{"intent_ref": "i-1", "candidate_kind": "validated_execution_bundle"}\n'
+            '{"intent_ref": "i-2", "candidate_kind": "validated_execution_bundle"}\n',
+            encoding="utf-8",
+        )
+        stats = learning_store_stats(tail=5)
+        assert stats["exists"] is True
+        assert stats["count"] == 2
+        assert len(stats["tail"]) == 2
+
+    def test_recorded_entry_shape(self, settings, tmp_path, monkeypatch):
+        monkeypatch.setenv("IDAC_LEARNING_STORE_PATH", str(tmp_path / "candidates.jsonl"))
+        intent = _sample_intent(constraints={"prompt": "flat wall", "atcm": True})
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "learn-2"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        validation = validate_intent_evidence(intent, evidence)
+        out = record_learning_candidate(intent=intent, evidence=evidence, validation=validation)
+        assert out["recorded"] is True
+        assert out["intent_ref"] == intent.id
+        assert out["evidence_ref"] == evidence.id
+        assert out["candidate_kind"] == "validated_execution_bundle"
+        line = json.loads((tmp_path / "candidates.jsonl").read_text(encoding="utf-8").strip())
+        assert line["intent_ref"] == intent.id
+        assert line["evidence_ref"] == evidence.id
+
+    def test_learning_append_only_multiple_records(self, settings, tmp_path, monkeypatch):
+        monkeypatch.setenv("IDAC_LEARNING_STORE_PATH", str(tmp_path / "candidates.jsonl"))
+        for i in range(3):
+            intent = _sample_intent(source_run_id=f"run-{i}")
+            plan = request_plan(intent, settings=settings)
+            with patch("app.main.dispatch_render", return_value={"structure": {"run_id": f"learn-{i}"}}):
+                evidence = execute_plan(plan, intent=intent, settings=settings)
+            validation = validate_intent_evidence(intent, evidence)
+            record_learning_candidate(intent=intent, evidence=evidence, validation=validation)
+        lines = [ln for ln in (tmp_path / "candidates.jsonl").read_text(encoding="utf-8").splitlines() if ln.strip()]
+        assert len(lines) == 3
 
 
 class TestRenderRuntime:
@@ -300,6 +472,32 @@ class TestDomainAdapterRendering:
         assert ex.shading_engine.status == "partial"
         assert ex.shading_engine._settings is not None
         assert ex.postfx_engine.status == "partial"
+
+    def test_postfx_engine_in_evidence_runtime_meta(self, settings):
+        intent = _sample_intent(constraints={"prompt": "flat wall", "atcm": True})
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "pfe-1"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        runtime = evidence.execution_trace.get("runtime", {})
+        pfe = runtime.get("postfx_engine", {})
+        assert pfe.get("status") == "partial"
+        assert "upscale_strategy" in pfe
+        assert "brdf_strategy" in pfe
+        assert pfe.get("per_tile_postfx_available") is False
+
+    def test_postfx_engine_conditional_waiver_in_evidence(self, settings):
+        intent = _sample_intent(constraints={"prompt": "flat wall", "atcm": True})
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "pfe-2"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        runtime = evidence.execution_trace.get("runtime", {})
+        pfe = runtime.get("postfx_engine", {})
+        brdf = pfe.get("brdf_strategy")
+        waivers = pfe.get("waivers_applied", [])
+        if brdf == "piecewise_cheap_tiles":
+            assert "W-TILE-FAITHFUL" in waivers
+        else:
+            assert waivers == []
 
 
 class TestPostFXEngineVerified:
@@ -398,17 +596,42 @@ class TestPostFXEngineVerified:
         assert "brdf" in dt
         assert "visibility" in dt
 
-    def test_per_tile_waiver(self):
+    def test_per_tile_not_available_without_waiver(self):
         engine = self.make_engine()
         desc = engine.describe({"render_plan": {}})
         assert desc["per_tile_postfx_available"] is False
+        assert desc["waivers_applied"] == []
+        assert desc["brdf_strategy"] == "full_brdf_tiles"
+
+    def test_waiver_applied_when_brdf_is_piecewise_cheap_tiles(self):
+        engine = self.make_engine()
+        desc = engine.describe({
+            "render_plan": {
+                "math_strategies": {
+                    "brdf_strategy": {"strategy": "piecewise_cheap_tiles"},
+                },
+            },
+        })
+        assert desc["brdf_strategy"] == "piecewise_cheap_tiles"
         assert "W-TILE-FAITHFUL" in desc["waivers_applied"]
+
+    def test_no_waiver_for_full_brdf_tiles(self):
+        engine = self.make_engine()
+        desc = engine.describe({
+            "render_plan": {
+                "math_strategies": {
+                    "brdf_strategy": {"strategy": "full_brdf_tiles"},
+                },
+            },
+        })
+        assert desc["waivers_applied"] == []
 
     def test_empty_domain_plan_defaults(self):
         engine = self.make_engine()
         desc = engine.describe({})
         assert desc["upscale_strategy"] == "none_full_res"
         assert desc["brdf_strategy"] == "full_brdf_tiles"
+        assert desc["waivers_applied"] == []
 
     def test_validate_upscale_static_method(self):
         assert PostFXEngine.validate_upscale("low_res_edge_aware_upscale") == "low_res_edge_aware_upscale"

@@ -159,6 +159,9 @@ class PostFXEngine:
         brdf_strategy = self.validate_brdf(brdf.get("strategy"))
         visibility_strategy = self.validate_visibility(visibility.get("strategy"))
 
+        per_tile_strategy = brdf_strategy == "piecewise_cheap_tiles"
+        waivers = ["W-TILE-FAITHFUL"] if per_tile_strategy else []
+
         return {
             "status": self.status,
             "upscale_strategy": upscale_strategy,
@@ -176,7 +179,7 @@ class PostFXEngine:
                 "Per-tile post-fx requires Genblaze crop_region or tile API "
                 "(waiver W-TILE-FAITHFUL)"
             ),
-            "waivers_applied": ["W-TILE-FAITHFUL"],
+            "waivers_applied": waivers,
         }
 
 
