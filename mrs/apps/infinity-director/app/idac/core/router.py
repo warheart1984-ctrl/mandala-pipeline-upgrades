@@ -17,6 +17,7 @@ from app.idac.core.charter_gate import (
 from app.idac.core.constitution import CONSTITUTIONAL_INVARIANTS
 from app.idac.core.contracts import EvidenceContract, ExecutionPlan, IntentContract, PlanViolationError
 from app.idac.core.learning import record_learning_candidate
+from app.idac.core.mission_registry import validate_mission_ref
 from app.idac.core.optimizer import request_plan
 from app.idac.core.validation import validate_intent_evidence
 from app.idac.domains.rendering.runtime import RenderExecutor
@@ -37,6 +38,7 @@ def validate_intent(intent: IntentContract) -> None:
             plan_ref="",
             intent_ref=intent.id,
         )
+    validate_mission_ref(intent.mission_ref, intent_ref=intent.id)
 
 
 def validate_plan(plan: ExecutionPlan, intent: IntentContract) -> None:

@@ -19,7 +19,7 @@ This IDAC Constitution supersedes Policy and Optimizer heuristics for the IDAC s
 
 Mission is the highest **non-constitutional** authority. Intent must cite `mission_ref`.
 
-**Director:** **declared** — `mission_ref` string validated; no mission registry.
+**Director:** **partial** — `mission_ref` validated against mission registry in `app/idac/core/mission_registry.py`.
 
 ## Article IV — Policy
 
@@ -77,7 +77,7 @@ Learning is post-constitutional; **must not mutate invariants**.
 | Invariant | Director enforcement |
 |-----------|---------------------|
 | No execution without intent | **partial** |
-| No optimization without constitutional constraints | **declared** |
+| No optimization without constitutional constraints | **partial** |
 | No execution without validated plan | **partial** |
 | No result without replayable evidence | **partial** |
 | No plan deviation without violation | **partial** |

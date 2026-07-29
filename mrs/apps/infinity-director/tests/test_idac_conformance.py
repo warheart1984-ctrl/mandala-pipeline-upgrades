@@ -421,6 +421,84 @@ class TestCharterGateLearningEnforcement:
         assert outcome["recorded"] is True
 
 
+class TestMissionRegistry:
+    """Article III — mission_ref validation against known missions."""
+
+    def test_known_mission_passes(self):
+        from app.idac.core.mission_registry import validate_mission_ref
+
+        validate_mission_ref("cecp/idac-stack-2026-07")
+
+    def test_unknown_mission_raises(self):
+        from app.idac.core.mission_registry import validate_mission_ref
+
+        with pytest.raises(PlanViolationError) as exc:
+            validate_mission_ref("unknown/mission")
+        assert exc.value.code == "idac.mission_ref_unknown"
+
+    def test_empty_mission_raises(self):
+        from app.idac.core.mission_registry import validate_mission_ref
+
+        with pytest.raises(PlanViolationError) as exc:
+            validate_mission_ref("")
+        assert exc.value.code == "idac.mission_ref_empty"
+
+    def test_validate_intent_rejects_unknown_mission(self):
+        intent = _sample_intent(mission_ref="bogus/mission")
+        with pytest.raises(PlanViolationError) as exc:
+            from app.idac.core.router import validate_intent
+
+            validate_intent(intent)
+        assert exc.value.code == "idac.mission_ref_unknown"
+
+    def test_list_known_missions(self):
+        from app.idac.core.mission_registry import list_known_missions
+
+        missions = list_known_missions()
+        assert "cecp/idac-stack-2026-07" in missions
+        assert "mission/test" in missions
+        assert len(missions) >= 2
+
+    def test_router_handle_intent_passes_valid_mission(self, settings):
+        from app.idac.core.router import handle_intent as handle_via_router
+
+        intent = _sample_intent()
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "mr-1"}}):
+            result = handle_via_router(intent, settings=settings)
+        assert result["validation"]["verdict"] == "pass"
+
+    def test_router_rejects_unknown_mission(self, settings):
+        from app.idac.core.router import handle_intent as handle_via_router
+
+        intent = _sample_intent(mission_ref="bogus/mission")
+        with pytest.raises(PlanViolationError) as exc:
+            handle_via_router(intent, settings=settings)
+        assert exc.value.code == "idac.mission_ref_unknown"
+
+
+class TestOptimizerCharterGate:
+    """DIRECTOR_ENFORCEMENT: no_optimization_without_constitutional_constraints."""
+
+    def test_request_plan_rejects_missing_charter(self, monkeypatch, settings):
+        monkeypatch.setattr(
+            "app.idac.core.optimizer.assert_idac_charter_loaded",
+            lambda: (_ for _ in ()).throw(
+                __import__("app.idac.core.charter_gate", fromlist=["IdacCharterLoadError"]).IdacCharterLoadError(
+                    "simulated missing charter"
+                )
+            ),
+        )
+        with pytest.raises(RuntimeError):
+            intent = _sample_intent()
+            request_plan(intent, settings=settings)
+
+    def test_request_plan_passes_with_charter(self, settings):
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        assert plan.plan_id is not None
+        assert plan.optimizer["must_not_execute"] is True
+
+
 class TestRenderRuntime:
     def test_tile_scheduler_declared_note(self):
         desc = TileScheduler.describe({"atcm_summary": {"tile_count": 16}})

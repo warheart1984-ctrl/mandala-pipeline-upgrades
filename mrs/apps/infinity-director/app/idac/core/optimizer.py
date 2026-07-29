@@ -6,6 +6,7 @@ from typing import Any
 
 from app.atcm import plan_atcm, suggested_dims_for_profile
 from app.config import Settings
+from app.idac.core.charter_gate import assert_idac_charter_loaded
 from app.idac.core.contracts import ExecutionPlan, IntentContract, PlanViolationError
 from app.idac.domains.rendering.adapters import RenderOptimizerAdapter
 from app.models import DirectRequest, MemoryContext, MemoryboardHints
@@ -61,6 +62,7 @@ def request_plan(
     settings: Settings,
     prepass_png: bytes | None = None,
 ) -> ExecutionPlan:
+    assert_idac_charter_loaded()
     _ = policy, constitution
     env = environment or {}
 
