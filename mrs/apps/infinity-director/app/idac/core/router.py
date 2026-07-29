@@ -11,6 +11,7 @@ from app.idac.core.charter_gate import (
     assert_idac_charter_loaded,
     evaluate_evidence_invariants,
     evaluate_intent_invariants,
+    evaluate_learning_invariants,
     evaluate_plan_invariants,
 )
 from app.idac.core.constitution import CONSTITUTIONAL_INVARIANTS
@@ -89,6 +90,7 @@ class IdacRouter:
         evaluate_evidence_invariants(intent, plan, evidence)
         validation = validate_intent_evidence(intent, evidence)
         evidence.validation = validation
+        evaluate_learning_invariants(validation)
         learning = record_learning_candidate(intent=intent, evidence=evidence, validation=validation)
         return {
             "intent": intent.to_document(),

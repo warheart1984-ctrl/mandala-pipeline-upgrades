@@ -383,6 +383,44 @@ class TestLearningL0:
         assert len(lines) == 3
 
 
+class TestCharterGateLearningEnforcement:
+    """evaluate_learning_invariants — no_learning_without_validated_evidence gate."""
+
+    def test_raises_when_verdict_not_pass(self):
+        from app.idac.core.charter_gate import evaluate_learning_invariants
+
+        with pytest.raises(PlanViolationError) as exc:
+            evaluate_learning_invariants({"verdict": "fail"})
+        assert exc.value.code == "idac.charter.no_learning_without_validated_evidence"
+
+    def test_raises_when_verdict_missing(self):
+        from app.idac.core.charter_gate import evaluate_learning_invariants
+
+        with pytest.raises(PlanViolationError) as exc:
+            evaluate_learning_invariants({})
+        assert exc.value.code == "idac.charter.no_learning_without_validated_evidence"
+
+    def test_passes_when_verdict_is_pass(self, settings):
+        from app.idac.core.charter_gate import evaluate_learning_invariants
+
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "clg-1"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        validation = validate_intent_evidence(intent, evidence)
+        evaluate_learning_invariants(validation)
+
+    def test_router_passes_learning_invariant_on_success(self, settings):
+        intent = _sample_intent()
+        plan = request_plan(intent, settings=settings)
+        with patch("app.main.dispatch_render", return_value={"structure": {"run_id": "clg-2"}}):
+            evidence = execute_plan(plan, intent=intent, settings=settings)
+        validation = validate_intent_evidence(intent, evidence)
+        validation["verdict"] = "pass"
+        outcome = record_learning_candidate(intent=intent, evidence=evidence, validation=validation)
+        assert outcome["recorded"] is True
+
+
 class TestRenderRuntime:
     def test_tile_scheduler_declared_note(self):
         desc = TileScheduler.describe({"atcm_summary": {"tile_count": 16}})

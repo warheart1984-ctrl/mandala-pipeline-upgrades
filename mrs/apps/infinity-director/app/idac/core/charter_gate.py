@@ -125,7 +125,13 @@ def evaluate_evidence_invariants(
 
 
 def evaluate_learning_invariants(validation: dict[str, Any]) -> None:
-    """Skeleton invariant — deny learning append when validation failed."""
-    if validation.get("verdict") != "pass":
-        return
+    """Deny learning append when validation verdict is not pass."""
     assert_idac_charter_loaded()
+    if validation.get("verdict") != "pass":
+        raise PlanViolationError(
+            code="idac.charter.no_learning_without_validated_evidence",
+            message="Invariant no_learning_without_validated_evidence: "
+            "learning append requires validation verdict == pass",
+            plan_ref=validation.get("plan_ref", ""),
+            intent_ref=validation.get("intent_ref", ""),
+        )

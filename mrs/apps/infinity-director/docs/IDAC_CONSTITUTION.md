@@ -19,7 +19,7 @@ This IDAC Constitution supersedes Policy and Optimizer heuristics for the IDAC s
 
 Mission is the highest **non-constitutional** authority. Intent must cite `mission_ref`.
 
-**Director:** **declared** — string field only; no mission registry.
+**Director:** **declared** — `mission_ref` string validated; no mission registry.
 
 ## Article IV — Policy
 
@@ -64,13 +64,13 @@ Evidence is descriptive, replay-oriented, **immutable after validation** (spec).
 
 Validation is authoritative and final in spec; re-judges Intent ↔ Evidence.
 
-**Director:** **skeleton** — `app/idac/core/validation.py`.
+**Director:** **partial** — `app/idac/core/validation.py`; 8 check types with pass/fail/verdict; bit-identical replay skipped (waiver W-BIT-IDENTICAL).
 
 ## Article X — Learning
 
 Learning is post-constitutional; **must not mutate invariants**.
 
-**Director:** **skeleton** — `app/idac/core/learning.py` records nothing.
+**Director:** **partial** — `app/idac/core/learning.py`; append-only JSONL store; invariant `no_learning_without_validated_evidence` enforced as gate prior to append.
 
 ## Six constitutional invariants
 
@@ -81,6 +81,6 @@ Learning is post-constitutional; **must not mutate invariants**.
 | No execution without validated plan | **partial** |
 | No result without replayable evidence | **partial** |
 | No plan deviation without violation | **partial** |
-| No learning without validated evidence | **skeleton** |
+| No learning without validated evidence | **partial** |
 
 Machine-readable invariant ids (charter gate): `no_execution_without_intent`, `no_optimization_without_constitutional_constraints`, `no_execution_without_validated_plan`, `no_result_without_replayable_evidence`, `no_plan_deviation_without_violation`, `no_learning_without_validated_evidence`.
