@@ -248,9 +248,9 @@ export function runPhotorealPromotionChecklist(bundle) {
   }
 
   // T-11 CPCS gate readiness
-  const checklistPasses = tests.filter((t) => t.result === "pass").length;
+  const preGatePasses = tests.filter((t) => t.result === "pass").length;
   const replayHash = isFilled(pep?.replayDeterminismRecord?.deterministicHash);
-  if (checklistPasses === 13 && replayHash && fullElig) {
+  if (preGatePasses === 10 && replayHash && fullElig) {
     push(
       "T-11",
       "CPCS gate readiness",
@@ -262,7 +262,7 @@ export function runPhotorealPromotionChecklist(bundle) {
       "T-11",
       "CPCS gate readiness",
       "partial",
-      `checklist pass count=${checklistPasses}; fullPhotorealEligible=${fullElig}`,
+      `pre-gate pass count=${preGatePasses}; fullPhotorealEligible=${fullElig}`,
     );
   } else {
     push("T-11", "CPCS gate readiness", "fail", "replay deterministic hash missing");
