@@ -105,7 +105,7 @@ async function main() {
   );
   const ckl = new ConstitutionalKnowledgeLayer(policies);
   const cse = new ConstitutionalStateEngine();
-  const gk = new GovernanceKernel({ ckl, cse });
+  const gk = new GovernanceKernel({ ckl });
   const orchestrator = new ExecutionOrchestrator({ gk, cse });
 
   const scene = createScene({
