@@ -31,8 +31,8 @@ function makeEvidence(overrides = {}) {
 describe("ExecutionOrchestrator (CKL → GK → CSE)", () => {
   it("plan lists constitutional phases", () => {
     const ckl = new ConstitutionalKnowledgeLayer(defaultPolicies);
-    const gk = new GovernanceKernel({ ckl });
     const cse = new ConstitutionalStateEngine();
+    const gk = new GovernanceKernel({ ckl, cse });
     const orch = new ExecutionOrchestrator({ gk, cse });
     const intent = { id: "i-test", type: "play_timeline" };
     const plan = orch.plan(intent, "render.session.start");
@@ -43,7 +43,7 @@ describe("ExecutionOrchestrator (CKL → GK → CSE)", () => {
   it("execute runs GK gate then CSE CSR with governanceTrace", async () => {
     const cse = new ConstitutionalStateEngine();
     const ckl = new ConstitutionalKnowledgeLayer(defaultPolicies);
-    const gk = new GovernanceKernel({ ckl });
+    const gk = new GovernanceKernel({ ckl, cse });
     const orch = new ExecutionOrchestrator({ gk, cse });
 
     const intent = cse.declareIntent({
@@ -80,7 +80,7 @@ describe("ExecutionOrchestrator (CKL → GK → CSE)", () => {
   it("execute throws when GK denies (missing world)", async () => {
     const cse = new ConstitutionalStateEngine();
     const ckl = new ConstitutionalKnowledgeLayer(defaultPolicies);
-    const gk = new GovernanceKernel({ ckl });
+    const gk = new GovernanceKernel({ ckl, cse });
     const orch = new ExecutionOrchestrator({ gk, cse });
 
     const intent = cse.declareIntent({ kind: "deny", goal: "test" });
@@ -102,7 +102,7 @@ describe("ExecutionOrchestrator (CKL → GK → CSE)", () => {
   it("paramAdjust from CKL precedent drift flows into CSR governanceTrace", async () => {
     const cse = new ConstitutionalStateEngine();
     const ckl = new ConstitutionalKnowledgeLayer(defaultPolicies);
-    const gk = new GovernanceKernel({ ckl });
+    const gk = new GovernanceKernel({ ckl, cse });
     const orch = new ExecutionOrchestrator({ gk, cse });
 
     // Two denied intents build precedent drift (same type for GetPrecedents matching)
@@ -134,7 +134,7 @@ describe("ExecutionOrchestrator (CKL → GK → CSE)", () => {
   it("CSR governanceTrace includes precedentCount from CKL evaluation", async () => {
     const cse = new ConstitutionalStateEngine();
     const ckl = new ConstitutionalKnowledgeLayer(defaultPolicies);
-    const gk = new GovernanceKernel({ ckl });
+    const gk = new GovernanceKernel({ ckl, cse });
     const orch = new ExecutionOrchestrator({ gk, cse });
 
     // Build some precedent with matching type/world
@@ -155,5 +155,15 @@ describe("ExecutionOrchestrator (CKL → GK → CSE)", () => {
     });
 
     assert.ok(csr.governanceTrace.precedentCount >= 2);
+  });
+});
+
+describe("GovernanceKernel.cse (integration note)", () => {
+  it("stores CSE reference without delegating evaluateIntent (partial wiring)", () => {
+    const cse = new ConstitutionalStateEngine();
+    const ckl = new ConstitutionalKnowledgeLayer(defaultPolicies);
+    const gk = new GovernanceKernel({ ckl, cse });
+    assert.equal(gk.cse, cse);
+    assert.equal(typeof gk.evaluateIntent, "function");
   });
 });

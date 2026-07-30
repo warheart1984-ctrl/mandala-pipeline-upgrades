@@ -13,9 +13,11 @@ export class GovernanceKernel {
   /**
    * @param {object} options
    * @param {import('./ConstitutionalKnowledgeLayer.js').ConstitutionalKnowledgeLayer} options.ckl
+   * @param {object} [options.cse]
    */
-  constructor({ ckl } = {}) {
+  constructor({ ckl, cse = null } = {}) {
     this.ckl = ckl ?? new ConstitutionalKnowledgeLayer([]);
+    this.cse = cse;
     this.charterId = CHARTER.id;
   }
 
