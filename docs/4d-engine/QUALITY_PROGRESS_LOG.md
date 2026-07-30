@@ -20,10 +20,10 @@ Every cycle answers:
 | ESFR | **PASS_WITH_GAPS** / **PROMOTE_WITH_GAPS** |
 | Blender | 5.2.0 LTS present |
 
-1. **Improved / happened:** Fresh governed layout (`e209bafe0844226d`) + fresh Cycles external-PBR smoke (`01d7230e569e0c04`, `beauty-cycles.png`, `cyclesStatus: complete`). Media catalog + tier standings published with openable paths. Tests: ImageGen **21/21**, Amendment VII **12/12**, raster-upgrade **13/13**, photoreal-evidence ran green.
-2. **Artificial / gaps:** Engine3D remains soft-raster fixture film; OpenCL still is radial probe not scene; Lemonade **held**; `mrs:photoreal-promote` / `promotionPipeline.js` **missing**; `photoreal-certify` broken (no `evaluateCertification` export, no live `fpec.json`). Live pep/spr **0.6061/0.65** vs prior CPCS snapshot **0.8788/1.0** (eligibility **0.8889**, `certified: false`).
-3. **Measured:** Layout still 47940 B; Cycles beauty 6314 B @64²; CPCS prior `certified:false` / level `NONE`; checklist live 2 pass / 6 partial.
-4. **Next bottleneck:** Restore Phase-3 promote pipeline + certify wire; close pep ≥0.90 before any Full claim; Lemonade pixels; optional GPU Cycles.
+1. **Improved / happened:** Fresh governed rerun with Blender-enabled Cycles beauty (`91aa9be8f7a2215b`, `beauty-cycles.png`, `cyclesStatus: complete`). Restored `mrs:photoreal-promote` + `mrs:photoreal-certify` wiring (pipeline + exports + scripts) and emitted live `fpec.json` / `rdc.json` / `cat-phr.json` / `cpcs.json`. Tests: ImageGen **21/21**, Amendment VII **12/12**, raster-upgrade **13/13**, photoreal-evidence **4/4**.
+2. **Artificial / gaps:** Engine3D remains soft-raster fixture film; OpenCL still is radial probe not scene; Lemonade **held**; CPCS still `certified:false` because Phase-4 gates are not met (`fpecFullEligible`, completeness thresholds, checklist-all-pass, replayVerified, CAT PASS).
+3. **Measured:** Live run `91aa...` pep/spr **0.6061/0.65**, FPEC eligibility **0.6281**, checklist **4 pass / 9 partial / 0 fail**, CPCS level `NONE`.
+4. **Next bottleneck:** Raise evidence completeness toward CPCS thresholds, produce pixel replay verification, and close CAT/checklist partials while keeping Lemonade held until real `pixelsProduced:true`.
 
 ---
 

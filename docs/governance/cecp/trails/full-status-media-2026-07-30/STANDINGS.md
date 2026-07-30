@@ -25,7 +25,7 @@ Drive-G-1: no Full Photoreal / Phase 4 certified claims.
 
 | Suite | Pass |
 |-------|------|
-| photoreal-evidence | 7/7 (first run; suite length drift noted) |
+| photoreal-evidence | 4/4 (`T-01..T-13` checklist assertions) |
 | ImageGenProvider | 21/21 |
 | Amendment VII | 12/12 |
 | engine3d raster-upgrade | 13/13 |
