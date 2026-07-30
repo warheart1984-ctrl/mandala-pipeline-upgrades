@@ -14,7 +14,7 @@ Honesty vocabulary: **soft-raster** | **opencl-beauty-probe** | **cycles-smoke**
 | `tmp/governed-render/01d7230e569e0c04/beauty-cycles.png` | still | **Fresh Cycles smoke** · cyclesStatus complete · photorealClaim true (plate) | 6314 B |
 | `tmp/governed-render/01d7230e569e0c04/external-pbr/scene.glb` | glb | exportStatus held | — |
 | `tmp/governed-render/01d7230e569e0c04/{pep,spr,cec}.json` | evidence | Phase-2 emit · pep 0.6061 · spr 0.65 | — |
-| `tmp/governed-render/91aa9be8f7a2215b/{still.png,beauty-cycles.png}` | stills | Governed rerun with Blender-enabled Cycles beauty | layout 4761 B / beauty 6376 B |
+| `tmp/governed-render/91aa9be8f7a2215b/{still.png,beauty-cycles.png}` | stills | Governed rerun with Blender-enabled Cycles beauty | layout 4761 B / beauty 6314 B |
 | `tmp/governed-render/91aa9be8f7a2215b/{pep,spr,cec}.json` | evidence | Phase-2 emit · pep 0.6061 · spr 0.65 | — |
 | `tmp/governed-render/91aa9be8f7a2215b/{fpec,rdc,cat-phr,cpcs}.json` | promotion/certification | Promote+certify chain restored; CPCS honest partial (`certified:false`) | — |
 | `tmp/governed-render/91aa9be8f7a2215b/photoreal-checklist-t01-t13.json` | checklist | T-01..T-13 summary: 4 pass / 9 partial / 0 fail | — |

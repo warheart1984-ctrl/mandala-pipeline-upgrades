@@ -16,7 +16,7 @@ InspectorVerdict **PASS_WITH_GAPS** accepted. Trail stages 01–05 present. Modu
 | Category | Outcome | Cite |
 |----------|---------|------|
 | Coding / hygiene | PASS | No protected-path edits; trail-only writes |
-| API / CLI honesty | PASS_WITH_GAPS | promote/certify CLIs broken or missing — documented |
+| API / CLI honesty | PASS | promote/certify/rcs CLIs wired and executed on live run `91aa9be8f7a2215b` |
 | Tests / CI smoke | PASS | ImageGen 21, VII 12, raster 13, photoreal evidence ran |
 | License / deps | PASS | No new deps |
 | Drive-G-1 wording | PASS | No Full Photoreal / Phase 4 certified claims |
@@ -35,14 +35,14 @@ InspectorVerdict **PASS_WITH_GAPS** accepted. Trail stages 01–05 present. Modu
 | 05 Conformance tags | PASS | soft-raster / held / certified:false |
 | 06 Lineage | PASS | this trail + Quality Progress Log |
 | 07 Anti-overclaim | PASS | CPCS certified false; Lemonade held |
-| 08 Promotion readiness | PASS_WITH_GAPS | media + Phase-2 evidence shippable; Phase-3/4 CLI restore needed |
+| 08 Promotion readiness | PASS_WITH_GAPS | media + promote/certify chain shippable; CPCS gates remain partial |
 
 ## Gaps (promotion path)
 
-1. Restore `promotionPipeline.js` + `npm run mrs:photoreal-promote` so `fpec.json` is written.
-2. Export `evaluateCertification` from photoreal `index.js`; wire `mrs:photoreal-certify`.
-3. Reconcile prior CPCS scores (0.8788/1.0/0.8889) with live Phase-2 emit (0.6061/0.65) — gap closers may be missing.
-4. Lemonade: held until `pixelsProduced: true`.
+1. Raise PEP/SRP completeness from 0.6061/0.65 toward CPCS thresholds (≥0.95/1.0).
+2. Re-run pixel-level dual replay to flip `rdc.replayVerified` from false.
+3. Move CAT from `PASS_WITH_GAPS` to `PASS` by closing checklist partials (T-01..T-05, T-08, T-10..T-12).
+4. Lemonade: keep held until verified `pixelsProduced: true` evidence.
 5. Raise Cycles samples/resolution only after GPU device path.
 
 ## Verdict
