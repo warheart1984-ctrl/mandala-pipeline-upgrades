@@ -67,4 +67,4 @@ Run directory gains:
 node --test mrs/packages/renderer-core/src/evidence/photoreal/photorealEvidence.test.js
 ```
 
-Checklist T-01..T-08 reports `pass` / `partial` / `fail` without faking Full.
+Checklist T-01..T-13 reports `pass` / `partial` / `fail` without faking Full.
