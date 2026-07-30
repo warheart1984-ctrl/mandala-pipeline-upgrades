@@ -14,6 +14,11 @@ Honesty vocabulary: **soft-raster** | **opencl-beauty-probe** | **cycles-smoke**
 | `tmp/governed-render/01d7230e569e0c04/beauty-cycles.png` | still | **Fresh Cycles smoke** · cyclesStatus complete · photorealClaim true (plate) | 6314 B |
 | `tmp/governed-render/01d7230e569e0c04/external-pbr/scene.glb` | glb | exportStatus held | — |
 | `tmp/governed-render/01d7230e569e0c04/{pep,spr,cec}.json` | evidence | Phase-2 emit · pep 0.6061 · spr 0.65 | — |
+| `tmp/governed-render/91aa9be8f7a2215b/{still.png,beauty-cycles.png}` | stills | Governed rerun with Blender-enabled Cycles beauty | layout 4761 B / beauty 6376 B |
+| `tmp/governed-render/91aa9be8f7a2215b/{pep,spr,cec}.json` | evidence | Phase-2 emit · pep 0.6061 · spr 0.65 | — |
+| `tmp/governed-render/91aa9be8f7a2215b/{fpec,rdc,cat-phr,cpcs}.json` | promotion/certification | Promote+certify chain restored; CPCS honest partial (`certified:false`) | — |
+| `tmp/governed-render/91aa9be8f7a2215b/photoreal-checklist-t01-t13.json` | checklist | T-01..T-13 summary: 4 pass / 9 partial / 0 fail | — |
+| `tmp/rcs-runs-2026-07-30/rcs-summary.json` | RCS | Conformance level `PARTIAL` (real scene + declared stubs) | — |
 | `tmp/blender-10s-test/governed-render/587f836fc789a003/{pep,spr,cec,photoreal-checklist-t01-t08}.json` | evidence | Re-emitted this cycle (Phase-2 scores) | — |
 | `tmp/blender-10s-test/governed-render/587f836fc789a003/cpcs.json` | CPCS | **Prior snapshot** · certified false · FPEC 0.8889 · pep 0.8788 · spr 1.0 | 956 B |
 
@@ -63,5 +68,6 @@ Honesty vocabulary: **soft-raster** | **opencl-beauty-probe** | **cycles-smoke**
 
 | Run | pep | spr | promotionEligibility | CPCS certified |
 |-----|-----|-----|----------------------|----------------|
+| Live promote/cert `91aa…` | 0.6061 | 0.65 | PROMOTE_WITH_GAPS | **false** / NONE |
 | Live emit `587f…` / `01d7…` | 0.6061 | 0.65 | PROMOTE_WITH_GAPS | n/a (no live CPCS write) |
 | Prior `cpcs.json` on `587f…` | 0.8788 | 1.0 | (FPEC eligibility 0.8889) | **false** / NONE |
