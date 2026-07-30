@@ -3,7 +3,7 @@
 | Field | Value |
 |-------|-------|
 | `trailId` | `full-status-media-2026-07-30` |
-| `feature` | MRS crew full standings: tests + governed-render + Cycles smoke + photoreal promote/certify probe + media inventory |
+| `feature` | MRS crew full standings: tests + governed-render + Cycles smoke + restored photoreal promote/certify chain + media inventory |
 | `started` | 2026-07-30 |
 | `overallStatus` | **partial** |
 | `mode` / `lens` | Pipeline-Conductor + Librarian + Anchor (foreman verification) |
@@ -18,7 +18,7 @@
 | Rank | Kind | Path |
 |------|------|------|
 | **Pic 1** | Engine3D soft-raster (best film still) | `tmp/book-movie-ch1/showcase-cinematic-v2/stills/engine3d-02-dim-room-cinematic-v2.png` |
-| **Pic 2** | Fresh Cycles beauty (64² smoke) | `tmp/governed-render/01d7230e569e0c04/beauty-cycles.png` |
+| **Pic 2** | Fresh Cycles beauty (64² smoke) | `tmp/governed-render/91aa9be8f7a2215b/beauty-cycles.png` |
 | **Pic 3** | OpenCL Tonga still | `tmp/book-movie-ch1/verification-cycle-2026-07-30/opencl-tonga-still.png` |
 | **Movie 1** | 30s @24fps cinematic-v2 | `tmp/book-movie-ch1/showcase-cinematic-v2/archive-of-consent-ch1-showcase-30s.mp4` |
 | **Movie 2** | 10s @24fps cinematic-v2 | `tmp/book-movie-ch1/showcase-cinematic-v2/archive-of-consent-ch1-first-10s.mp4` |
