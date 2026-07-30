@@ -77,6 +77,11 @@ mrs/packages/renderer-web/_webgpu-smoke/_out/
 .worktrees/
 renders/
 
+# HIP hello binary under proofs (JSON compile proof is SoT; rebuild with hipcc)
+docs/4d-engine/proofs/legacy-efficient/hip_hello.exe
+docs/4d-engine/proofs/legacy-efficient/hip-hello-*.tmp
+docs/4d-engine/proofs/legacy-efficient/hip-hello-run.log
+
 # Operator-provided production face GLBs (keep README / .gitkeep tracked)
 operator-assets/**/*.glb
 operator-assets/**/*.gltf
