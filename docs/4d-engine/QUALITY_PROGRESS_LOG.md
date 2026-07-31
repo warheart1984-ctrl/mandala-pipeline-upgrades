@@ -30,8 +30,6 @@ Every cycle answers:
 
 ---
 
----
-
 ## 2026-07-30 — Full status media standings (MRS crew)
 
 | Field | Value |
