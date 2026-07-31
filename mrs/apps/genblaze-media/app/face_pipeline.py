@@ -2,11 +2,12 @@
 """
 face_pipeline.py — Constitutional Face Pipeline.
 
-Prompt → SceneSpec → GLB (governed) → Cycles (photoreal) → PNG + provenance.
+Prompt → SceneSpec → GLB (governed) → Cycles (photoreal, ACES 2.0) → PNG + USD + provenance.
 
 Usage:
     python -m app.face_pipeline --prompt "hero face" --output hero.png
     python -m app.face_pipeline --prompt "elderly wizard" --face-glb ./operator-assets/human/HumanFaceRigged.glb --quality final --output wizard.png
+    python -m app.face_pipeline --prompt "abstract" --scene-type tesseract --output tesseract.png --no-usd
 """
 
 import argparse
@@ -31,7 +32,8 @@ ENGINE3D_SCRIPTS = ENGINE3D_CORE / "scripts"
 RENDERER_SCRIPTS = RENDERER_CORE / "scripts"
 RENDER_GLB = REPO_ROOT / "packages" / "renderer-core" / "scripts" / "render-glb.mjs"
 VALIDATE_FACE = REPO_ROOT / "packages" / "engine3d-core" / "scripts" / "validate-face-glb.mjs"
-CYCLES_RENDER = REPO_ROOT / "packages" / "renderer-core" / "scripts" / "render-glb-cycles.py"
+CYCLES_RENDER = REPO_ROOT / "packages" / "renderer-core" / "scripts" / "render-prod-cycles.py"
+OCIO_CONFIG = REPO_ROOT / "assets" / "ocio" / "aces_cg_config.ocio"
 
 NODE_EXE = shutil.which("node") or "node.cmd"
 BLENDER_EXE = shutil.which("blender") or r"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe"
@@ -99,6 +101,8 @@ class FacePipeline:
         face_glb: Optional[Path] = None,
         scene_type: str = "face",
         work_dir: Optional[Path] = None,
+        ocio_config: Optional[Path] = None,
+        shot_meta: Optional[Dict[str, Any]] = None,
     ):
         self.prompt = prompt
         self.output = Path(output)
@@ -110,6 +114,9 @@ class FacePipeline:
         self.samples = samples or preset["samples"]
         self.seed = seed or int(time.time() * 1000) & 0xFFFFFFFF
         self.face_glb = face_glb
+        self.export_usd = True
+        self.ocio_config = ocio_config or OCIO_CONFIG
+        self.shot_meta = shot_meta or {}
 
         prefix = scene_type
         self.work_dir = work_dir or (Path("tmp") / f"{prefix}-{uuid.uuid4().hex[:8]}")
@@ -171,6 +178,13 @@ class FacePipeline:
                     {"id": "mouth", "color": "#c05a5a", "opacity": 1.0, "brdf": "ggx", "roughness": 0.4, "f0": 0.03},
                 ],
             }
+        shot = {}
+        for key in ("sequenceId", "episodeId", "shotId", "take", "frameStart", "frameEnd", "sceneVersion", "shotVersion"):
+            if self.shot_meta.get(key) is not None:
+                shot[key] = self.shot_meta[key]
+        if shot:
+            spec["shot"] = shot
+
         self.scene_spec_path.write_text(json.dumps(spec, indent=2))
         spec_hash = sha256_file(self.scene_spec_path)
         log.info("  SceneSpec: %s (hash: %s)", self.scene_spec_path, spec_hash[:16])
@@ -233,14 +247,22 @@ class FacePipeline:
         log.info("Stage 4: Cycles render (%dx%d, %d samples)...", self.width, self.height, self.samples)
         env = os.environ.copy()
         env["PATH"] += os.pathsep + str(Path(BLENDER_EXE).parent)
+        if self.ocio_config and self.ocio_config.exists():
+            env["OCIO"] = str(self.ocio_config.resolve())
         glb_path = str(self.glb_path.resolve())
         png_path = str(self.png_path.resolve())
         cycles_script = str(CYCLES_RENDER.resolve())
         cmd = [BLENDER_EXE, "-b", "-P", cycles_script, "--", glb_path, png_path, str(self.samples), str(self.width), str(self.height)]
+        if self.export_usd:
+            cmd.append("--export-usd")
         run(cmd, env=env, cwd=None, timeout=1800)
 
         png_hash = sha256_file(self.png_path)
         log.info("  Render: %s (hash: %s)", self.png_path, png_hash[:16])
+        usd_path = self.work_dir / "render.usd"
+        if usd_path.exists():
+            self.usd_hash = sha256_file(usd_path)
+            log.info("  USD: %s (hash: %s)", usd_path, self.usd_hash[:16])
         return png_hash
 
     # ── Stage 5: Provenance ────────────────────────────────────────────────
@@ -260,11 +282,15 @@ class FacePipeline:
             "width": self.width,
             "height": self.height,
             "seed": self.seed,
+            "colorspace": "ACES 2.0 - SDR 100 nits (Rec.709)" if self.ocio_config and self.ocio_config.exists() else "AgX",
+            "shot": self.shot_meta or None,
             "sceneSpec": {"path": str(self.scene_spec_path), "sha256": spec_hash},
             "governedGLB": {"path": str(self.glb_path), "sha256": glb_hash, "validation": validation},
             "renderOutput": {"path": str(self.final_png), "sha256": png_hash, "width": self.width, "height": self.height, "samples": self.samples},
+            "usdExport": {"path": str(self.png_path.with_suffix(".usd")), "sha256": self.usd_hash} if getattr(self, "usd_hash", None) else None,
             "governance": {"pipeline": "face_pipeline", "version": "1.0.0", "constitutional": True, "specHash": spec_hash, "deterministic": True},
         }
+        provenance["usdExport"] = provenance["usdExport"] or None
         self.provenance_path.write_text(json.dumps(provenance, indent=2))
         log.info("  Provenance: %s", self.provenance_path)
         return provenance
@@ -306,6 +332,16 @@ def main():
     parser.add_argument("--seed", type=int, help="Random seed")
     parser.add_argument("--face-glb", type=Path, help="Existing production face GLB")
     parser.add_argument("--work-dir", type=Path, help="Working directory")
+    parser.add_argument("--no-usd", action="store_true", help="Disable USD export")
+    parser.add_argument("--ocio-config", type=Path, help="Custom OCIO config path")
+    parser.add_argument("--sequence", dest="sequence_id", help="Sequence id (e.g. seq001)")
+    parser.add_argument("--episode", dest="episode_id", help="Episode id (e.g. ep01)")
+    parser.add_argument("--shot", dest="shot_id", help="Shot id (e.g. shot_010)")
+    parser.add_argument("--take", type=int, default=None, help="Take number (>= 0)")
+    parser.add_argument("--frame-start", type=int, default=None, help="Frame range start")
+    parser.add_argument("--frame-end", type=int, default=None, help="Frame range end")
+    parser.add_argument("--scene-version", dest="scene_version", help="SceneSpec version label (e.g. v1.2)")
+    parser.add_argument("--shot-version", dest="shot_version", help="Shot version label (e.g. v3)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
     args = parser.parse_args()
 
@@ -323,7 +359,19 @@ def main():
         face_glb=args.face_glb,
         scene_type=args.scene_type,
         work_dir=args.work_dir,
+        ocio_config=args.ocio_config,
+        shot_meta={
+            "sequenceId": args.sequence_id,
+            "episodeId": args.episode_id,
+            "shotId": args.shot_id,
+            "take": args.take,
+            "frameStart": args.frame_start,
+            "frameEnd": args.frame_end,
+            "sceneVersion": args.scene_version,
+            "shotVersion": args.shot_version,
+        },
     )
+    pipeline.export_usd = not args.no_usd
 
     try:
         result = pipeline.run()
