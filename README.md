@@ -50,6 +50,9 @@ Operator snapshot after `feat/pcc-projection-continuity` / [PR #89](https://gith
 | --- | --- | --- |
 | Engine3D soft-raster | Governed one-command stills; cinematic-v2 DOF/MB/dust/grade; Amendment VII apply | **enforced** host path · **not photoreal** |
 | Photoreal external-PBR | SceneSpecification → GLB (**held**) → Blender Cycles beauty when Blender present | **partial** · plate `photorealClaim` when pixels written · **not** Full Photoreal |
+| Prod face fixture → Cycles | `HumanFaceRiggedProd.glb` default (~752 KB, ~10k tris); `face_pipeline.py --scene-type face\|tesseract` | **partial** face beauty · **not** Full Photoreal |
+| Cycles device (this host) | Blender 5.2 Cycles; no OpenCL; R9 380 no HIP → script falls back **CPU-only** | **partial** · honest CPU path |
+| Face GLB validation | `eyes` material + `TEXCOORD_0` in build scripts; validator clean on prod + CI fixtures | **enforced** (zero warnings on checked assets) |
 | Photoreal evidence (PEP/SPR/CEC/CPCS) | Phase 2 emit + promote/certify CLIs restored; CPCS remains honest-incomplete | **partial** · `certified: false` · Phase 4 **forbidden** |
 | OpenCL / CL-Gen | ImageGen cascade + Tonga still probe | **partial** · probe ≠ scene plate |
 | Lemonade SD | Local diffusion beauty | **held** (`pixelsProduced: false` on this host class) |
@@ -64,6 +67,8 @@ Operator-facing deltas only — not a promotion claim. Evidence lives in code, t
 | Governance / conformance | CSR governance-trace check in default profile; browser Node fetch stub; runtime provenance in CI | **enforced** `17/17` + `npm run test:runtime-provenance` |
 | Engine3D biometric / world profiles | Amendment VII biometric gates + Amendment VIII world-profile foundation (`world.biogeometric` …) | VII **enforced** (opt-in) · VIII **partial** — [`docs/4d-engine/WORLD_PROFILE_BIOGEOMETRIC.md`](docs/4d-engine/WORLD_PROFILE_BIOGEOMETRIC.md) |
 | Photoreal path + CCC-ImageGen | `photoreal.external.pbr` / `photoreal.remote.diffusion`; CCC honesty select; GLB→Cycles evidence | **partial** · Lemonade **held** — [`docs/4d-engine/PHOTOREAL_PROVIDER_STRATEGY.md`](docs/4d-engine/PHOTOREAL_PROVIDER_STRATEGY.md) · [`docs/4d-engine/CCC_IMAGE_GEN.md`](docs/4d-engine/CCC_IMAGE_GEN.md) |
+| Prod face fixture + scene variety | `build-prod-face-fixture.mjs` → `HumanFaceRiggedProd.glb`; Genblaze `face_pipeline.py --scene-type face\|tesseract` (tesseract via `render-glb`→Cycles) | **partial** · validation clean · face quality **not** Full Photoreal |
+| Cycles host honesty | `render-glb-cycles.py` prefers GPU backends; falls back CPU when OptiX/CUDA/HIP unavailable (Blender 5.2 / R9 380 class) | **partial** · CPU-only on this host |
 | Sovereign X AMD legacy-efficient | `gpu.compute.amd.legacy_efficient` lane (algo/mem/gov); OpenCL still + HIP stubs | **partial** · HIP device run often **blocked** — [`docs/4d-engine/PHOTOREAL_ON_R9_380.md`](docs/4d-engine/PHOTOREAL_ON_R9_380.md) |
 | Genblaze BYOK + lanes | Local-first keys; render lanes + deploy health; NIM/GPU **assist-only** | **partial** — [`docs/genblaze/`](docs/genblaze/) |
 | ChatGPT app + Jarvis | Native pipeline tools; Jarvis session autopersist / Continuity Ledger hooks | **partial** — [`mrs/apps/chatgpt-mrs/`](mrs/apps/chatgpt-mrs/) · [`jarvis-memoryboard/`](jarvis-memoryboard/) |
@@ -204,7 +209,8 @@ Statuses below match charter evidence (not marketing). Details: [`constitution/C
 | Canvas fallback | Present |
 | Engine3D soft-raster + Amendment VII biometric | **Enforced** (opt-in gates) · soft-raster ≠ photoreal |
 | Amendment VIII world profiles | **Partial** (`docs/4d-engine/WORLD_PROFILE_BIOGEOMETRIC.md`) · full world engine **not shipped** |
-| Photoreal GLB → Cycles (`--beauty external-pbr`) | **Partial** (Held GLB + Cycles when Blender present) · not Full Photoreal |
+| Photoreal GLB → Cycles (`--beauty external-pbr`) | **Partial** (Held GLB + Cycles when Blender present; CPU-only on R9 380 / Blender 5.2 without HIP) · not Full Photoreal |
+| Prod face fixture (`HumanFaceRiggedProd.glb`) + `--scene-type` | **Partial** pipeline default · validator clean · not Full Photoreal face |
 | Photoreal evidence PEP/SPR/CEC + promote/certify | **Partial** · CPCS `certified: false` |
 | CCC-ImageGen honesty select | **Partial** · Lemonade SD beauty **held** |
 | SX `gpu.compute.amd.legacy_efficient` | **Partial** (OpenCL probe; HIP often **blocked**) |
