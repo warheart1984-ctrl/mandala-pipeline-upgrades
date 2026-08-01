@@ -229,6 +229,10 @@ class Settings:
     demo_cache_enabled: bool = False
     demo_cache_shot_id: str | None = None
     demo_cache_default_frame: int = 0
+    # GENBLAZE_PRE_RENDER_FALLBACK=1 — on live generate failure, serve
+    # {prefix}/pre-render/structure.png from B2 (source=b2-structure-cache).
+    pre_render_fallback_enabled: bool = False
+    pre_render_shots_per_hour: int = 4
     # --- Media look lane (FLUX/Lemonade/polish prompt steer; partial) ---
     # GENBLAZE_STYLE=anime | default. Request body ``style`` overrides.
     media_style: str = "default"
@@ -602,6 +606,16 @@ def get_settings() -> Settings:
     except ValueError:
         demo_cache_default_frame = 0
     demo_cache_default_frame = max(0, min(9999, demo_cache_default_frame))
+    pre_render_fallback_enabled = (
+        os.getenv("GENBLAZE_PRE_RENDER_FALLBACK") or ""
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    try:
+        pre_render_shots_per_hour = int(
+            (os.getenv("GENBLAZE_PRE_RENDER_SHOTS_PER_HOUR") or "4").strip() or "4"
+        )
+    except ValueError:
+        pre_render_shots_per_hour = 4
+    pre_render_shots_per_hour = max(1, min(60, pre_render_shots_per_hour))
     # Media look lane — anime is partial (prompt steer), not Full Photoreal.
     from app.style_steer import normalize_style
 
@@ -809,6 +823,8 @@ def get_settings() -> Settings:
         demo_cache_enabled=demo_cache_enabled,
         demo_cache_shot_id=demo_cache_shot_id,
         demo_cache_default_frame=demo_cache_default_frame,
+        pre_render_fallback_enabled=pre_render_fallback_enabled,
+        pre_render_shots_per_hour=pre_render_shots_per_hour,
         media_style=media_style,
         prompt_scene_bridge_enabled=prompt_scene_bridge_enabled,
         prompt_scene_bridge_script_path=prompt_scene_bridge_script_override,

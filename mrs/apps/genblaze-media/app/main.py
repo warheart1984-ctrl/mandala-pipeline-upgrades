@@ -106,10 +106,12 @@ from app.image_ingest import (
 )
 from app.demo_cache import (
     SOURCE_B2_CACHE,
+    SOURCE_B2_STRUCTURE,
     SOURCE_LIVE_GENERATE,
     claim_label,
     demo_cache_enabled,
     fetch_frame_from_b2,
+    sha256_bytes,
     structure_only_response,
 )
 from app.gmi_provider import gmi_availability
@@ -119,6 +121,7 @@ from app.image_polish import (
     polish_availability,
     polish_image,
 )
+from app.pre_render import load_cached_structure_if_available, structure_asset_key
 from app.provider_cascade import cascade_health
 from app.image_to_scene import (
     DISCLAIMER as IMAGE_TO_SCENE_DISCLAIMER,
@@ -904,6 +907,20 @@ def health(request: Request) -> dict:
                 "provider_cascade still discloses failover readiness."
             ),
         },
+        "pre_render": {
+            "fallback_enabled": settings.pre_render_fallback_enabled,
+            "shots_per_hour": settings.pre_render_shots_per_hour,
+            "b2_prefix": f"{settings.storage_prefix}/pre-render/",
+            "structure_key": structure_asset_key(settings.storage_prefix),
+            "status": "partial",
+            "spread_mode": "schedule+run-due",
+            "note": (
+                "python -m app.pre_render --spawn writes structure + 24h schedule; "
+                "--run-due generates due demo-cache slots. "
+                "GENBLAZE_PRE_RENDER_FALLBACK=1 serves structure.png on live fail "
+                "(source=b2-structure-cache). Dual-path with demo-cache/."
+            ),
+        },
         "engine3d_still": engine3d_still_availability(settings),
         "engine3d_still_note": (
             "POST /api/engine3d-still renders Engine3D triangle structure "
@@ -1082,6 +1099,65 @@ def _dispatch_image_body(intent: ProcessIntent) -> dict:
     return out
 
 
+def _b2_structure_fallback_response(
+    settings: Any,
+    *,
+    detail: str,
+    cascade_probe: dict[str, Any],
+    started: float,
+    prompt: str,
+    style: str,
+    style_steered: bool,
+    use_demo_cache: bool,
+    shot_id: str | None,
+    frame: int | None,
+) -> dict[str, Any] | None:
+    """Serve ``{prefix}/pre-render/structure.png`` when live providers fail.
+
+    Enabled when ``GENBLAZE_PRE_RENDER_FALLBACK=1`` or demo_cache mode is on
+    (demo miss → live fail → structure failover). Returns None on miss / skip.
+    """
+    if not (
+        getattr(settings, "pre_render_fallback_enabled", False) or use_demo_cache
+    ):
+        return None
+    cached, reason = load_cached_structure_if_available(settings)
+    if cached is None:
+        return None
+    digest = sha256_bytes(cached)
+    run_id = f"pre-render-structure-{digest[:12]}"
+    put_preview(APP_DIR, run_id, cached)
+    elapsed_ms = int((time.monotonic() - started) * 1000)
+    return {
+        "status": "ok",
+        "run_id": run_id,
+        "prompt": prompt,
+        "model": None,
+        "provider": "b2-pre-render",
+        "source": SOURCE_B2_STRUCTURE,
+        "source_label": claim_label(SOURCE_B2_STRUCTURE),
+        "shot_id": shot_id,
+        "frame": frame,
+        "asset_key": structure_asset_key(settings.storage_prefix),
+        "asset_sha256": digest,
+        "preview_url": f"/api/preview/{run_id}",
+        "dry_run": False,
+        "detail": f"{detail} | b2_structure={reason}",
+        "provider_cascade": cascade_probe,
+        "style": style,
+        "style_steered": style_steered,
+        "modality": "image",
+        "elapsed_ms": elapsed_ms,
+        "demo_cache": use_demo_cache,
+        "pre_render_fallback": True,
+        "anime_claim": False,
+        "note": (
+            "B2 pre-render structure fallback — not live beauty. "
+            "Painters/Fal/HF/GMI failed or were unavailable."
+        ),
+    }
+
+
 def _run_generate_common(
     body: GenerateRequest,
     *,
@@ -1219,6 +1295,20 @@ def _run_generate_common(
         else:
             result = _dispatch_image(settings, prompt_for_gen, quality=body.quality)
     except ValueError as exc:
+        fallback = _b2_structure_fallback_response(
+            settings,
+            detail=f"live generate rejected: {exc}",
+            cascade_probe=cascade_probe,
+            started=started,
+            prompt=body.prompt,
+            style=style,
+            style_steered=style_steered,
+            use_demo_cache=use_demo_cache,
+            shot_id=getattr(body, "shot_id", None) or settings.demo_cache_shot_id,
+            frame=getattr(body, "frame", None),
+        )
+        if fallback is not None:
+            return fallback
         if use_demo_cache:
             return {
                 **structure_only_response(
@@ -1231,6 +1321,20 @@ def _run_generate_common(
             }
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except GenerationQualityError as exc:
+        fallback = _b2_structure_fallback_response(
+            settings,
+            detail=f"quality fail: {exc}",
+            cascade_probe=cascade_probe,
+            started=started,
+            prompt=body.prompt,
+            style=style,
+            style_steered=style_steered,
+            use_demo_cache=use_demo_cache,
+            shot_id=getattr(body, "shot_id", None) or settings.demo_cache_shot_id,
+            frame=getattr(body, "frame", None),
+        )
+        if fallback is not None:
+            return fallback
         if use_demo_cache:
             return {
                 **structure_only_response(
@@ -1243,6 +1347,20 @@ def _run_generate_common(
             }
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:
+        fallback = _b2_structure_fallback_response(
+            settings,
+            detail=f"painters unavailable: {exc}",
+            cascade_probe=cascade_probe,
+            started=started,
+            prompt=body.prompt,
+            style=style,
+            style_steered=style_steered,
+            use_demo_cache=use_demo_cache,
+            shot_id=getattr(body, "shot_id", None) or settings.demo_cache_shot_id,
+            frame=getattr(body, "frame", None),
+        )
+        if fallback is not None:
+            return fallback
         if use_demo_cache:
             return {
                 **structure_only_response(
@@ -1256,6 +1374,20 @@ def _run_generate_common(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         detail = _format_generation_failure(exc)
+        fallback = _b2_structure_fallback_response(
+            settings,
+            detail=f"live generate failed: {detail}",
+            cascade_probe=cascade_probe,
+            started=started,
+            prompt=body.prompt,
+            style=style,
+            style_steered=style_steered,
+            use_demo_cache=use_demo_cache,
+            shot_id=getattr(body, "shot_id", None) or settings.demo_cache_shot_id,
+            frame=getattr(body, "frame", None),
+        )
+        if fallback is not None:
+            return fallback
         if use_demo_cache:
             return {
                 **structure_only_response(
