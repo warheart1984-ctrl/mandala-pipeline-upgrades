@@ -5,6 +5,7 @@
 | Status | **Declared, not promoted** |
 | Branch | `feat/anime-structure-plate-projector` |
 | PR | #95 |
+| Commit tip | `a8f6e57` (+ follow-up tip update) |
 
 ## Overview
 
