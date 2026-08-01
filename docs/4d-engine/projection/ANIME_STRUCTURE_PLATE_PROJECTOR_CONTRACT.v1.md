@@ -11,7 +11,7 @@
 | Provenance schema | [`schemas/4d-engine/v1/StructurePlateProjectionProvenance.v1.schema.json`](../../../schemas/4d-engine/v1/StructurePlateProjectionProvenance.v1.schema.json) |
 | Experiment evidence | `tmp/rt4d-project-compare/` · runner `mrs/packages/renderer-core/scripts/rt4d-project-compare.mjs` |
 | Landed commits | `7f47af3` (verify + runner), `fec593b` (runner tidy) |
-| Drive-G-1 | No universal winner. No Print SoT / Digital Printer mutation. Promotion of a default remains **declared** until richer evidence. |
+| Drive-G-1 | No universal winner. No Print SoT / Digital Printer mutation. Promotion of a default remains **declared** until richer evidence. Meta-pattern: **experiment → provenance → contract → promotion**. |
 
 > **BANNER:** Structure-lane projection is a **consumer contract** over RT4D hits for
 > Engine3D structure plates. It does **not** replace CPU RT4D print, Digital Printer,
@@ -102,11 +102,26 @@ Locked from compare evidence (`tmp/rt4d-project-compare/`, commits `7f47af3` / `
    - **drop_w** — better for debugging / literal structural inspection
 5. Fits **multi-lane** philosophy.
 
-Promotion of Projector4D to **enforced** anime-structure default: **declared** only — requires richer scene / comprehension evidence (see §8).
+Promotion of Projector4D to **enforced** anime-structure default: **declared** only — requires richer scene / comprehension evidence (see §6, §9).
 
 ---
 
-## 6. Provenance (required fields)
+## 6. Decision Process / Promotion Gate
+
+**Biggest win** of this work is formalizing the **decision process**, not crowning Projector4D over drop_w.
+
+| Binding | Statement |
+| --- | --- |
+| Lane conclusion | **Projector4D** → 4D story / explanation; **drop_w** → literal geometry / debug. Different objectives, different lanes — not competitors for one “correct” projector. |
+| Pole-stress evidence | Pole-stress already ran (`tmp/rt4d-project-compare/pole-stress/`; §9): Print SoT raw non-finite=1, structure-lane rejected=3, drop_w accepted=13 of 13. Exposing a real boundary is **good** evidence that shapes the structure-lane reject policy — not a reason to collapse lanes. |
+| Default promotion | Remains **declared** until richer ink/cel + viewer-comprehension studies complete; promote only if evidence shows better understanding **without** compromising replay. |
+| Pattern slogan | **experiment → provenance → contract → promotion** — not promote-first, validate-later. |
+
+Status tags unchanged: contract **declared / partial**; default promotion **declared**.
+
+---
+
+## 7. Provenance (required fields)
 
 Every structure-plate artifact MUST carry:
 
@@ -124,7 +139,7 @@ JSON Schema: `schemas/4d-engine/v1/StructurePlateProjectionProvenance.v1.schema.
 
 ---
 
-## 7. Repo locations
+## 8. Repo locations
 
 | Role | Path | Status |
 | --- | --- | --- |
@@ -137,7 +152,7 @@ JSON Schema: `schemas/4d-engine/v1/StructurePlateProjectionProvenance.v1.schema.
 
 ---
 
-## 8. Next experiments
+## 9. Next experiments
 
 | # | Experiment | Goal | Status tag |
 | --- | --- | --- | --- |
@@ -157,7 +172,7 @@ Print SoT remains unchanged by this wrapper policy.
 
 ---
 
-## 9. Explicit non-claims
+## 10. Explicit non-claims
 
 - Contract is **not** a charter CKL row / runtime deny gate (**declared**).
 - No mutation of Digital Printer / Print SoT / constitutional charter.
@@ -167,7 +182,7 @@ Print SoT remains unchanged by this wrapper policy.
 
 ---
 
-## 10. Cross-links
+## 11. Cross-links
 
 - [`USER_4D_TO_3D_MATH_VERIFY.md`](./USER_4D_TO_3D_MATH_VERIFY.md) — formula ↔ repo mapping
 - [`W_AS_STORY_VS_FLAT_AXIS.md`](./W_AS_STORY_VS_FLAT_AXIS.md) — readable design note

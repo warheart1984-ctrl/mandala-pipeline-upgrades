@@ -25,4 +25,4 @@ node mrs/packages/renderer-core/scripts/rt4d-project-compare.mjs --pole-stress
 node mrs/packages/renderer-core/scripts/rt4d-project-compare.mjs --scene rich
 ```
 
-**Evaluation lock:** no universal winner — Projector4D for 4D story / explanation; drop_w for literal debug. Print SoT / Digital Printer untouched.
+**Evaluation lock:** no universal winner — Projector4D for 4D story / explanation; drop_w for literal debug. Print SoT / Digital Printer untouched. Pattern: **experiment → provenance → contract → promotion** (contract §6; promotion remains **declared**).

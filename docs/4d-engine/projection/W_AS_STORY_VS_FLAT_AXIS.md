@@ -54,6 +54,8 @@ What you see is what the first three coordinates already are. Excellent for debu
 
 This fits a **multi-lane** philosophy: Print SoT, observation aperture (ProjCC), and anime structure plates may need different projectors for different jobs. One formula does not own every lane.
 
+The durable win is the **decision process**, not a single projector pick: Projector4D and drop_w serve different objectives (4D story vs literal debug). Pole-stress exposing a real boundary is evidence that belongs in the lane contract. Default promotion stays **declared** until richer ink/cel + comprehension studies; pattern = **experiment → provenance → contract → promotion** (see contract §6).
+
 ---
 
 ## Shared guarantees
@@ -83,10 +85,10 @@ On a shared hypersphere-arc hit dump (`tmp/rt4d-project-compare/`):
 - Dual-run point-set hashes matched → replay determinism **PASS**.
 - Plates used Engine3D soft-raster when available, else in-script fallback (same camera intent).
 
-That is enough to justify *keeping both* and treating Projector4D as the storytelling **candidate** — not enough to **enforce** it as the only anime-structure default. Richer ink/cel scenes and pole-stress evidence come next; default promotion stays **declared** until then.
+That is enough to justify *keeping both* and treating Projector4D as the storytelling **candidate** — not enough to **enforce** it as the only anime-structure default. Pole-stress has already run (structure-lane rejects near \(w=-d_4\); drop_w accepts all); richer ink/cel + viewer-comprehension evidence still gate promotion. Default promotion stays **declared**.
 
 ---
 
 ## Next
 
-See contract §8: pole stress (`--pole-stress`), richer scene (`--scene rich`), then only with evidence promote Projector4D as default anime-structure projection while retaining drop_w for engineering.
+See contract §9: richer scene / comprehension (`--scene rich` and beyond), then only with evidence promote Projector4D as default anime-structure projection while retaining drop_w for engineering.

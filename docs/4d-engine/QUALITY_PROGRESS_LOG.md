@@ -12,6 +12,22 @@ Every cycle answers:
 
 ---
 
+## 2026-08-01 — Projection meta-pattern locked (decision process / promotion gate)
+
+| Field | Value |
+|-------|-------|
+| Contract §6 | Decision Process / Promotion Gate — **declared / partial** |
+| Pattern | **experiment → provenance → contract → promotion** |
+| Promotion | default anime-structure Projector4D remains **declared** |
+| Print SoT / Digital Printer | untouched |
+
+1. **Improved / happened:** User-affirmed landing captured in existing projection docs: biggest win = formalizing the decision process (not crowning one projector); multi-lane conclusion stands; pole-stress boundary shapes lane policy.
+2. **Artificial / gaps:** Still not a CKL gate; ink/cel + viewer-comprehension studies incomplete; no default promotion.
+3. **Measured:** Docs-only this cycle; prior pole-stress counts unchanged (reject vs accept near pole).
+4. **Next bottleneck:** Richer comprehension evidence before any declared→partial default promotion.
+
+---
+
 ## 2026-08-01 — Anime Structure Plate Projector contract + \(w\)-story design note
 
 | Field | Value |
