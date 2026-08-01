@@ -85,6 +85,7 @@ from app.style_steer import (
 )
 from app.anime_ue_handoff import (
     ANIME_UE_ENDPOINT,
+    anime_lane_health,
     anime_ue_availability,
     build_anime_ue_handoff,
 )
@@ -207,6 +208,8 @@ STATIC_UI = STATIC_DIR / "index.html"
 STATIC_CROS = STATIC_DIR / "cros.html"
 STATIC_LEGAL = STATIC_DIR / "legal.html"
 STATIC_LOGO = STATIC_DIR / "assets" / "engine3d-logo.svg"
+STATIC_MRS_LOGO = STATIC_DIR / "assets" / "mrs-logo.png"
+STATIC_MRS_BRAND = STATIC_DIR / "assets" / "mrs-brand.json"
 
 # Last startup warmup probe result (no secrets) — exposed on /health.
 _nvidia_warmup_state: dict[str, Any] | None = None
@@ -997,12 +1000,13 @@ def health(request: Request) -> dict:
             "SceneSpecification → RT4D. Infinity narrative lane is out-of-process only."
         ),
         "chatgpt_plugin": plugin_availability(settings),
+        "anime_lane": anime_lane_health(),
         "anime_ue": anime_ue_availability(),
         "anime_ue_note": (
-            f"POST {ANIME_UE_ENDPOINT} — governed creative pipeline handoff "
-            "(structure/cel plate + AnimeWorldProfile + projection_method provenance). "
-            "Status: partial. UE AnimeStylizer optional; reliable demo is "
-            "Genblaze→structure→ffmpeg."
+            f"POST {ANIME_UE_ENDPOINT} — Anime Lane handoff (declared/partial). "
+            "Forces style=anime; returns lane + anime_lane.contract_version + provenance. "
+            "Contract: docs/anime-lane/ANIME_LANE_CROSS_ENGINE_CONTRACT.v1.md. "
+            "UE optional; reliable demo Genblaze→structure→ffmpeg. Not promoted."
         ),
         "sx_kernel": {
             "active": True,
@@ -3166,6 +3170,20 @@ def engine3d_logo() -> FileResponse:
     if not STATIC_LOGO.is_file():
         raise HTTPException(status_code=404, detail="logo missing")
     return FileResponse(STATIC_LOGO, media_type="image/svg+xml")
+
+
+@app.get("/assets/mrs-logo.png")
+def mrs_logo() -> FileResponse:
+    if not STATIC_MRS_LOGO.is_file():
+        raise HTTPException(status_code=404, detail="MRS logo missing")
+    return FileResponse(STATIC_MRS_LOGO, media_type="image/png")
+
+
+@app.get("/brand/mrs.json")
+def mrs_brand_profile() -> FileResponse:
+    if not STATIC_MRS_BRAND.is_file():
+        raise HTTPException(status_code=404, detail="MRS brand profile missing")
+    return FileResponse(STATIC_MRS_BRAND, media_type="application/json")
 
 
 # ---------------------------------------------------------------------------

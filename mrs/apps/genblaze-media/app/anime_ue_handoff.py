@@ -1,13 +1,11 @@
-"""Thin Genblaze → UE AnimeStylizer handoff (partial).
+"""Thin Genblaze → Anime Lane handoff (partial).
 
-POST /api/anime returns a structure/cel plate handoff package with provenance
-pointing at AnimeWorldProfile + projection_method. Does **not** claim a full
-UE compile, RDG stylize, or ffmpeg CI artifact.
+POST /api/anime forces style=anime and returns lane + anime_lane.contract_version
++ provenance. Health exposes anime_lane per docs/anime-lane/ANIME_LANE_HEALTH_SCHEMA.v1.json.
 
 Drive-G-1:
-  - Status: **partial** (handoff + provenance declared; live Engine3D optional)
+  - Lane: declared; implementation: partial; UE: skeleton/partial; promotion: not promoted
   - Print SoT / Digital Printer untouched
-  - UE AnimeStylizer remains skeleton/partial (optional consumer leg)
 """
 
 from __future__ import annotations
@@ -26,14 +24,34 @@ from app.anime_world_profile import (
 
 ANIME_UE_ENDPOINT = "/api/anime"
 ANIME_UE_KIND = "anime-ue-handoff"
+ANIME_LANE_CODE = "anime"
+ANIME_LANE_CONTRACT_VERSION = "1.0"
 STATUS = "partial"
-CONTRACT_REL = (
+STYLE_ANIME = "anime"
+
+CROSS_ENGINE_CONTRACT_REL = "docs/anime-lane/ANIME_LANE_CROSS_ENGINE_CONTRACT.v1.md"
+HEALTH_SCHEMA_REL = "docs/anime-lane/ANIME_LANE_HEALTH_SCHEMA.v1.json"
+STRUCTURE_PLATE_CONTRACT_REL = (
     "docs/4d-engine/projection/ANIME_STRUCTURE_PLATE_PROJECTOR_CONTRACT.v1.md"
 )
 PROVENANCE_SCHEMA_REL = (
     "schemas/4d-engine/v1/StructurePlateProjectionProvenance.v1.schema.json"
 )
+PROVENANCE_SCHEMA_SHORT = "StructurePlateProjectionProvenance.v1.schema.json"
 UE_PLUGIN_REL = "unreal/AnimeStylizer"
+
+PROVENANCE_FIELD_NAMES = [
+    "lane",
+    "style_forced",
+    "palette_lut",
+    "outline_pass_version",
+    "cel_shading_version",
+    "color_grade_version",
+    "temporal_aa_version",
+    "structure_plate_used",
+    "structure_plate_provenance",
+    "export_settings",
+]
 
 _REFERENCE_MODELS = {
     "projector4d-sot": {
@@ -84,7 +102,8 @@ def build_structure_plate_provenance(
         "print_sot_touched": False,
         "digital_printer_touched": False,
         "anime_world_profile_id": anime_world_profile_id,
-        "contract": CONTRACT_REL,
+        "contract": STRUCTURE_PLATE_CONTRACT_REL,
+        "anime_lane_contract": CROSS_ENGINE_CONTRACT_REL,
         "status": "declared",
     }
     if ref["d4"] is not None:
@@ -99,10 +118,92 @@ def build_structure_plate_provenance(
     return prov
 
 
+def build_anime_lane_provenance(
+    *,
+    structure_plate_provenance: dict[str, Any],
+    structure_plate_used: bool,
+    palette_lut: str | None = None,
+) -> dict[str, Any]:
+    """Lane-level provenance fields from the Anime Lane contract (§7)."""
+    return {
+        "lane": ANIME_LANE_CODE,
+        "style_forced": True,
+        "palette_lut": palette_lut,
+        "outline_pass_version": "skeleton-0.1",
+        "cel_shading_version": "skeleton-0.1",
+        "color_grade_version": "skeleton-0.1",
+        "temporal_aa_version": "skeleton-0.1",
+        "structure_plate_used": structure_plate_used,
+        "structure_plate_provenance": structure_plate_provenance,
+        "export_settings": {
+            "status": "declared",
+            "recipe": "ffmpeg -framerate N -i frame_%04d.png -c:v libx264 -pix_fmt yuv420p anime_demo.mp4",
+        },
+        "schema": PROVENANCE_SCHEMA_REL,
+        "anime_lane_contract": CROSS_ENGINE_CONTRACT_REL,
+    }
+
+
+def anime_lane_health() -> dict[str, Any]:
+    """`/health.anime_lane` payload matching ANIME_LANE_HEALTH_SCHEMA.v1.json (+ maturity)."""
+    return {
+        "contract_version": ANIME_LANE_CONTRACT_VERSION,
+        "endpoint": ANIME_UE_ENDPOINT,
+        "status": {
+            "reachable": True,
+            "style_forced": True,
+            "governed": True,
+            "maturity": STATUS,
+            "lane_status": "declared",
+            "promoted": False,
+        },
+        "contract_notes": (
+            f"{CROSS_ENGINE_CONTRACT_REL} — declared; scaffold partial; "
+            "UE AnimeStylizer skeleton/partial; not promoted."
+        ),
+        "provenance_schema": PROVENANCE_SCHEMA_SHORT,
+        "provenance": {
+            "schema": PROVENANCE_SCHEMA_SHORT,
+            "fields": list(PROVENANCE_FIELD_NAMES),
+        },
+        "ue_plugin": {
+            "module": "AnimeStylizerModule",
+            "path": UE_PLUGIN_REL,
+            "passes": [
+                "AnimeOutlinePass",
+                "AnimeCelShadingPass",
+                "AnimeColorGradePass",
+                "AnimeTemporalAAPass",
+            ],
+            "structure_plate_blend": True,
+            "structure_plate_blend_maturity": "skeleton",
+            "ue_status": "skeleton/partial",
+            "compile": "unknown",
+        },
+        "promotion": {
+            "eligible": True,
+            "promoted": False,
+            "blockers": [
+                "ink_cel_evidence",
+                "pole_stress_thresholds",
+                "ci_provenance_validator",
+                "shading_space_alignment",
+            ],
+        },
+        "docs": {
+            "contract": CROSS_ENGINE_CONTRACT_REL,
+            "health_schema": HEALTH_SCHEMA_REL,
+            "index": "docs/anime-lane/README.md",
+        },
+    }
+
+
 def anime_ue_availability() -> dict[str, Any]:
+    """Backward-compatible availability fragment (also embeds anime_lane health)."""
     profile_path = default_example_path()
     profile_id = None
     profile_valid = False
+    example_error: str | None = None
     if profile_path.is_file():
         try:
             profile = load_anime_world_profile(profile_path)
@@ -110,23 +211,12 @@ def anime_ue_availability() -> dict[str, Any]:
             profile_id = profile.get("profileId")
             profile_valid = len(issues) == 0
         except (OSError, ValueError) as exc:
-            profile_valid = False
-            return {
-                "endpoint": ANIME_UE_ENDPOINT,
-                "kind": ANIME_UE_KIND,
-                "status": STATUS,
-                "available": True,
-                "example_profile_id": None,
-                "example_profile_valid": False,
-                "example_error": str(exc),
-                "ue_plugin": UE_PLUGIN_REL,
-                "ue_status": "skeleton/partial",
-                "note": (
-                    "POST /api/anime returns structure/cel handoff + provenance. "
-                    "UE AnimeStylizer is optional; reliable demo is Genblaze→structure→ffmpeg."
-                ),
-            }
-    return {
+            example_error = str(exc)
+    else:
+        example_error = f"missing:{profile_path}"
+
+    lane = anime_lane_health()
+    out: dict[str, Any] = {
         "endpoint": ANIME_UE_ENDPOINT,
         "kind": ANIME_UE_KIND,
         "status": STATUS,
@@ -135,12 +225,16 @@ def anime_ue_availability() -> dict[str, Any]:
         "example_profile_valid": profile_valid,
         "ue_plugin": UE_PLUGIN_REL,
         "ue_status": "skeleton/partial",
-        "contract": CONTRACT_REL,
+        "contract": CROSS_ENGINE_CONTRACT_REL,
+        "anime_lane": lane,
         "note": (
-            "POST /api/anime returns structure/cel handoff + provenance. "
-            "UE AnimeStylizer is optional; reliable demo is Genblaze→structure→ffmpeg."
+            "POST /api/anime forces style=anime; returns lane + anime_lane + provenance. "
+            "UE AnimeStylizer optional; reliable demo is Genblaze→structure→ffmpeg."
         ),
     }
+    if example_error:
+        out["example_error"] = example_error
+    return out
 
 
 def build_anime_ue_handoff(
@@ -155,7 +249,7 @@ def build_anime_ue_handoff(
     width: int = 256,
     height: int = 256,
 ) -> dict[str, Any]:
-    """Assemble UE handoff JSON (partial). Live plate optional via structure_png."""
+    """Assemble Anime Lane handoff JSON (partial). Always forces style=anime."""
     path = Path(anime_world_profile_path) if anime_world_profile_path else default_example_path()
     profile = load_anime_world_profile(path)
     issues = validate_anime_world_profile(profile)
@@ -169,14 +263,20 @@ def build_anime_ue_handoff(
     if structure_png is not None:
         asset_sha = hashlib.sha256(structure_png).hexdigest()
 
-    provenance = build_structure_plate_provenance(
+    structure_plate_prov = build_structure_plate_provenance(
         projection_method=method,
         anime_world_profile_id=profile_id,
         asset_sha256=asset_sha,
     )
+    structure_used = structure_png is not None or bool(structure_preview_url)
+    lane_provenance = build_anime_lane_provenance(
+        structure_plate_provenance=structure_plate_prov,
+        structure_plate_used=structure_used,
+        palette_lut=None,
+    )
 
     structure: dict[str, Any] | None = None
-    if structure_png is not None or structure_preview_url:
+    if structure_used:
         structure = {
             "run_id": run_id,
             "kind": "anime-structure-plate",
@@ -189,6 +289,9 @@ def build_anime_ue_handoff(
         }
 
     return {
+        "lane": ANIME_LANE_CODE,
+        "style": STYLE_ANIME,
+        "style_forced": True,
         "status": STATUS,
         "kind": ANIME_UE_KIND,
         "run_id": run_id,
@@ -200,7 +303,16 @@ def build_anime_ue_handoff(
         "anime_world_profile_path": str(path).replace("\\", "/"),
         "anime_world_profile_status": profile.get("status"),
         "projection_method": method,
-        "provenance": provenance,
+        "anime_lane": {
+            "contract_version": ANIME_LANE_CONTRACT_VERSION,
+            "style_forced": True,
+            "status": "declared",
+            "maturity": STATUS,
+            "promoted": False,
+            "contract": CROSS_ENGINE_CONTRACT_REL,
+            "provenance": lane_provenance,
+        },
+        "provenance": lane_provenance,
         "structure": structure,
         "capability_tags": {
             "genblaze_api_anime": "partial",
@@ -209,13 +321,15 @@ def build_anime_ue_handoff(
             "ffmpeg_export": "declared",
             "replay": "declared",
             "print_sot": "untouched",
+            "promotion": "not_promoted",
         },
         "ue_consumer": {
             "plugin_path": UE_PLUGIN_REL,
             "plugin_status": "skeleton/partial",
             "load_api": "UAnimeStylizerBlueprintLibrary::LoadStructurePlate",
             "config_api": "FAnimeStylizerConfig (bUseStructurePlate, StructureBlend)",
-            "contract": CONTRACT_REL,
+            "contract": CROSS_ENGINE_CONTRACT_REL,
+            "structure_plate_contract": STRUCTURE_PLATE_CONTRACT_REL,
             "note": (
                 "Optional leg. Reliable hackathon demo does not require UE compile — "
                 "use Genblaze structure plate → ffmpeg."
@@ -235,10 +349,11 @@ def build_anime_ue_handoff(
             "Not a verified UE 5.3+ compile in this repo",
             "Not CKL-enforced provenance (declared schema only)",
             "Not a measured R9 380 / 1.1 ms profile",
+            "Not a promoted default lane",
             "ffmpeg H.264 cleanliness is operator-side (declared unless artifact hashed)",
         ],
         "note": (
-            "Governed creative pipeline handoff. Structure/cel plate + AnimeWorldProfile "
-            "+ projection_method provenance for UE or ffmpeg consumers."
+            "Anime Lane handoff (declared/partial). style forced to anime. "
+            "See docs/anime-lane/ANIME_LANE_CROSS_ENGINE_CONTRACT.v1.md."
         ),
     }
