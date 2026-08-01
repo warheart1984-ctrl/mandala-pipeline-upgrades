@@ -5,8 +5,8 @@
 | Status | **declared** (analysis / mapping note; not a new renderer) |
 | Date | 2026-08-01 |
 | Print SoT (implementation) | `mrs/packages/renderer-core/src/render/rt4d/output/projector.js` (`Projector4D`) |
-| Related | [`PROJECTION_CONTINUITY_CONTRACT.md`](./PROJECTION_CONTINUITY_CONTRACT.md) |
-| Drive-G-1 | Verifies formulas and maps them to existing code. Does **not** claim a new projection path is implemented or enforced. Does **not** change Print SoT. |
+| Related | [`PROJECTION_CONTINUITY_CONTRACT.md`](./PROJECTION_CONTINUITY_CONTRACT.md) · [`ANIME_STRUCTURE_PLATE_PROJECTOR_CONTRACT.v1.md`](./ANIME_STRUCTURE_PLATE_PROJECTOR_CONTRACT.v1.md) · [`W_AS_STORY_VS_FLAT_AXIS.md`](./W_AS_STORY_VS_FLAT_AXIS.md) |
+| Drive-G-1 | Verifies formulas and maps them to existing code. Does **not** claim a new projection path is implemented or enforced. Does **not** change Print SoT. No universal winner between Projector4D and drop_w. |
 
 ## Reference model vs implementation (binding)
 
@@ -97,7 +97,15 @@ Anime structure lane consumes projected RT4D hits into Engine3D soft-raster (the
 5. Viewer comprehension  
 
 Runner (reusable): `mrs/packages/renderer-core/scripts/rt4d-project-compare.mjs`  
-Evidence folder (tmp OK, often untracked): `tmp/rt4d-project-compare/`
+Evidence folder (tmp OK, often untracked): `tmp/rt4d-project-compare/`  
+Flags: `--pole-stress` (near \(w=-d_4\)); `--scene rich` (denser scaffold — ink-cel still **declared**)
+
+### Evaluation stance (binding)
+
+- Same hits / camera / scene ⇒ differences attributable to projection model.
+- Projector4D communicates 4th dim via foreshortening; drop_w is literal XYZ (weaker 4th-axis story).
+- **No universal winner** — Projector4D for storytelling; drop_w for debug / literal inspection.
+- Default anime-structure promotion of Projector4D remains **declared** until richer evidence.
 
 ## Explicit non-claims
 

@@ -4,13 +4,17 @@
  *
  * Status: **partial** evidence runner (structure lane). Does NOT touch Print SoT /
  * Digital Printer. Reference models are evaluated through evidence, not crowned a priori.
+ * No universal winner: Projector4D = 4D story candidate; drop_w = literal debug.
  *
  * Usage:
  *   node mrs/packages/renderer-core/scripts/rt4d-project-compare.mjs
  *   node mrs/packages/renderer-core/scripts/rt4d-project-compare.mjs --out-dir tmp/rt4d-project-compare
+ *   node mrs/packages/renderer-core/scripts/rt4d-project-compare.mjs --pole-stress
+ *   node mrs/packages/renderer-core/scripts/rt4d-project-compare.mjs --scene rich
  *
  * Provenance: every artifact carries projector_id / projection_method
  * (`projector4d-sot` | `drop_w`).
+ * Contract: docs/4d-engine/projection/ANIME_STRUCTURE_PLATE_PROJECTOR_CONTRACT.v1.md
  */
 
 import { createHash } from "node:crypto";
@@ -34,8 +38,18 @@ const ALPHA = 1 / D4;
 const WIDTH = 320;
 const HEIGHT = 240;
 const SEED = 7;
+/** Structure-lane reject ε near pole w=-d4 (does not mutate Print SoT). */
+const POLE_EPS = D4 * 0.05;
 
 const PROVENANCE_SCHEMA = "rt4d-project-compare/1.0";
+const EVALUATION_STANCE = [
+  "Experiment valuable: same hits/camera/scene ⇒ differences attributable to projection model.",
+  "Projector4D communicates 4th dim via foreshortening/depth; drop_w is literal XYZ (weaker 4th-axis story).",
+  "Provenance of method/reference model ⇒ replayable comparisons.",
+  "No universal winner — Projector4D for storytelling; drop_w for debug/literal inspection.",
+  "Multi-lane: not one projector for every use case. Print SoT / Digital Printer untouched.",
+  "Default anime-structure promotion of Projector4D remains **declared** until richer evidence.",
+];
 
 function parseArgs(argv) {
   /** @type {Record<string, string|boolean>} */
@@ -88,7 +102,7 @@ function projectProjector4D(p, projector) {
   return { x: q.x, y: q.y, z: q.z };
 }
 
-function buildAnimeStructureScene() {
+function buildAnimeStructureScene(sceneKind = "sparse") {
   const scene = new Scene4D();
   // Structure arc: same xyz footprint, stepped w → foreshortening differs by projector.
   const centers = [
@@ -101,11 +115,29 @@ function buildAnimeStructureScene() {
     vec4(0.9, -0.2, -0.3, 2.0),
   ];
   const radii = [0.45, 0.38, 0.5, 0.38, 0.45, 0.32, 0.28];
+  if (sceneKind === "rich") {
+    // Denser scaffold for comprehension compare — still not full ink-cel pipeline.
+    const extras = [
+      vec4(-1.5, 0.6, 0.3, -2.8),
+      vec4(1.5, 0.6, -0.2, 2.8),
+      vec4(-0.3, -0.7, 0.5, -3.2),
+      vec4(0.4, 0.8, -0.4, 3.0),
+      vec4(0.0, 0.0, 0.0, -1.0),
+      vec4(-0.9, 0.2, 0.1, 1.2),
+      vec4(1.0, -0.5, 0.2, -0.4),
+      vec4(-0.2, 0.3, -0.5, 2.4),
+    ];
+    const extraR = [0.22, 0.22, 0.18, 0.2, 0.55, 0.3, 0.26, 0.24];
+    for (let i = 0; i < extras.length; i++) {
+      centers.push(extras[i]);
+      radii.push(extraR[i]);
+    }
+  }
   for (let i = 0; i < centers.length; i++) {
     scene.addPrimitive(new Hypersphere(centers[i], radii[i]), `body-${i}`);
   }
   scene.build();
-  return { scene, centers, radii };
+  return { scene, centers, radii, scene_kind: sceneKind };
 }
 
 /**
@@ -192,22 +224,73 @@ function dumpHits(scene, centers, radii, grid = 8) {
   return { origin: { x: origin.x, y: origin.y, z: origin.z, w: origin.w }, hits };
 }
 
-function projectHitSet(hits, method, projector) {
-  return hits.map((h) => {
+/**
+ * Project hits. For projector4d-sot, structure-lane policy rejects near pole
+ * (|d4+w| < POLE_EPS) — does not mutate Print SoT Projector4D.
+ * @returns {{ projected: object[], rejected: number, non_finite: number, accepted: number }}
+ */
+function projectHitSet(hits, method, projector, { rejectNearPole = false } = {}) {
+  const projected = [];
+  let rejected = 0;
+  let non_finite = 0;
+  for (const h of hits) {
     const p = h.position;
+    if (method === "projector4d-sot" && rejectNearPole) {
+      const denom = D4 + p.w;
+      if (!Number.isFinite(denom) || Math.abs(denom) < POLE_EPS) {
+        rejected += 1;
+        continue;
+      }
+    }
     const p3 =
       method === "projector4d-sot"
         ? projectProjector4D(p, projector)
         : projectDropW(p);
     const scale = method === "projector4d-sot" ? D4 / (D4 + p.w) : 1;
-    return {
+    const finite =
+      Number.isFinite(p3.x) &&
+      Number.isFinite(p3.y) &&
+      Number.isFinite(p3.z) &&
+      Number.isFinite(scale);
+    if (!finite) {
+      non_finite += 1;
+      if (rejectNearPole) {
+        rejected += 1;
+        continue;
+      }
+    }
+    projected.push({
       id: h.id,
       xyzw: [p.x, p.y, p.z, p.w],
       xyz: [p3.x, p3.y, p3.z],
       w_scale: scale,
       materialId: h.materialId,
-    };
-  });
+      finite,
+    });
+  }
+  return {
+    projected,
+    rejected,
+    non_finite,
+    accepted: projected.length,
+  };
+}
+
+/** Raw SoT projection without reject — for pole diagnostics only. */
+function projectRawProjector4D(p, projector) {
+  const p3 = projectProjector4D(p, projector);
+  const denom = D4 + p.w;
+  const scale = denom === 0 ? Infinity : D4 / denom;
+  return {
+    xyz: [p3.x, p3.y, p3.z],
+    w_scale: scale,
+    denom,
+    finite:
+      Number.isFinite(p3.x) &&
+      Number.isFinite(p3.y) &&
+      Number.isFinite(p3.z) &&
+      Number.isFinite(scale),
+  };
 }
 
 function metrics(projected) {
@@ -525,13 +608,16 @@ function comparisonTable(mSot, mDrop, hashes) {
   ];
 }
 
-async function runOnce(outDir, runTag) {
-  const { scene, centers, radii } = buildAnimeStructureScene();
-  const dump = dumpHits(scene, centers, radii, 8);
+async function runOnce(outDir, runTag, sceneKind = "sparse") {
+  const { scene, centers, radii } = buildAnimeStructureScene(sceneKind);
+  const grid = sceneKind === "rich" ? 12 : 8;
+  const dump = dumpHits(scene, centers, radii, grid);
   const projector = new Projector4D({ d4: D4, d3: 4, width: WIDTH, height: HEIGHT });
 
-  const projectedSot = projectHitSet(dump.hits, "projector4d-sot", projector);
-  const projectedDrop = projectHitSet(dump.hits, "drop_w", projector);
+  const sotRes = projectHitSet(dump.hits, "projector4d-sot", projector);
+  const dropRes = projectHitSet(dump.hits, "drop_w", projector);
+  const projectedSot = sotRes.projected;
+  const projectedDrop = dropRes.projected;
 
   const hitPath = join(outDir, "hits.json");
   const sotPts = join(outDir, "projected-projector4d-sot.json");
@@ -548,6 +634,7 @@ async function runOnce(outDir, runTag) {
     alpha_for_sot: ALPHA,
     seed: SEED,
     run_tag: runTag,
+    scene_kind: sceneKind,
     origin: dump.origin,
     hit_count: dump.hits.length,
     hits: dump.hits,
@@ -555,12 +642,12 @@ async function runOnce(outDir, runTag) {
   writeFileSync(hitPath, JSON.stringify(hitDoc, null, 2) + "\n");
 
   const sotDoc = {
-    provenance: provenance("projector4d-sot", { run_tag: runTag }),
+    provenance: provenance("projector4d-sot", { run_tag: runTag, scene_kind: sceneKind }),
     points: projectedSot,
     metrics: metrics(projectedSot),
   };
   const dropDoc = {
-    provenance: provenance("drop_w", { run_tag: runTag }),
+    provenance: provenance("drop_w", { run_tag: runTag, scene_kind: sceneKind }),
     points: projectedDrop,
     metrics: metrics(projectedDrop),
   };
@@ -579,7 +666,6 @@ async function runOnce(outDir, runTag) {
     plateMetaDrop = { ...writePlateFallback(projectedDrop, plateDrop), ...plateMetaDrop };
   }
 
-  // Provenance sidecars for plates
   writeFileSync(
     join(outDir, "plate-projector4d-sot.provenance.json"),
     JSON.stringify(
@@ -587,8 +673,9 @@ async function runOnce(outDir, runTag) {
         run_tag: runTag,
         artifact: "plate-projector4d-sot.png",
         plate_backend: plateMetaSot.used,
-        sha256: plateMetaSot.sha256 ?? null,
+        asset_sha256: plateMetaSot.sha256 ?? null,
         camera: plateMetaSot.camera ?? null,
+        scene_kind: sceneKind,
       }),
       null,
       2,
@@ -601,8 +688,9 @@ async function runOnce(outDir, runTag) {
         run_tag: runTag,
         artifact: "plate-drop_w.png",
         plate_backend: plateMetaDrop.used,
-        sha256: plateMetaDrop.sha256 ?? null,
+        asset_sha256: plateMetaDrop.sha256 ?? null,
         camera: plateMetaDrop.camera ?? null,
+        scene_kind: sceneKind,
       }),
       null,
       2,
@@ -611,6 +699,7 @@ async function runOnce(outDir, runTag) {
 
   return {
     hit_count: dump.hits.length,
+    scene_kind: sceneKind,
     sot_hash: sha256Json(projectedSot),
     drop_hash: sha256Json(projectedDrop),
     metrics_sot: sotDoc.metrics,
@@ -620,29 +709,157 @@ async function runOnce(outDir, runTag) {
   };
 }
 
+/**
+ * Pole stress: synthetic hits with w ≈ −d4.
+ * Documents Print SoT raw (may be non-finite) vs structure-lane reject wrapper.
+ */
+function runPoleStress(outDir) {
+  mkdirSync(outDir, { recursive: true });
+  const projector = new Projector4D({ d4: D4, d3: 4, width: WIDTH, height: HEIGHT });
+  const offsets = [
+    -1.0, -0.5, -0.2, -POLE_EPS * 2, -POLE_EPS, -POLE_EPS / 2, 0,
+    POLE_EPS / 2, POLE_EPS, POLE_EPS * 2, 0.2, 0.5, 1.0,
+  ];
+  /** @type {Array<Record<string, unknown>>} */
+  const rows = [];
+  let raw_non_finite = 0;
+  let lane_rejected = 0;
+  let drop_ok = 0;
+
+  for (let i = 0; i < offsets.length; i++) {
+    const eps = offsets[i];
+    const w = -D4 + eps;
+    const p = { x: 1, y: 0.5, z: -0.25, w };
+    const raw = projectRawProjector4D(p, projector);
+    if (!raw.finite) raw_non_finite += 1;
+    const hit = { id: i, position: p, materialId: null };
+    const sotLane = projectHitSet([hit], "projector4d-sot", projector, {
+      rejectNearPole: true,
+    });
+    const dropLane = projectHitSet([hit], "drop_w", projector);
+    if (sotLane.rejected > 0) lane_rejected += 1;
+    if (dropLane.accepted > 0) drop_ok += 1;
+    rows.push({
+      w,
+      denom_d4_plus_w: raw.denom,
+      abs_denom: Math.abs(raw.denom),
+      below_pole_eps: Math.abs(raw.denom) < POLE_EPS,
+      projector4d_raw_finite: raw.finite,
+      projector4d_raw_xyz: raw.xyz,
+      projector4d_raw_scale: raw.w_scale,
+      structure_lane_reject: sotLane.rejected > 0,
+      drop_w_xyz: dropLane.projected[0]?.xyz ?? null,
+    });
+  }
+
+  const report = {
+    provenance: {
+      schema: PROVENANCE_SCHEMA,
+      experiment: "pole-stress",
+      lane: "anime-structure",
+      print_sot_touched: false,
+      digital_printer_touched: false,
+      d4: D4,
+      pole_eps: POLE_EPS,
+      pole_at_w: -D4,
+      policy:
+        "Structure-lane compare rejects |d4+w| < pole_eps. Print SoT Projector4D unchanged (may yield non-finite).",
+    },
+    evaluation_stance: EVALUATION_STANCE,
+    counts: {
+      samples: rows.length,
+      raw_non_finite,
+      structure_lane_rejected: lane_rejected,
+      drop_w_always_finite_accepted: drop_ok,
+    },
+    rows,
+  };
+  writeFileSync(join(outDir, "pole-stress.json"), JSON.stringify(report, null, 2) + "\n");
+
+  const readme = [
+    "# Pole stress — w ≈ −d₄",
+    "",
+    "| Field | Value |",
+    "| --- | --- |",
+    "| Status | **partial** evidence |",
+    "| d4 | " + D4 + " |",
+    "| Pole | w = −d4 = " + -D4 + " |",
+    "| Structure-lane ε | " + POLE_EPS + " (|d4+w| < ε ⇒ reject) |",
+    "| Print SoT touched | false |",
+    "",
+    "## Policy",
+    "",
+    "- **Print SoT `Projector4D`:** no reject — raw scale may be non-finite near the pole.",
+    "- **Structure-lane wrapper:** reject (skip) when `|d4+w| < ε` (ε = 0.05·d4).",
+    "- **drop_w:** always finite (identity on xyz).",
+    "- No silent clamp for storytelling honesty.",
+    "",
+    "## Counts",
+    "",
+    "- samples: " + rows.length,
+    "- Print SoT raw non-finite: " + raw_non_finite,
+    "- Structure-lane rejected: " + lane_rejected,
+    "- drop_w accepted: " + drop_ok,
+    "",
+    "## Evaluation stance",
+    "",
+    ...EVALUATION_STANCE.map((s) => "- " + s),
+    "",
+    "See `pole-stress.json` for per-sample rows.",
+    "",
+  ].join("\n");
+  writeFileSync(join(outDir, "README.md"), readme);
+  return report;
+}
+
 async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   if (args.help) {
     process.stdout.write(
       "rt4d-project-compare.mjs — RT4D hits → Projector4D vs drop_w → Engine3D plate\n" +
-        "  --out-dir <dir>   default: <repo>/tmp/rt4d-project-compare\n",
+        "  --out-dir <dir>   default: <repo>/tmp/rt4d-project-compare\n" +
+        "  --pole-stress     near-pole reject/finite diagnostics (subdir pole-stress/)\n" +
+        "  --scene rich      denser hypersphere scaffold (still not full ink-cel)\n",
     );
     process.exit(0);
   }
 
-  const outDir =
+  const baseOut =
     typeof args["out-dir"] === "string"
       ? resolve(String(args["out-dir"]))
       : resolve(REPO, "tmp", "rt4d-project-compare");
+  mkdirSync(baseOut, { recursive: true });
+
+  if (args["pole-stress"]) {
+    const poleDir = join(baseOut, "pole-stress");
+    const report = runPoleStress(poleDir);
+    process.stdout.write(
+      JSON.stringify(
+        {
+          ok: true,
+          experiment: "pole-stress",
+          outDir: poleDir,
+          counts: report.counts,
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+    return;
+  }
+
+  const sceneKind = args.scene === "rich" ? "rich" : "sparse";
+  const outDir =
+    sceneKind === "rich" ? join(baseOut, "scene-rich") : baseOut;
   mkdirSync(outDir, { recursive: true });
 
-  const runA = await runOnce(outDir, "A");
-  // Dual-run for replay determinism (point-set only; plates may share paths).
-  const builtB = buildAnimeStructureScene();
-  const dumpB = dumpHits(builtB.scene, builtB.centers, builtB.radii, 8);
+  const runA = await runOnce(outDir, "A", sceneKind);
+  const builtB = buildAnimeStructureScene(sceneKind);
+  const grid = sceneKind === "rich" ? 12 : 8;
+  const dumpB = dumpHits(builtB.scene, builtB.centers, builtB.radii, grid);
   const projector = new Projector4D({ d4: D4, d3: 4, width: WIDTH, height: HEIGHT });
-  const sotB = projectHitSet(dumpB.hits, "projector4d-sot", projector);
-  const dropB = projectHitSet(dumpB.hits, "drop_w", projector);
+  const sotB = projectHitSet(dumpB.hits, "projector4d-sot", projector).projected;
+  const dropB = projectHitSet(dumpB.hits, "drop_w", projector).projected;
   const hashes = {
     sot_a: runA.sot_hash,
     sot_b: sha256Json(sotB),
@@ -657,8 +874,12 @@ async function main(argv = process.argv.slice(2)) {
       lane: "anime-structure",
       print_sot_touched: false,
       digital_printer_touched: false,
+      scene_kind: sceneKind,
       note: "Compare evidence for two reference-model implementations on one hit set.",
+      contract:
+        "docs/4d-engine/projection/ANIME_STRUCTURE_PLATE_PROJECTOR_CONTRACT.v1.md",
     },
+    evaluation_stance: EVALUATION_STANCE,
     camera_shared: true,
     scene_shared: true,
     hit_count: runA.hit_count,
@@ -667,6 +888,8 @@ async function main(argv = process.argv.slice(2)) {
     metrics: { projector4d_sot: runA.metrics_sot, drop_w: runA.metrics_drop },
     replay_hashes: hashes,
     criteria: table,
+    default_promotion:
+      "Projector4D as anime-structure default remains **declared** until richer ink/cel evidence.",
     artifacts: [
       "hits.json",
       "projected-projector4d-sot.json",
@@ -687,6 +910,7 @@ async function main(argv = process.argv.slice(2)) {
     "| Field | Value |",
     "| --- | --- |",
     "| Status | **partial** evidence |",
+    "| Scene | `" + sceneKind + "` |",
     "| Print SoT | untouched |",
     "| Digital Printer | untouched |",
     "| Hit count | " + runA.hit_count + " |",
@@ -696,6 +920,11 @@ async function main(argv = process.argv.slice(2)) {
       runA.plate_drop.used +
       "` |",
     "| Shared camera + scene | yes |",
+    "| Contract | `docs/4d-engine/projection/ANIME_STRUCTURE_PLATE_PROJECTOR_CONTRACT.v1.md` |",
+    "",
+    "## Evaluation stance (binding)",
+    "",
+    ...EVALUATION_STANCE.map((s) => "- " + s),
     "",
     "## Provenance example",
     "",
@@ -718,6 +947,9 @@ async function main(argv = process.argv.slice(2)) {
     "- `projector4d-sot`: scale d4/(d4+w) with d4=" + D4 + " (α=" + ALPHA + ").",
     "- `drop_w`: identity on xyz — w discarded.",
     "- Soft-raster shading is 3D only (not full 4D transport).",
+    sceneKind === "rich"
+      ? "- Scene `rich`: denser scaffold for comprehension — **not** full ink-cel pipeline (**skeleton/partial**)."
+      : "- Scene `sparse`: baseline arc; use `--scene rich` for denser scaffold.",
     "",
     "## Replay",
     "",
@@ -738,10 +970,11 @@ async function main(argv = process.argv.slice(2)) {
     "",
     "## Gaps",
     "",
-    "- Sparse ray dump ≠ dense silhouette / ink-cel pipeline.",
+    "- Sparse/rich point dump ≠ full ink-cel production pipeline.",
     "- Viewer comprehension is qualitative (operator read), not a psychometric score.",
     "- If Engine3D dist missing, plates use in-script fallback soft-raster (same camera).",
     "- Print SoT / observation aperture / Digital Printer not exercised.",
+    "- Default Projector4D promotion for anime-structure remains **declared**.",
     "",
   ].join("\n");
   writeFileSync(join(outDir, "README.md"), readme);
@@ -751,6 +984,7 @@ async function main(argv = process.argv.slice(2)) {
       {
         ok: true,
         outDir,
+        scene_kind: sceneKind,
         hit_count: runA.hit_count,
         replay_pass:
           hashes.sot_a === hashes.sot_b && hashes.drop_a === hashes.drop_b,
