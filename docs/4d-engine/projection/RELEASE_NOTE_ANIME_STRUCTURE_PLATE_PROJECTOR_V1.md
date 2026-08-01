@@ -5,7 +5,7 @@
 | Title | Anime-Structure Plate Projector (v1) — 4D Story Projection Lane |
 | Status | Default promotion **declared** (not yet promoted) |
 | Branch | `feat/anime-structure-plate-projector` |
-| Commit tip | `a8f6e57396e79f228e57c12000f8b155dcbb550c` (promotion package land; supersedes older tip `9cd70ef`) |
+| Commit tip | `8f2012b` (#96 merge on `main`); land `fbc50a2` / parallel `a8f6e57` (supersedes older tip `9cd70ef` / merged #95) |
 | Related | [`docs/releases/ANIME_STRUCTURE_PROJECTOR_LANE_ANNOUNCEMENT.md`](../../releases/ANIME_STRUCTURE_PROJECTOR_LANE_ANNOUNCEMENT.md) |
 
 ## Summary
