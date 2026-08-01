@@ -9,9 +9,14 @@ Object layout (under ``GENBLAZE_STORAGE_PREFIX``, default ``genblaze-media``)::
     {prefix}/demo-cache/{shot_id}/f{frame:04d}/manifest.json
 
 Source labels (mandatory on API responses):
-  - ``b2-cache``       — served from pre-rendered B2 object
-  - ``live-generate``  — produced by a live provider call this request
-  - ``structure-only`` — cache miss + beauty painters failed / disabled
+  - ``b2-cache``            — served from pre-rendered B2 demo-cache frame
+  - ``b2-structure-cache``  — served from B2 ``{prefix}/pre-render/structure.png``
+  - ``live-generate``       — produced by a live provider call this request
+  - ``structure-only``      — cache miss + beauty painters failed / disabled
+
+Dual-path (both under ``GENBLAZE_STORAGE_PREFIX``):
+  - ``{prefix}/demo-cache/{shot}/fNNNN/`` — beauty/demo shot frames
+  - ``{prefix}/pre-render/`` — structure still + schedule/manifest (failover)
 """
 
 from __future__ import annotations
@@ -28,10 +33,18 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 SOURCE_B2_CACHE = "b2-cache"
+SOURCE_B2_STRUCTURE = "b2-structure-cache"
 SOURCE_LIVE_GENERATE = "live-generate"
 SOURCE_STRUCTURE_ONLY = "structure-only"
 
-VALID_SOURCES = frozenset({SOURCE_B2_CACHE, SOURCE_LIVE_GENERATE, SOURCE_STRUCTURE_ONLY})
+VALID_SOURCES = frozenset(
+    {
+        SOURCE_B2_CACHE,
+        SOURCE_B2_STRUCTURE,
+        SOURCE_LIVE_GENERATE,
+        SOURCE_STRUCTURE_ONLY,
+    }
+)
 
 _SHOT_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$")
 
@@ -161,7 +174,12 @@ def build_frame_provenance(
 def claim_label(source: str) -> str:
     """Human-readable honesty string for UI / Devpost."""
     if source == SOURCE_B2_CACHE:
-        return "Cached beauty from B2 (pre-render) — not a live generate"
+        return "Cached beauty from B2 demo-cache — not a live generate"
+    if source == SOURCE_B2_STRUCTURE:
+        return (
+            "Cached structure still from B2 pre-render/ — not live beauty; "
+            "painters failed or skipped"
+        )
     if source == SOURCE_LIVE_GENERATE:
         return "Live generate this request"
     if source == SOURCE_STRUCTURE_ONLY:
