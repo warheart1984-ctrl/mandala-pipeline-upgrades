@@ -852,8 +852,11 @@ def health(request: Request) -> dict:
         "lemonade_note": (
             "Set GENBLAZE_IMAGE_BACKEND=lemonade to generate concept stills via "
             "local Lemonade Server (default SD-Turbo on localhost:13305). "
-            "No NVIDIA API key required. First run may pull the model."
+            "No NVIDIA API key required. First run may pull the model. "
+            "AMD hosts without sd-server: GENBLAZE_SKIP_LOCAL_SD=1 and pre-render "
+            "beauty on a GMI/cloud host (docs/ops/HACKATHON_DEMO_CACHE_B2.md)."
         ),
+        "skip_local_sd": bool(getattr(settings, "skip_local_sd", False)),
         "rt4d_note": (
             "Deterministic procedural 4D path-traced stills via renderer-core. "
             "NOT text-to-image / not diffusion. Prompt selects a scene archetype; "

@@ -100,6 +100,55 @@ python -m app.pre_render \
 
 `--allow-placeholder` writes tiny PNGs for layout tests only (not judge beauty).
 
+### AMD host / skip local SD (runbook)
+
+This workstation may lack Lemonade `sd-server` / ROCm image gen. Do **not** burn demo time waiting on local SD.
+
+| Host role | What to run |
+|-----------|-------------|
+| **AMD / local (no SD)** | Set `GENBLAZE_SKIP_LOCAL_SD=1`. Serve demo with `GENBLAZE_DEMO_CACHE=1` + B2 credentials. Optional: `GENBLAZE_IMAGE_BACKEND=rt4d` for structure stills. |
+| **Cloud / GMI-credit machine** | Run `python -m app.pre_render … --upload-b2` (install `[gmi]` / `requirements-gmi.txt`). Upload once; AMD host only reads cache. |
+
+```bash
+# On the AMD machine — no local SD, no live GMI spend required for cache serve:
+export GENBLAZE_SKIP_LOCAL_SD=1
+export GENBLAZE_DEMO_CACHE=1
+export GENBLAZE_DEMO_CACHE_SHOT=mandala-open
+# B2_* from .env — never commit keys
+npm run genblaze:media
+```
+
+```bash
+# On a GMI-capable host — pre-render then upload (credits spend here):
+cd mrs/apps/genblaze-media
+pip install -r requirements-gmi.txt   # or: pip install -e ".[gmi]"
+export GMI_API_KEY=…                  # dashboard / console only
+python -m app.pre_render --plan plans/demo-shot-plan.example.json \
+  --upload-b2 --out-dir ../../../tmp/genblaze-demo-cache
+```
+
+CLI flag (documents intent; this CLI already uses GMI, not Lemonade):
+
+```bash
+python -m app.pre_render --plan plans/demo-shot-plan.example.json \
+  --schedule-hint-only --skip-local-sd
+```
+
+### CI / local verify without keys
+
+No secrets in GitHub Actions. Green path:
+
+```bash
+cd mrs/apps/genblaze-media
+export GENBLAZE_DRY_RUN=1 GENBLAZE_SKIP_LOCAL_SD=1
+pip install -r requirements.txt   # do not require requirements-gmi.txt
+python -m pytest tests/test_demo_cache.py -q
+python -m app.pre_render --plan plans/demo-shot-plan.example.json --schedule-hint-only
+# or: npm run genblaze:pre-render
+```
+
+Live GMI/fal/NIM gens are **out of CI** (credits + keys are operator/Render dashboard only).
+
 ## How to run live demo against cache
 
 ```bash
@@ -113,11 +162,20 @@ curl -s -X POST http://127.0.0.1:8787/api/generate \
 # Expect source: "b2-cache" when object exists
 ```
 
+## Docker SoT
+
+| Image | Context | Notes |
+|-------|---------|-------|
+| **Repo-root `Dockerfile`** | Repo root | **Render SoT** (`render.yaml`). Bundles RT4D + Engine3D. Installs `requirements-docker.txt` then optional `requirements-gmi.txt` (non-fatal if package missing). |
+| `mrs/apps/genblaze-media/Dockerfile` | App dir | NVIDIA-only; no RT4D. Same optional GMI install. |
+
+`GMI_API_KEY` is **never** baked into the image — set on the Render dashboard (`render.yaml` lists `sync: false`).
+
 ## Anti-overclaim
 
 - Cached frames are **not** live anime generate.
 - GMI SDK path is **partial** until `genblaze-gmicloud` is installed + credits used.
-- AMD host may lack local SD — pre-render on a cloud/credit machine.
+- AMD host: set `GENBLAZE_SKIP_LOCAL_SD=1`; pre-render on a cloud/credit machine.
 - Do not claim CI billed live GMI/fal/NIM in default unit tests.
 
 ## Related

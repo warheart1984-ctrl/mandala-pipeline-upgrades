@@ -18,7 +18,15 @@
 | Demo cache B2 I/O | **partial** (needs credentials) |
 | hfspace fallback | **partial** (existing polish path) |
 
-## Gaps
+## Gaps (follow-up slice)
 
-- Docker image may lack `genblaze-gmicloud` until optional install
-- No live credit spend in CI
+| Gap | Status after follow-up |
+|-----|------------------------|
+| Docker `genblaze-gmicloud` | **Addressed** — `requirements-gmi.txt` + optional pip in repo-root + app Dockerfiles (non-fatal) |
+| CI without keys | **Addressed** — `genblaze-demo-cache` job in `ci.yml` + Mandala Agent CI: `test_demo_cache.py` + `--schedule-hint-only` under `GENBLAZE_DRY_RUN=1` |
+| AMD skip local SD | **Addressed** — `GENBLAZE_SKIP_LOCAL_SD` / `--skip-local-sd` + ops runbook |
+| Live GMI credits | **Still blocked** — operator/Render dashboard only; not solvable in CI |
+
+## Intent (follow-up)
+
+Wire optional GMI SDK into Render SoT image, keep CI green without secrets, clarify AMD pre-render host split.

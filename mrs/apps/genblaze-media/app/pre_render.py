@@ -188,6 +188,14 @@ def run_pre_render(args: argparse.Namespace) -> int:
         format="%(asctime)s %(levelname)s %(message)s",
     )
     settings = get_settings()
+    skip_local = bool(getattr(args, "skip_local_sd", False)) or bool(
+        getattr(settings, "skip_local_sd", False)
+    )
+    if skip_local:
+        logger.info(
+            "GENBLAZE_SKIP_LOCAL_SD / --skip-local-sd: local Lemonade/SD skipped; "
+            "this CLI uses GMI (or --allow-placeholder). Prefer a GMI-credit host."
+        )
     out_root = Path(args.out_dir).resolve()
     out_root.mkdir(parents=True, exist_ok=True)
 
@@ -231,7 +239,22 @@ def run_pre_render(args: argparse.Namespace) -> int:
     hint = schedule_hint(len(jobs), window_hours=float(args.window_hours))
     sleep_s = float(args.sleep_seconds) if args.sleep_seconds is not None else hint["sleep_seconds"]
     if args.schedule_hint_only:
-        print(json.dumps({"schedule": hint, "jobs": len(jobs), "cascade": cascade_health(settings)}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "schedule": hint,
+                    "jobs": len(jobs),
+                    "cascade": cascade_health(settings),
+                    "skip_local_sd": skip_local,
+                    "gmi": gmi_availability(settings),
+                    "note": (
+                        "No live GMI spend. Unit/CI path: pytest tests/test_demo_cache.py "
+                        "+ this --schedule-hint-only flag. Keys not required."
+                    ),
+                },
+                indent=2,
+            )
+        )
         return 0
 
     logger.info(
@@ -309,6 +332,14 @@ def build_parser() -> argparse.ArgumentParser:
         default="auto",
         choices=("auto", "gmi"),
         help="Image provider (GMI via GenBlaze SDK)",
+    )
+    p.add_argument(
+        "--skip-local-sd",
+        action="store_true",
+        help=(
+            "Declare AMD/local-SD skip (same as GENBLAZE_SKIP_LOCAL_SD=1). "
+            "This CLI never calls Lemonade; flag documents operator intent."
+        ),
     )
     p.add_argument("--anime-world-profile-id", default=None)
     return p

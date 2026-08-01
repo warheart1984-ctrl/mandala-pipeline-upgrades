@@ -57,11 +57,18 @@ See [`HACKATHON_DEMO_CACHE_B2.md`](./HACKATHON_DEMO_CACHE_B2.md).
 3. Confirm `/health`: `b2_configured`, `demo_cache`, `provider_cascade`, `gmi`.
 4. Smoke: `POST /api/generate` with `demo_cache=true` after frames exist in B2.
 
+## Docker / deps
+
+- **SoT image:** repo-root `Dockerfile` (see root `render.yaml`).
+- Optional SDK: `mrs/apps/genblaze-media/requirements-gmi.txt` (`genblaze-gmicloud>=0.3.2,<0.4`) installed at build with non-fatal fallback.
+- Local/dev: `pip install -r requirements-gmi.txt` or `pip install -e ".[gmi]"`.
+
 ## Gaps (honest)
 
 | Gap | Status |
 |-----|--------|
-| GMI credits / key on Render | Operator must set; not in CI |
-| `genblaze-gmicloud` in Docker image | Add optional install if image lacks it |
+| GMI credits / key on Render | **Blocked on operator** — set `GMI_API_KEY` in dashboard; never in CI |
+| `genblaze-gmicloud` in Docker image | **Addressed** — optional install in both Dockerfiles; build continues if package missing |
 | Live NIM 504s | Known; prefer RT4D + demo cache for demos |
 | B2 Class C | Keep `B2_PROBE_ON_HEALTH=0` on free tier |
+| AMD local SD | Use `GENBLAZE_SKIP_LOCAL_SD=1`; pre-render off-box |

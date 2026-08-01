@@ -170,3 +170,18 @@ class TestPreRenderHelpers:
         h = schedule_hint(24, window_hours=24.0)
         assert h["frames"] == 24
         assert abs(h["sleep_seconds"] - 3600.0) < 0.1
+
+
+class TestSkipLocalSd:
+    def test_lemonade_availability_skipped(self, monkeypatch):
+        monkeypatch.setenv("GENBLAZE_SKIP_LOCAL_SD", "1")
+        monkeypatch.setenv("GENBLAZE_DRY_RUN", "1")
+        from app.config import get_settings
+        from app.lemonade_provider import lemonade_availability
+
+        s = get_settings()
+        assert s.skip_local_sd is True
+        avail = lemonade_availability(s)
+        assert avail["available"] is False
+        assert avail.get("skipped") is True
+        assert "SKIP_LOCAL_SD" in (avail.get("skip_reason") or "")

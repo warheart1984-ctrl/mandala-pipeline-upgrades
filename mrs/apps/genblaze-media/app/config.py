@@ -183,6 +183,9 @@ class Settings:
     lemonade_steps: int = 4
     lemonade_timeout_seconds: float = 600.0
     lemonade_api_key: str | None = None
+    # GENBLAZE_SKIP_LOCAL_SD=1 — skip Lemonade/local SD (AMD hosts without sd-server).
+    # Pre-render beauty on a cloud-capable / GMI-credit host instead.
+    skip_local_sd: bool = False
     rt4d_node_path: str = "node"
     rt4d_script_path: str | None = None
     scene_spec_script_path: str | None = None
@@ -468,6 +471,12 @@ def get_settings() -> Settings:
         lemonade_timeout = 600.0
     lemonade_timeout = max(30.0, min(3600.0, lemonade_timeout))
     lemonade_api_key = (os.getenv("LEMONADE_API_KEY") or "").strip() or None
+    skip_local_sd = (os.getenv("GENBLAZE_SKIP_LOCAL_SD") or "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
     # Default OFF: explicit opt-in so a blank/504 NVIDIA still falls back to the
     # deterministic RT4D render instead of surfacing the failure.
     image_fallback_to_rt4d = (
@@ -768,6 +777,7 @@ def get_settings() -> Settings:
         lemonade_steps=lemonade_steps,
         lemonade_timeout_seconds=lemonade_timeout,
         lemonade_api_key=lemonade_api_key,
+        skip_local_sd=skip_local_sd,
         rt4d_node_path=rt4d_node_path,
         rt4d_script_path=rt4d_script_override,
         scene_spec_script_path=scene_spec_script_override,
