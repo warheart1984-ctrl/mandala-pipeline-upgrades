@@ -104,12 +104,22 @@ from app.image_ingest import (
     list_ingested,
     resolve_stored_file,
 )
+from app.demo_cache import (
+    SOURCE_B2_CACHE,
+    SOURCE_LIVE_GENERATE,
+    claim_label,
+    demo_cache_enabled,
+    fetch_frame_from_b2,
+    structure_only_response,
+)
+from app.gmi_provider import gmi_availability
 from app.image_polish import (
     PolishError,
     PolishNotConfiguredError,
     polish_availability,
     polish_image,
 )
+from app.provider_cascade import cascade_health
 from app.image_to_scene import (
     DISCLAIMER as IMAGE_TO_SCENE_DISCLAIMER,
     extract_source_scene,
@@ -415,6 +425,25 @@ class GenerateRequest(BaseModel):
             "status partial) or 'default'. Overrides GENBLAZE_STYLE when set. "
             "Does not claim photoreal; Cycles external-pbr remains optional."
         ),
+    )
+    demo_cache: bool | None = Field(
+        default=None,
+        description=(
+            "When true (or GENBLAZE_DEMO_CACHE=1), serve pre-rendered B2 frames "
+            "labeled source=b2-cache. Still exercises provider health/failover "
+            "disclosure. Never claims live-generate on cache hits."
+        ),
+    )
+    shot_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description="Demo-cache shot id (default GENBLAZE_DEMO_CACHE_SHOT).",
+    )
+    frame: int | None = Field(
+        default=None,
+        ge=0,
+        le=9999,
+        description="Demo-cache frame index (default GENBLAZE_DEMO_CACHE_FRAME).",
     )
 
 
@@ -858,6 +887,20 @@ def health(request: Request) -> dict:
             "diffusion edit. Not geometric reconstruction. Set "
             "GENBLAZE_POLISH_ENABLED=1 and configure FAL_KEY."
         ),
+        "gmi": gmi_availability(settings),
+        "provider_cascade": cascade_health(settings),
+        "demo_cache": {
+            "enabled": settings.demo_cache_enabled,
+            "shot_id": settings.demo_cache_shot_id,
+            "default_frame": settings.demo_cache_default_frame,
+            "b2_prefix": f"{settings.storage_prefix}/demo-cache/",
+            "status": "partial",
+            "note": (
+                "GENBLAZE_DEMO_CACHE=1 or body demo_cache=true serves "
+                "pre-rendered B2 frames labeled source=b2-cache while "
+                "provider_cascade still discloses failover readiness."
+            ),
+        },
         "engine3d_still": engine3d_still_availability(settings),
         "engine3d_still_note": (
             "POST /api/engine3d-still renders Engine3D triangle structure "
@@ -1088,6 +1131,71 @@ def _run_generate_common(
         style_steered,
         len(prompt_for_gen or ""),
     )
+
+    # ── Demo cache (pre-render → B2) — honest source labeling ──────────
+    use_demo_cache = (not video) and demo_cache_enabled(
+        settings, getattr(body, "demo_cache", None)
+    )
+    cascade_probe = cascade_health(settings)
+    if use_demo_cache:
+        shot_id = (
+            (getattr(body, "shot_id", None) or settings.demo_cache_shot_id or "").strip()
+        )
+        frame = (
+            int(body.frame)
+            if getattr(body, "frame", None) is not None
+            else int(settings.demo_cache_default_frame)
+        )
+        if not shot_id:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "demo_cache requires shot_id "
+                    "(body.shot_id or GENBLAZE_DEMO_CACHE_SHOT)"
+                ),
+            )
+        cached = fetch_frame_from_b2(settings, shot_id, frame)
+        if cached is not None:
+            image_bytes, prov = cached
+            run_id = f"cache-{shot_id}-f{frame:04d}"
+            put_preview(APP_DIR, run_id, image_bytes)
+            elapsed_ms = int((time.monotonic() - started) * 1000)
+            return {
+                "status": "ok",
+                "run_id": run_id,
+                "prompt": body.prompt,
+                "model": prov.model,
+                "provider": prov.provider or "b2-demo-cache",
+                "source": SOURCE_B2_CACHE,
+                "source_label": claim_label(SOURCE_B2_CACHE),
+                "shot_id": shot_id,
+                "frame": frame,
+                "asset_key": prov.asset_key,
+                "manifest_key": prov.manifest_key,
+                "asset_sha256": prov.asset_sha256,
+                "preview_url": f"/api/preview/{run_id}",
+                "created_at": prov.created_at,
+                "dry_run": False,
+                "detail": prov.detail,
+                "provenance": prov.to_dict(),
+                "provider_cascade": cascade_probe,
+                "style": style,
+                "style_steered": style_steered,
+                "modality": "image",
+                "elapsed_ms": elapsed_ms,
+                "demo_cache": True,
+                "note": (
+                    "Cached beauty from B2. Provider cascade below is a health "
+                    "probe only — this response is NOT live-generate."
+                ),
+            }
+        # Cache miss: try live generate; on failure → structure-only (fail-closed).
+        logger.info(
+            "demo_cache miss · shot=%s frame=%s · attempting live-generate",
+            shot_id,
+            frame,
+        )
+
     # ── Constitutional governance via Sovereign X Kernel ──────────────
     global _last_kernel_result
     try:
@@ -1108,13 +1216,53 @@ def _run_generate_common(
         else:
             result = _dispatch_image(settings, prompt_for_gen, quality=body.quality)
     except ValueError as exc:
+        if use_demo_cache:
+            return {
+                **structure_only_response(
+                    shot_id=getattr(body, "shot_id", None) or settings.demo_cache_shot_id,
+                    frame=getattr(body, "frame", None),
+                    detail=f"cache miss and live generate rejected: {exc}",
+                ),
+                "provider_cascade": cascade_probe,
+                "demo_cache": True,
+            }
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except GenerationQualityError as exc:
+        if use_demo_cache:
+            return {
+                **structure_only_response(
+                    shot_id=getattr(body, "shot_id", None) or settings.demo_cache_shot_id,
+                    frame=getattr(body, "frame", None),
+                    detail=f"cache miss and quality fail: {exc}",
+                ),
+                "provider_cascade": cascade_probe,
+                "demo_cache": True,
+            }
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:
+        if use_demo_cache:
+            return {
+                **structure_only_response(
+                    shot_id=getattr(body, "shot_id", None) or settings.demo_cache_shot_id,
+                    frame=getattr(body, "frame", None),
+                    detail=f"cache miss and painters unavailable: {exc}",
+                ),
+                "provider_cascade": cascade_probe,
+                "demo_cache": True,
+            }
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         detail = _format_generation_failure(exc)
+        if use_demo_cache:
+            return {
+                **structure_only_response(
+                    shot_id=getattr(body, "shot_id", None) or settings.demo_cache_shot_id,
+                    frame=getattr(body, "frame", None),
+                    detail=f"cache miss and live generate failed: {detail}",
+                ),
+                "provider_cascade": cascade_probe,
+                "demo_cache": True,
+            }
         raise HTTPException(status_code=502, detail=f"generation failed: {detail}") from exc
 
     if hasattr(result, "style"):
@@ -1132,6 +1280,17 @@ def _run_generate_common(
     entry["style"] = style
     entry["style_steered"] = style_steered
     entry["modality"] = "video" if video else entry.get("modality") or "image"
+    if not video:
+        entry["source"] = SOURCE_LIVE_GENERATE
+        entry["source_label"] = claim_label(SOURCE_LIVE_GENERATE)
+        entry["provider_cascade"] = cascade_probe
+        if use_demo_cache:
+            entry["demo_cache"] = True
+            entry["demo_cache_miss"] = True
+            entry["note"] = (
+                "demo_cache miss → live-generate this request "
+                "(not b2-cache)."
+            )
     # Attach constitutional governance metadata from the kernel.
     if _last_kernel_result:
         entry["governance"] = {

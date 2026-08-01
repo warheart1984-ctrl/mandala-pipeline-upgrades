@@ -2,7 +2,7 @@
 
 Stages:
   1) Structure plate (Engine3D soft-raster / provided PNG / continuity reuse)
-  2) Anime painter (fal | lemonade probe | local cel-proxy) or structure-only
+   2) Anime painter (fal | hfspace | lemonade probe | local cel-proxy) or structure-only
   3) Continuity + provenance report
 
 Drive-G-1:
@@ -61,6 +61,7 @@ BACKEND_CEL_PROXY = "cel-proxy"
 BACKEND_FAL = "fal"
 BACKEND_LEMONADE = "lemonade"
 BACKEND_NVIDIA = "nvidia"
+BACKEND_HFSPACE = "hfspace"
 
 
 def _repo_root() -> Path:
@@ -508,8 +509,101 @@ def probe_nvidia(live: bool | None = None) -> PainterProbe:
     )
 
 
+def probe_hfspace(live: bool | None = None) -> PainterProbe:
+    """Three-state probe for the keyless HF Space img2img lane.
+
+    ``configured`` is keyless (true when the Space URL is set), but fail-closes
+    to ``configured=False`` when ``GENBLAZE_POLISH_ENABLED`` is off (policy gate,
+    same as :func:`probe_fal`). Live mode checks that the Space responds; it does
+    **not** burn ZeroGPU quota on a full infer in the probe (detail notes this).
+    """
+    live = _env_live() if live is None else live
+    url = (os.getenv("GENBLAZE_HFSPACE_URL") or "").strip().rstrip("/") or None
+    if not url:
+        return PainterProbe(
+            backend=BACKEND_HFSPACE,
+            configured=False,
+            reachable=None,
+            operational=None,
+            verified=False,
+            last_verified=None,
+            detail="missing GENBLAZE_HFSPACE_URL",
+            env_vars_required=["GENBLAZE_HFSPACE_URL"],
+        )
+    if not _polish_enabled():
+        return PainterProbe(
+            backend=BACKEND_HFSPACE,
+            configured=False,
+            reachable=None,
+            operational=None,
+            verified=False,
+            last_verified=None,
+            detail=(
+                "GENBLAZE_POLISH_ENABLED not enabled (fail closed); "
+                "hfspace is keyless but policy gate off"
+            ),
+            env_vars_required=["GENBLAZE_HFSPACE_URL"],
+        )
+    if not live:
+        return PainterProbe(
+            backend=BACKEND_HFSPACE,
+            configured=True,
+            reachable=None,
+            operational=None,
+            verified=False,
+            last_verified=None,
+            detail="configured (live probe disabled via GENBLAZE_PROBE_LIVE=0)",
+            env_vars_required=["GENBLAZE_HFSPACE_URL"],
+        )
+    try:
+        import httpx
+
+        with httpx.Client(timeout=20.0) as client:
+            resp = client.get(f"{url}/")
+    except Exception as exc:  # noqa: BLE001
+        return PainterProbe(
+            backend=BACKEND_HFSPACE,
+            configured=True,
+            reachable=False,
+            operational=False,
+            verified=True,
+            last_verified=_utc_now(),
+            detail=f"hfspace: unreachable ({type(exc).__name__}: {exc})",
+            env_vars_required=["GENBLAZE_HFSPACE_URL"],
+        )
+    if resp.status_code == 200:
+        return PainterProbe(
+            backend=BACKEND_HFSPACE,
+            configured=True,
+            reachable=True,
+            operational=True,
+            verified=True,
+            last_verified=_utc_now(),
+            detail=(
+                "hfspace: space reachable (HTTP 200); infer not exercised by probe "
+                "(ZeroGPU cold-start/quota)"
+            ),
+            env_vars_required=["GENBLAZE_HFSPACE_URL"],
+        )
+    return PainterProbe(
+        backend=BACKEND_HFSPACE,
+        configured=True,
+        reachable=True,
+        operational=False,
+        verified=True,
+        last_verified=_utc_now(),
+        detail=f"hfspace: space responded (HTTP {resp.status_code})",
+        env_vars_required=["GENBLAZE_HFSPACE_URL"],
+    )
+
+
 def probe_painters(live: bool | None = None) -> list[PainterProbe]:
-    return [probe_fal(live), probe_lemonade(live), probe_nvidia(live)]
+    return [
+        probe_fal(live),
+        probe_hfspace(live),
+        probe_lemonade(live),
+        probe_nvidia(live),
+    ]
 
 
 def build_assertion(
@@ -813,6 +907,22 @@ def try_lemonade_t2i(prompt: str) -> tuple[bytes | None, str]:
         return None, f"lemonade: {type(exc).__name__}: {exc}"
 
 
+def try_hfspace_polish(structure_png: bytes, prompt: str) -> tuple[bytes | None, str]:
+    """Keyless HF Space img2img — free fallback leg (quota-capped, best-effort)."""
+    polish_flag = (os.getenv("GENBLAZE_POLISH_ENABLED") or "").strip().lower()
+    if polish_flag not in {"1", "true", "yes", "on"}:
+        return None, "hfspace: GENBLAZE_POLISH_ENABLED not set (fail closed)"
+    try:
+        from app.image_polish import PolishError, _hfspace_img2img
+
+        pixels = _hfspace_img2img(structure_png, prompt, strength=0.45)
+        return pixels, "hfspace: img2img ok (keyless HF Space fallback)"
+    except PolishError as exc:
+        return None, f"hfspace: polish error ({exc})"
+    except Exception as exc:  # noqa: BLE001
+        return None, f"hfspace: {type(exc).__name__}: {exc}"
+
+
 def run_beauty_stage(
     *,
     structure_png: bytes,
@@ -844,7 +954,7 @@ def run_beauty_stage(
     )
     order: list[str]
     if painter_pref == "auto":
-        order = [BACKEND_FAL, BACKEND_LEMONADE, BACKEND_CEL_PROXY]
+        order = [BACKEND_FAL, BACKEND_HFSPACE, BACKEND_LEMONADE, BACKEND_CEL_PROXY]
     elif painter_pref == BACKEND_NONE:
         order = []
     else:
@@ -864,6 +974,16 @@ def run_beauty_stage(
             details.append(detail)
             if pixels:
                 beauty_bytes, lane, backend = pixels, LANE_BEAUTY, BACKEND_FAL
+                break
+        elif candidate == BACKEND_HFSPACE:
+            if probe is None or not probe.available:
+                details.append(probe.detail if probe else "hfspace: not probed")
+                continue
+            pixels, detail = try_hfspace_polish(structure_png, steered)
+            details.append(detail)
+            if pixels:
+                # img2img preserves structure (like fal); claim on gate only.
+                beauty_bytes, lane, backend = pixels, LANE_BEAUTY, BACKEND_HFSPACE
                 break
         elif candidate == BACKEND_LEMONADE:
             if probe is None or not probe.available:
@@ -1234,8 +1354,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--painter",
         default="auto",
-        choices=["auto", "fal", "lemonade", "cel-proxy", "none"],
-        help="Beauty backend preference (auto tries fal→lemonade→cel-proxy)",
+        choices=["auto", "fal", "hfspace", "lemonade", "cel-proxy", "none"],
+        help=(
+            "Beauty backend preference (auto tries fal→hfspace→lemonade→cel-proxy)"
+        ),
     )
     p.add_argument(
         "--no-cel-proxy",
