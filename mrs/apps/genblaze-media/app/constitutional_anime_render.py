@@ -37,7 +37,7 @@ from app.anime_world_profile import (
     load_anime_world_profile,
     validate_anime_world_profile,
 )
-from app.config import _load_dotenv_files
+from app.config import _load_dotenv_files, resolve_repo_root
 from app.style_steer import ANIME_STEER_SUFFIX, apply_style_steer
 
 # Match the app's canonical env source (repo-root .env then app-local .env,
@@ -66,7 +66,8 @@ BACKEND_GMICLOUD = "gmicloud"
 
 
 def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
+    # Monorepo checkout vs Docker /app shallow layout (see config.resolve_repo_root).
+    return resolve_repo_root()
 
 
 def _utc_now() -> str:
