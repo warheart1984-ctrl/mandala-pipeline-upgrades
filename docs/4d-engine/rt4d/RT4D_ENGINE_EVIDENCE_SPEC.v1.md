@@ -254,3 +254,17 @@ capturing agent.
 > **Boundary.** The RT3D evidence envelope is *ready to be cited* by a CIEMS promotion packet,
 > but the packet is authored in the CECP trail repo and admitted by the Drive-G CIEMS runtime — a
 > separate, explicitly-mandated operation. Do not claim "CIEMS enforcement" from this repo alone.
+
+---
+
+## Appendix — Hosted MCP / infra evidence surface (Priority #5)
+
+| Surface | Location | Status in this repo |
+|---------|----------|---------------------|
+| CDK app (API GW → Lambda → engine ALB) | `infra/cdk/` | **partial** (synth/docker milestone; deploy/live URL not claimed) |
+| Fail-closed Bearer authorizer | `infra/cdk/lambda/authorizer` | **partial** (Secrets Manager `${prefix}/api-keys`) |
+| Structured log fields (`renderId`, `failureClass`, `renderCost`, `latencyMs`) | Observability stack contract + handler logs | **declared** until consistently emitted/queried in prod |
+| Hash authority | RT4D engine only | **enforced** in product path; infra must pass through (no recompute) |
+| CIEMS / JCR admission of hosted renders | Drive-G external | **declared-only** |
+
+CECP trail: `docs/governance/cecp/trails/rt4d-priority5-hosted-mcp-2026-08/`.
