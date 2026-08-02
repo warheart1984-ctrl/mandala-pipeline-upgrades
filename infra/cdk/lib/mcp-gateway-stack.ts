@@ -103,7 +103,8 @@ export class McpGatewayStack extends cdk.Stack {
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_22_X,
       timeout: cdk.Duration.seconds(120),
-      memorySize: 1024,
+      // Account 450753703992 us-east-2 Lambda memory ceiling is 512 MiB.
+      memorySize: 512,
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [lambdaSg],
