@@ -77,7 +77,11 @@ export async function handleRenderRt4dPreview(args: unknown) {
   });
 
   return {
-    text: `Preview for ${updated.sceneId} via ${engine.source}. ${engine.note}`,
+    text:
+      `Preview for ${updated.sceneId} via ${engine.source}. ${engine.note}` +
+      (engine.evidence
+        ? ` replayToken=${engine.evidence.replayToken.slice(0, 16)}… conformance=${engine.evidence.conformance?.ok ?? "n/a"}`
+        : ""),
     sceneId: updated.sceneId,
     previewUrl: engine.previewUrl,
     sha256: engine.sha256,
@@ -85,6 +89,7 @@ export async function handleRenderRt4dPreview(args: unknown) {
     width: engine.width,
     height: engine.height,
     runId: engine.runId,
+    evidence: engine.evidence,
     provenance: updated.provenance,
     continuityState: updated.continuityState,
     shotEvidence: updated.shotEvidence,

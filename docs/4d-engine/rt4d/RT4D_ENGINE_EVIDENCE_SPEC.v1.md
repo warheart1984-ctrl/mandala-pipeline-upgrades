@@ -134,5 +134,123 @@ separate, explicitly-mandated operation. Do not claim "CIEMS enforcement" from t
 - The envelope carries `intentId`/`timelineId`/`worldId` for lineage, but **does not** assert
   cross-world federation or multi-tenant governance — those remain declared (`CONSTITUTIONAL_LAYER_STACK.md`).
 - `operation: "rt4d_dimensional_preview"` is scoped to still-image dimensional preview only.
-  Animation, timeline, and export remain declared (`render_rt4d_preview` status `partial` at the
-  product-lane level).
+   Animation, timeline, and export remain declared (`render_rt4d_preview` status `partial` at the
+   product-lane level).
+
+---
+
+## 7. RT3D state-capture evidence envelope (sim→persist→evidence layer)
+
+| Field | Value |
+|-------|-------|
+| `id` | `rt3d.ledger.evidence.v1` |
+| **Status** | **declared** (CIEMS-aligned, substrate-level) |
+| **Layer** | MRS substrate (`mrs/apps/rt4d-engine/src/evidence/rt3dEvidenceBridge.ts`) — the ledger + bridge live in the host repo |
+| **Canonical consumer** | External CIEMS / JCR (Drive-G) — not present in this repo |
+| **Verification layer** | MRS-local — `Rt3dLedger.replay()` determinism (engineTick fixed steps, 1e-9 tolerance) |
+| Authority | Drive-G-1 (evidence-bound claims). This document is an agreement, not a charter amendment. |
+
+> **Honest scope.** The RT3D persistence layer (`Rt3dLedger`) captures a deterministic
+> state trajectory produced by `EngineHost.engineTick(fixedDelta)` (P4 replayable reality —
+> fixed timestep, content-addressed scene store, no wall-clock randomness). This envelope
+> *attaches* CIEMS-shaped provenance to that persisted trajectory so the external CIEMS/JCR host
+> can consume it. **This repo does not host the CIEMS runtime**; the `rt3d_state_capture` envelope
+> is **declared** here and becomes **tested** only when a CIEMS artifact cites it. The bridge
+> reuses the ledger's own `replay()` as its substrate-level verification — it does **not** emulate
+> CIEMS promotion.
+
+### Why this exists
+
+Per `DIMENSIONAL_COMPRESSION.md`, the simulation→persistence→evidence→promotion chain binds a
+rendered result to constitutional provenance:
+
+```
+RT3D Simulation (engineTick) → Persistence (Rt3dLedger) → Evidence (rt3dEvidenceBridge) → Promotion (CIEMS JCR)
+```
+
+The RT3D ledger owns determinism; the evidence bridge only **attaches** an envelope + a
+verifier that calls `ledger.replay()`. Promotion into CIEMS is a separate, explicitly-mandated
+operation deferred to the Drive-G CIEMS runtime (`G:\CIEMS`).
+
+### Envelope shape
+
+Produced by `mrs/apps/rt4d-engine/src/evidence/rt3dEvidenceBridge.ts`
+(`buildRt3dEvidenceEnvelope(entry: Rt3dLedgerEntry)`).
+
+```ts
+type Rt3dEvidenceEnvelope = {
+  operation: "rt3d_state_capture";                 // declared operation identifier
+  source: "mrs-rt4d-engine/rt3d-ledger";            // the RT3D ledger that produced the entry
+  engineVersion: string;                            // rt4d-engine package version
+  intentId: string;                                 // governance: originating intent (from ledger linege)
+  timelineId: string;                               // governance: originating timeline (from ledger lineage)
+  worldId: string;                                  // governance: originating world (from ledger lineage)
+  sceneId: string;                                  // engine content-addressed id ("rt3d-scene-<16hex>")
+  specHash: string;                                 // sha256Hex(canonicalRt4dJson(spec)) anchor
+  seed: number;                                    // determinism seed from convertSceneSpecification
+  fixedDelta: number;                               // fixed timestep (1/60) powering engineTick
+  frames: number;                                  // trajectory length
+  trajectoryChecksum: string;                      // sha256 over the full canonicalized entry (tamper guard)
+  trajectoryRoot: string;                          // sha256 over per-frame body-position frame hashes
+  replayToken: string;                             // sha256(specHash:seed:fixedDelta:frames:trajectoryRoot)
+  at: string;                                      // ISO-8601 emit time (audit only)
+};
+```
+
+### Field derivation rules (must not drift)
+
+| Field | Formula |
+|-------|---------|
+| `specHash` | `sha256Hex(canonicalRt4dJson(sceneSpec))` (renderer-core `canonicalRt4dJson`, key-sorted) |
+| `seed` | from `convertSceneSpecification` (deterministic, NOT a render seed) |
+| `trajectoryRoot` | `sha256(frameHashes.join("\n"))`, where each `frameHash = sha256(JSON(canonicalFrameBodies))` — Merkle-style root over per-frame body positions |
+| `trajectoryChecksum` | `sha256Hex(canonicalJson(entry))` over the full ledger entry (tamper guard) |
+| `replayToken` | `sha256(specHash + ":" + seed + ":" + fixedDelta + ":" + frames + ":" + trajectoryRoot)` |
+
+### Verification (substrate level)
+
+`verifyRt3dEvidenceEnvelope(envelope, entry, replay)` in `rt3dEvidenceBridge.ts`:
+
+1. **Replay invariant** — calls `ledger.replay(entry)`; the ledger re-runs `engineTick` fixed
+   steps and asserts every captured frame reproduces within **1e-9**.
+2. **Trajectory integrity** — recomputes `trajectoryRoot(entry.snapshots)` and compares to
+   `envelope.trajectoryRoot`; a tampered snapshot body yields a different root → `verified:false`.
+3. Returns `{ envelope, replayOk, mismatch?, trajectoryRecomputed }`.
+
+This is the **MRS substrate verification** step. It does **not** assert CIEMS/JCR enforcement —
+see §5 (RT4D) / §9 (this spec). Acceptance: `replayOk === true && trajectoryRecomputed === true`.
+
+### Replay contract (for the external CIEMS/JCR host)
+
+To replay-verify a prior RT3D capture, the CIEMS host supplies the exact envelope fields and asks
+the ledger to re-simulate. Acceptance:
+
+- `replayToken` matches the stored token.
+- `ledger.replay(entry)` returns `{ ok: true }`.
+- `trajectoryRoot` recomputes identically (`trajectoryRecomputed: true`).
+
+Because the ledger is content-addressed and fixed-step, the same
+`(specHash, seed, fixedDelta, frames)` trajectory replays byte-identically without re-running the
+capturing agent.
+
+### Determinism obligations (P4 replayable reality)
+
+- All randomness in an RT3D trajectory derives from the `seed` in `convertSceneSpecification` —
+  `engineTick` consumes no wall-clock or `Math.random`/`Date.now`.
+- `fixedDelta` (1/60) is the sole timestep; `runFrames`/`engineTick` step deterministically.
+- The ledger's `load` rejects tampered entries via `trajectoryChecksum`; the evidence bridge adds
+  an independent `trajectoryRoot` so a tampered on-disk file is caught at both the persistence
+  gate and the evidence gate.
+
+### Relationship to CIEMS / JCR (drive-G external)
+
+| Artifact | Where it lives | Status in *this* repo |
+|----------|----------------|----------------------|
+| CIEMS Constitutional Runtime / JCR | `G:\CIEMS`, `G:\.codex\cse\constitutional-runtime` | **not present** (declared-only) |
+| Sovereign X OS / CIEMS namespace | `G:\Sovereign-X-Constitutional-Compute` | **not present** (declared-only) |
+| CIEMS lineage tree / promotion | `docs/governance/cecp/trails/*` | **declared** (no runtime gate) |
+| This RT3D evidence envelope | `mrs/apps/rt4d-engine` | **declared** envelope; verification = **tested** (`Rt3dLedger.replay`, AC-L4) |
+
+> **Boundary.** The RT3D evidence envelope is *ready to be cited* by a CIEMS promotion packet,
+> but the packet is authored in the CECP trail repo and admitted by the Drive-G CIEMS runtime — a
+> separate, explicitly-mandated operation. Do not claim "CIEMS enforcement" from this repo alone.

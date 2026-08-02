@@ -7,7 +7,7 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/rt4d-engine.test.mjs"
+    "test": "tsx --test test/rt4d-engine.test.mjs test/rt3d-ledger.test.mjs test/rt3d-evidence-bridge.test.mjs"
   },
   "dependencies": {
     "@mrs/renderer-core": "workspace:*"

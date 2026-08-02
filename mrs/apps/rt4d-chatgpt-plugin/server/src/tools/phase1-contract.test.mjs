@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it, before, after } from "node:test";
 import { handleCreateRt4dScene } from "./create-rt4d-scene.ts";
 import { handleRenderRt4dPreview } from "./render-rt4d-preview.ts";
 import { handleInspectRt4dProvenance } from "./inspect-rt4d-provenance.ts";
@@ -99,5 +99,94 @@ describe("rt4d-chatgpt-plugin phase1+2", () => {
     assert.equal(updated.continuityState.continuityVersion, 2);
     assert.ok(updated.provenance.hashes.sceneSha256);
     assert.notEqual(updated.provenance.hashes.sceneSha256, priorSceneHash);
+  });
+
+  it("render_rt4d_preview surfaces evidence=null on placeholder path", async () => {
+    const created = handleCreateRt4dScene({
+      prompt: "placeholder evidence check",
+      mode: "create_anime_scene",
+    });
+    const prev = process.env.RT4D_ENGINE_URL;
+    delete process.env.RT4D_ENGINE_URL;
+    try {
+      const preview = await handleRenderRt4dPreview({ sceneId: created.sceneId });
+      assert.equal(preview.source, "placeholder");
+      assert.equal(preview.evidence, null);
+    } finally {
+      if (prev !== undefined) process.env.RT4D_ENGINE_URL = prev;
+    }
+  });
+
+  it("render_rt4d_preview surfaces the engine's evidence envelope on the success path", async () => {
+    const created = handleCreateRt4dScene({
+      prompt: "engine evidence wiring",
+      mode: "create_anime_scene",
+    });
+    const FAKE_PNG = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    const FAKE_EVIDENCE = {
+      operation: "rt4d_dimensional_preview",
+      source: "mrs-renderer-core/rt4d",
+      engineVersion: "test",
+      intentId: "intent-test",
+      timelineId: "timeline-test",
+      worldId: "world-test",
+      sceneId: "rt4d-scene-fake",
+      sceneSpecHash: "deadbeef",
+      sceneSha256: "cafe",
+      runId: "run-9",
+      renderKey: "key-9",
+      seed: 12345,
+      pngSha256: "a".repeat(64),
+      parameters: { seed: 12345 },
+      parametersHash: "b".repeat(64),
+      replayToken: "c".repeat(64),
+      at: "2026-08-02T00:00:00.000Z",
+      verified: true,
+    };
+    const originalFetch = globalThis.fetch;
+    const originalUrl = process.env.RT4D_ENGINE_URL;
+    process.env.RT4D_ENGINE_URL = "http://fake-engine.local";
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/v1/scenes") && init?.method === "POST") {
+        return new Response(JSON.stringify({ data: { sceneId: "rt4d-scene-fake", sceneHash: "cafe" } }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.includes("/v1/scenes/") && url.endsWith("/render")) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              renderReceipt: { runId: "run-9", sha256: FAKE_EVIDENCE.pngSha256, renderKey: "key-9" },
+              pngBase64: FAKE_PNG.toString("base64"),
+              evidence: FAKE_EVIDENCE,
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ ok: false, error: { code: "NO_ROUTE", message: "unexpected " + url } }),
+        { status: 404, headers: { "content-type": "application/json" } },
+      );
+    });
+
+    try {
+      const preview = await handleRenderRt4dPreview({ sceneId: created.sceneId });
+      assert.equal(preview.source, "engine");
+      assert.ok(preview.evidence !== null, "engine path should attach evidence");
+      assert.equal(preview.evidence?.replayToken, "c".repeat(64));
+      assert.equal(preview.evidence?.seed, 12345);
+      assert.equal(preview.evidence?.conformance?.ok, true);
+      assert.ok(preview.text.includes("replayToken="));
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalUrl !== undefined) process.env.RT4D_ENGINE_URL = originalUrl;
+      else delete process.env.RT4D_ENGINE_URL;
+    }
   });
 });

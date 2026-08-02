@@ -1,5 +1,26 @@
 import { createHash } from "node:crypto";
 
+export type Rt4dEvidenceEnvelope = {
+  operation: string;
+  source: string;
+  engineVersion: string;
+  intentId: string;
+  timelineId: string;
+  worldId: string;
+  sceneId: string;
+  sceneSpecHash: string;
+  sceneSha256: string;
+  runId: string;
+  renderKey: string;
+  seed: number;
+  pngSha256: string;
+  parameters: Record<string, unknown>;
+  parametersHash: string;
+  replayToken: string;
+  at: string;
+  conformance?: { ok: boolean; allFoundationalPassed?: boolean };
+};
+
 export type EnginePreviewResult = {
   previewUrl: string;
   sha256: string;
@@ -8,6 +29,7 @@ export type EnginePreviewResult = {
   height: number;
   runId?: string;
   note: string;
+  evidence: Rt4dEvidenceEnvelope | null;
 };
 
 type JsonObject = Record<string, unknown>;
@@ -173,6 +195,7 @@ export async function renderViaEngine(input: {
       height,
       note:
         "RT4D_ENGINE_URL unset — returned deterministic placeholder preview (declared stub).",
+      evidence: null,
     };
   }
 
@@ -222,6 +245,7 @@ export async function renderViaEngine(input: {
     if (!rjson) throw new Error("engine render returned non-object JSON");
     const rdata = asObject(rjson.data);
     const rreceipt = asObject(rdata?.renderReceipt);
+    const renvelope = asObject(rdata?.evidence);
 
     const pngBase64 =
       asString(rdata?.pngBase64) ?? asString(rjson.pngBase64);
@@ -242,6 +266,30 @@ export async function renderViaEngine(input: {
       height,
       runId,
       note: `Preview via RT4D_ENGINE_URL (${base}) POST /v1/scenes/{id}/render — deterministic seeded render (seed from sceneSha256).`,
+      evidence: renvelope
+        ? ({
+            operation: asString(renvelope.operation) ?? "rt4d_dimensional_preview",
+            source: asString(renvelope.source) ?? "mrs-renderer-core/rt4d",
+            engineVersion: asString(renvelope.engineVersion) ?? "unknown",
+            intentId: asString(renvelope.intentId) ?? "",
+            timelineId: asString(renvelope.timelineId) ?? "",
+            worldId: asString(renvelope.worldId) ?? "",
+            sceneId: asString(renvelope.sceneId) ?? "",
+            sceneSpecHash: asString(renvelope.sceneSpecHash) ?? "",
+            sceneSha256: asString(renvelope.sceneSha256) ?? "",
+            runId: asString(renvelope.runId) ?? runId ?? "",
+            renderKey: asString(renvelope.renderKey) ?? "",
+            seed: Number(renvelope.seed ?? 0) >>> 0,
+            pngSha256: asString(renvelope.pngSha256) ?? sha,
+            parameters: (renvelope.parameters as Record<string, unknown>) ?? {},
+            parametersHash: asString(renvelope.parametersHash) ?? "",
+            replayToken: asString(renvelope.replayToken) ?? "",
+            at: asString(renvelope.at) ?? new Date().toISOString(),
+            conformance: renvelope.verified != null
+              ? { ok: Boolean(renvelope.verified) }
+              : undefined,
+          } as Rt4dEvidenceEnvelope)
+        : null,
     };
   } catch (err) {
     const placeholder = buildPlaceholderPng(input.sceneSha256);
@@ -253,6 +301,7 @@ export async function renderViaEngine(input: {
       width,
       height,
       note: `Engine call failed (${detail}); fell back to deterministic placeholder. status=partial.`,
+      evidence: null,
     };
   } finally {
     clearTimeout(timer);
