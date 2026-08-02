@@ -62,6 +62,8 @@ export async function handleRenderRt4dPreview(args: unknown) {
     prompt: scene.prompt,
     sceneId: scene.sceneId,
     sceneSha256: scene.provenance.hashes.sceneSha256,
+    rotations: scene.rotations,
+    projection: scene.projection,
     width: parsed.width,
     height: parsed.height,
   });

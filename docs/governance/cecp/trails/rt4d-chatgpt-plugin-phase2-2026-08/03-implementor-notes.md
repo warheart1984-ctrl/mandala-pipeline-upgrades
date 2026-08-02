@@ -26,3 +26,16 @@ Ship interactive dimensional preview viewer + `update_rt4d_scene` wiring for PR 
 - `export_rt4d_asset` still skeleton
 - No durable store / verified continuity / AnimeStylizer
 - ChatGPT directory listing not claimed
+
+## Debt — portrait lighting API mismatch (**declared**)
+
+**Bug-prevention / do not wire without adapter.**
+
+- `createPortraitLightingRig` (renderer-core) returns a **portrait object**
+  (`keyLight` / `fillLight` / `rimLight` / `envLight`).
+- `Scene4D.setLightRig` expects an **array** of RT4D lights (`lightRig.map(...)`).
+- Passing the portrait object into `setLightRig` would throw or silently mis-bind.
+
+**Current path:** RT4D engine / plugin preview use the audited `render-still.mjs` light list; do **not** call `createPortraitLightingRig` → `setLightRig` until an adapter exists.
+
+**Status:** debt **declared** (not fixed in this trail).
