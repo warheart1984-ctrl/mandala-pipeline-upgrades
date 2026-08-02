@@ -9,13 +9,14 @@ import {
   PathTracer4D,
   vec4,
 } from "@mrs/renderer-core/rt4d";
-import { getSurface, sampleSurface } from "@mrs/renderer-core/surfaces";
+import { getSurface, listSurfaces, sampleSurface } from "@mrs/renderer-core/surfaces";
 import { composeRotations } from "@mrs/renderer-core/math";
 // NOTE: exports map has NO "./rt4d/proton" entry and directory targets throw
 // ERR_UNSUPPORTED_DIR_IMPORT; the "./render/*" wildcard + explicit index.js file
 // target is the only specifier that resolves (probe-verified on Node v24.18.0).
 import { encodePngRgba } from "@mrs/renderer-core/render/rt4d/proton/index.js";
 import { createHash } from "node:crypto";
+import { versions } from "node:process";
 import type { SceneSpec } from "./store.js";
 
 export type RenderParams = {
@@ -27,12 +28,22 @@ export type RenderParams = {
   timeSeconds?: number;
 };
 
+export type RuntimeFingerprint = {
+  node: string;
+  zlib: string;
+  platform: string;
+  arch: string;
+};
+
 export type RenderResult = {
   png: Buffer;
   sha256: string;
+  pixelHash: string;
   width: number;
   height: number;
   sampleCount: number;
+  renderId: string;
+  runtimeFingerprint: RuntimeFingerprint;
 };
 
 export type GeometryOptions = {
@@ -81,8 +92,81 @@ export function resolveOrderedParams(params: RenderParams): Record<string, unkno
 const PLANE_SET = new Set(["xy", "xz", "xw", "yz", "yw", "zw"]);
 const DEFAULT_FOV = { fovX: 52, fovY: 52, fovZ: 8, fovW: 8 };
 
-function validateSceneSpec(spec: SceneSpec): void {
+/** Surfaces supported by renderer-core (capability gate — AC-R6). */
+const SUPPORTED_SURFACES = new Set<string>(
+  listSurfaces().map((s: unknown) => String((s as { id?: unknown }).id ?? "")),
+);
+
+/** Runtime fingerprint: distinguishes certified-runtime byte-identity from cross-environment pixel equivalence. */
+export function runtimeFingerprint(): RuntimeFingerprint {
+  const nodeZlib = typeof (process as { versions?: { zlib?: string } }).versions?.zlib === "string"
+    ? (process.versions.zlib as string)
+    : "builtin";
+  return {
+    node: versions.node,
+    zlib: nodeZlib,
+    platform: versions.platform ?? process.platform,
+    arch: versions.arch ?? process.arch,
+  };
+}
+
+/**
+ * Canonical hash of the projection transform state: projection + camera +
+ * rotations + resolution + seed + dims. Camera change (AC-R3) changes this.
+ */
+export function computeProjectionHash(
+  spec: SceneSpec,
+  params: RenderParams,
+  orderedParams: Record<string, unknown>,
+): string {
+  const canonical = {
+    surface: spec.surface,
+    projection: {
+      type: spec.projection?.type,
+      distance4d: Number(spec.projection?.distance4d),
+      distance3d: Number(spec.projection?.distance3d),
+    },
+    camera: {
+      fovX: Number(spec.camera?.fovX),
+      fovY: Number(spec.camera?.fovY),
+      fovZ: Number(spec.camera?.fovZ),
+      fovW: Number(spec.camera?.fovW),
+    },
+    rotations: (spec.rotations ?? []).map((r) => ({
+      plane: r.plane,
+      speed: Number(r.speed),
+    })),
+    resolution: spec.resolution,
+    seed: orderedParams.seed,
+    width: orderedParams.width,
+    height: orderedParams.height,
+    maxDepth: orderedParams.maxDepth,
+    samplesPerPixel: orderedParams.samplesPerPixel,
+    timeSeconds: orderedParams.timeSeconds,
+  };
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
+/** Content-addressed render id (deterministic replay gate). */
+export function computeRenderId(
+  sceneSpecHash: string,
+  seed: number,
+  projectionHash: string,
+): string {
+  const digest = createHash("sha256")
+    .update(`${sceneSpecHash}:${seed >>> 0}:${projectionHash}`)
+    .digest("hex");
+  return `rt4d-render-${digest.slice(0, 16)}`;
+}
+
+/** Validate the scene is within the engine's capability surface (AC-R6 gate). */
+export function validateSceneSpec(spec: SceneSpec): void {
   if (typeof spec.surface !== "string") throw new Error("SceneSpec.surface must be a string");
+  if (!SUPPORTED_SURFACES.has(spec.surface)) {
+    throw new Error(
+      `CAPABILITY_UNSUPPORTED: surface "${spec.surface}" is not supported. Available: ${Array.from(SUPPORTED_SURFACES).join(", ")}`,
+    );
+  }
   if (!Number.isFinite(spec.resolution)) throw new Error("SceneSpec.resolution must be a number");
   if (!Array.isArray(spec.rotations)) throw new Error("SceneSpec.rotations must be an array");
   for (const r of spec.rotations) {
@@ -155,7 +239,11 @@ function toByte(c: number, exposure: number): number {
 
 const EXPOSURE = 2.4;
 
-export async function renderScene(spec: SceneSpec, params: RenderParams): Promise<RenderResult> {
+export async function renderScene(
+  spec: SceneSpec,
+  params: RenderParams,
+  sceneSpecHash: string,
+): Promise<RenderResult> {
   if (params.seed === undefined) {
     throw new Error("seed is required for deterministic replay");
   }
@@ -165,6 +253,17 @@ export async function renderScene(spec: SceneSpec, params: RenderParams): Promis
   const width = clampInt(params.width, 16, 1024, 128);
   const height = clampInt(params.height, 16, 1024, 128);
   const timeSeconds = params.timeSeconds ?? 0;
+
+  const orderedParams = {
+    seed: Number(params.seed),
+    maxDepth,
+    samplesPerPixel: samples,
+    width,
+    height,
+    timeSeconds,
+  };
+  const projectionHash = computeProjectionHash(spec, params, orderedParams);
+  const renderId = computeRenderId(sceneSpecHash, seed, projectionHash);
 
   const { scene } = buildScene(spec, timeSeconds);
   const cam = spec.camera;
@@ -217,7 +316,17 @@ export async function renderScene(spec: SceneSpec, params: RenderParams): Promis
 
   const png = encodePngRgba(width, height, new Uint8ClampedArray(rgba));
   const sha256 = createHash("sha256").update(png).digest("hex");
-  return { png, sha256, width, height, sampleCount: samples };
+  const pixelHash = createHash("sha256").update(rgba).digest("hex");
+  return {
+    png,
+    sha256,
+    pixelHash,
+    width,
+    height,
+    sampleCount: samples,
+    renderId,
+    runtimeFingerprint: runtimeFingerprint(),
+  };
 }
 
 export function computeGeometry(spec: SceneSpec, opts: GeometryOptions): GeometryResult {

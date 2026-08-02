@@ -32,12 +32,25 @@ export type Rt4dEvidenceEnvelope = {
   sceneSha256: string;
   runId: string;
   renderKey: string;
+  renderId: string;
   seed: number;
+  projectionHash: string;
+  pixelHash: string;
+  pngHash: string;
   pngSha256: string;
+  rendererVersion: string;
+  runtimeFingerprint: {
+    node: string;
+    zlib: string;
+    platform: string;
+    arch: string;
+  };
   parameters: Record<string, unknown>;
   parametersHash: string;
   at: string;
   replayToken: string;
+  evidenceStatus: "substrate_verified";
+  promotionStatus: "not_promoted_to_ciems";
 };
 
 export type SceneProvenanceIds = {
@@ -49,14 +62,18 @@ export type SceneProvenanceIds = {
 /**
  * Build the CIEMS-aligned evidence envelope for an RT4D dimensional preview render.
  *
- * Fields (per AGENTS.md V "Evidence Requirements"):
- *   runId, seed, sceneSpecHash, renderKey, pngSha256, source, engineVersion, at.
+ * Layered determinism tokens (per RT4D_ENGINE_EVIDENCE_SPEC.v1 §7 / Priority #4 AC):
+ *   runId, renderId, seed, sceneSpecHash, renderKey, projectionHash, pixelHash,
+ *   pngHash/pngSha256, rendererVersion, runtimeFingerprint, at, replayToken.
  *
  * - sceneSpecHash  = sha256Hex(sceneSpec) (canonical, key-sorted)
- * - seed           = deterministic seed used for the render (replays identically)
+ * - seed           = deterministic uint32 rng seed (replays identically)
  * - renderKey      = the engine's content-addressable render identifier
- * - pngSha256      = sha256 of the rendered PNG bytes
- * - replayToken    = sha256(sceneSpecHash + seed + parametersHash) — the single value a
+ * - renderId       = rt4d-render-<16hex> content-addressed render id
+ * - projectionHash = sha256 of canonical (projection + camera + rotations + seed + resolution)
+ * - pixelHash      = sha256 of the raw RGBA framebuffer (pixel-equivalent replay across envs)
+ * - pngHash/pngSha256 = sha256 of the PNG bytes (byte-identical replay in certified runtime)
+ * - replayToken    = sha256(sceneSpecHash + seed + projectionHash) — the single value a
  *                    future CIEMS replay gate compares to authorize a re-render as
  *                    equivalent to a prior one.
  */
@@ -69,7 +86,7 @@ export function createRt4dEvidenceEnvelope(
   receipt: RenderReceipt,
   params: RenderParamsForEvidence = {},
 ): Rt4dEvidenceEnvelope {
-  const sceneSpecHash = sha256Hex(scene.spec);
+  const sceneSpecHash = sha256Hex(canonicalRt4dJson(scene.spec));
   const parameters = {
     seed: Number(receipt.renderParameters.seed),
     maxDepth: receipt.renderParameters.maxDepth,
@@ -80,7 +97,7 @@ export function createRt4dEvidenceEnvelope(
   };
   const parametersHash = sha256Hex(parameters);
   const replayToken = sha256Hex(
-    `${sceneSpecHash}:${Number(receipt.renderParameters.seed)}:${parametersHash}`,
+    `${sceneSpecHash}:${Number(receipt.renderParameters.seed)}:${receipt.projectionHash ?? ""}`,
   );
 
   return {
@@ -95,12 +112,25 @@ export function createRt4dEvidenceEnvelope(
     sceneSha256: scene.provenance.hashes.sceneSha256,
     runId: receipt.runId,
     renderKey: receipt.renderKey ?? "",
+    renderId: receipt.renderId ?? "",
     seed: Number(receipt.renderParameters.seed),
+    projectionHash: receipt.projectionHash ?? "",
+    pixelHash: receipt.pixelHash ?? "",
+    pngHash: receipt.sha256,
     pngSha256: receipt.sha256,
+    rendererVersion: "@mrs/renderer-core/rt4d@1.0.0",
+    runtimeFingerprint: receipt.runtimeFingerprint ?? {
+      node: "unknown",
+      zlib: "builtin",
+      platform: "unknown",
+      arch: "unknown",
+    },
     parameters,
     parametersHash,
     at: receipt.at,
     replayToken,
+    evidenceStatus: "substrate_verified",
+    promotionStatus: "not_promoted_to_ciems",
   };
 }
 

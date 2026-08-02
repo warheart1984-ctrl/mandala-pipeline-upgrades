@@ -138,13 +138,46 @@ describe("rt4d-chatgpt-plugin phase1+2", () => {
       sceneSha256: "cafe",
       runId: "run-9",
       renderKey: "key-9",
+      renderId: "rt4d-render-fake16",
       seed: 12345,
+      projectionHash: "d".repeat(64),
+      pixelHash: "e".repeat(64),
+      pngHash: "f".repeat(64),
       pngSha256: "a".repeat(64),
+      rendererVersion: "@mrs/renderer-core/rt4d@1.0.0",
+      runtimeFingerprint: { node: "v24.18.0", zlib: "builtin", platform: "win32", arch: "x64" },
       parameters: { seed: 12345 },
       parametersHash: "b".repeat(64),
       replayToken: "c".repeat(64),
       at: "2026-08-02T00:00:00.000Z",
+      evidenceStatus: "substrate_verified",
+      promotionStatus: "not_promoted_to_ciems",
       verified: true,
+    };
+    const FAKE_RENDER_RESPONSE = {
+      data: {
+        renderReceipt: { 
+          runId: "run-9", 
+          sha256: FAKE_EVIDENCE.pngSha256, 
+          renderKey: "key-9",
+          renderId: FAKE_EVIDENCE.renderId,
+          projectionHash: FAKE_EVIDENCE.projectionHash,
+          pixelHash: FAKE_EVIDENCE.pixelHash,
+          runtimeFingerprint: FAKE_EVIDENCE.runtimeFingerprint,
+        },
+        pngBase64: FAKE_PNG.toString("base64"),
+        evidence: FAKE_EVIDENCE,
+        renderId: FAKE_EVIDENCE.renderId,
+        sceneSpecHash: FAKE_EVIDENCE.sceneSpecHash,
+        projectionHash: FAKE_EVIDENCE.projectionHash,
+        pixelHash: FAKE_EVIDENCE.pixelHash,
+        pngHash: FAKE_EVIDENCE.pngHash,
+        trajectoryRoot: "t".repeat(64),
+        rendererVersion: FAKE_EVIDENCE.rendererVersion,
+        runtimeFingerprint: FAKE_EVIDENCE.runtimeFingerprint,
+        evidenceStatus: FAKE_EVIDENCE.evidenceStatus,
+        promotionStatus: FAKE_EVIDENCE.promotionStatus,
+      },
     };
     const originalFetch = globalThis.fetch;
     const originalUrl = process.env.RT4D_ENGINE_URL;
@@ -159,13 +192,7 @@ describe("rt4d-chatgpt-plugin phase1+2", () => {
       }
       if (url.includes("/v1/scenes/") && url.endsWith("/render")) {
         return new Response(
-          JSON.stringify({
-            data: {
-              renderReceipt: { runId: "run-9", sha256: FAKE_EVIDENCE.pngSha256, renderKey: "key-9" },
-              pngBase64: FAKE_PNG.toString("base64"),
-              evidence: FAKE_EVIDENCE,
-            },
-          }),
+          JSON.stringify(FAKE_RENDER_RESPONSE),
           { status: 200, headers: { "content-type": "application/json" } },
         );
       }

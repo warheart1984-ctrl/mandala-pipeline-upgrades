@@ -16,6 +16,15 @@ export type RenderReceipt = {
   runId: string;
   renderKey: string;
   sha256: string;
+  pixelHash: string;
+  renderId: string;
+  projectionHash: string;
+  runtimeFingerprint: {
+    node: string;
+    zlib: string;
+    platform: string;
+    arch: string;
+  };
   renderParameters: Record<string, unknown>;
   cached: boolean;
   at: string;

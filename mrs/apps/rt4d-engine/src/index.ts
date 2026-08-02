@@ -15,7 +15,7 @@ import {
   type SceneRecord,
   type RenderReceipt,
 } from "./store.js";
-import { renderScene, computeGeometry, resolveOrderedParams, type RenderParams } from "./renderer.js";
+import { renderScene, computeGeometry, computeProjectionHash, resolveOrderedParams, validateSceneSpec, type RenderParams } from "./renderer.js";
 import { createRt4dEvidenceEnvelope, type Rt4dEvidenceEnvelope } from "./evidence/rt4dEvidenceEnvelope.js";
 
 export const DEFAULT_PORT = 8020;
@@ -127,6 +127,13 @@ export function createEngineServer(): Server {
         }
         const spec = body as SceneSpec;
         spec.camera.lensRadius = 0;
+        try {
+          validateSceneSpec(spec);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          sendJson(res, 400, envelope({ statusTag: "declared", error: { code: "CAPABILITY_UNSUPPORTED", message: msg } }));
+          return;
+        }
         const { sceneId, sceneHash } = upsertScene(spec);
         sendJson(res, 200, envelope<{ sceneId: string; sceneHash: string }>({ statusTag: "live", data: { sceneId, sceneHash } }));
         return;
@@ -172,14 +179,22 @@ export function createEngineServer(): Server {
         const renderKey = deriveRenderKey(record.sceneHash, orderedParams);
         const cached = getReceipt(sceneId, renderKey);
         if (cached) {
-          const hitReceipt: RenderReceipt = {
-            ...cached,
-            cached: true,
-          };
+          const hitReceipt: RenderReceipt = { ...cached, cached: true };
           sendJson(
             res,
             200,
-            envelope<{ sceneId: string; renderKey: string; renderReceipt: RenderReceipt; pngBase64: string; evidence: Rt4dEvidenceEnvelope }>({
+            envelope<{
+              sceneId: string;
+              renderKey: string;
+              renderReceipt: RenderReceipt;
+              pngBase64: string;
+              evidence: Rt4dEvidenceEnvelope;
+              renderId: string;
+              projectionHash: string;
+              pixelHash: string;
+              pngHash: string;
+              runtimeFingerprint: RenderReceipt["runtimeFingerprint"];
+            }>({
               statusTag: "live",
               data: {
                 sceneId,
@@ -187,18 +202,32 @@ export function createEngineServer(): Server {
                 renderReceipt: hitReceipt,
                 pngBase64: cached.pngBase64 ?? "",
                 evidence: buildEvidence(sceneId, record, hitReceipt),
+                renderId: cached.renderId,
+                projectionHash: cached.projectionHash,
+                pixelHash: cached.pixelHash,
+                pngHash: cached.sha256,
+                runtimeFingerprint: cached.runtimeFingerprint,
               },
             }),
           );
           return;
         }
 
-        const result = await renderScene(record.spec, params);
+        const result = await renderScene(record.spec, params, record.sceneHash);
         runCounter += 1;
+        const projectionHash = computeProjectionHash(
+          record.spec,
+          params,
+          orderedParams,
+        );
         const receipt: RenderReceipt = {
           runId: `run-${runCounter}`,
           renderKey,
           sha256: result.sha256,
+          pixelHash: result.pixelHash,
+          renderId: result.renderId,
+          projectionHash,
+          runtimeFingerprint: result.runtimeFingerprint,
           renderParameters: orderedParams,
           cached: false,
           at: new Date().toISOString(),
@@ -208,7 +237,18 @@ export function createEngineServer(): Server {
         sendJson(
           res,
           200,
-          envelope<{ sceneId: string; renderKey: string; renderReceipt: RenderReceipt; pngBase64: string; evidence: Rt4dEvidenceEnvelope }>({
+          envelope<{
+            sceneId: string;
+            renderKey: string;
+            renderReceipt: RenderReceipt;
+            pngBase64: string;
+            evidence: Rt4dEvidenceEnvelope;
+            renderId: string;
+            projectionHash: string;
+            pixelHash: string;
+            pngHash: string;
+            runtimeFingerprint: RenderReceipt["runtimeFingerprint"];
+          }>({
             statusTag: "live",
             data: {
               sceneId,
@@ -216,6 +256,11 @@ export function createEngineServer(): Server {
               renderReceipt: receipt,
               pngBase64: receipt.pngBase64!,
               evidence: buildEvidence(sceneId, record, receipt),
+              renderId: receipt.renderId,
+              projectionHash: receipt.projectionHash,
+              pixelHash: receipt.pixelHash,
+              pngHash: receipt.sha256,
+              runtimeFingerprint: receipt.runtimeFingerprint,
             },
           }),
         );
