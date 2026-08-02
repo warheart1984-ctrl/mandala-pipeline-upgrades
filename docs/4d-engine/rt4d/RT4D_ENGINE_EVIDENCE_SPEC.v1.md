@@ -268,3 +268,54 @@ capturing agent.
 | CIEMS / JCR admission of hosted renders | Drive-G external | **declared-only** |
 
 CECP trail: `docs/governance/cecp/trails/rt4d-priority5-hosted-mcp-2026-08/`.
+
+---
+
+## Appendix — Usage metering / credits surface (Priority #6)
+
+| Field | Value |
+|-------|-------|
+| Status | **declared** (commercial scaffold; formula not cost-calibrated; billing not live) |
+| Package | `mrs/packages/rt4d-metering` (`@mrs/rt4d-metering`) |
+| Authority rule | Pricing consumes **verified engine receipts** only — never parallel wall-clock estimators in plugin/gateway |
+
+### Authority chain
+
+```text
+engine layered evidence (renderId + pixelHash + pngHash + projectionHash
+  + runtimeFingerprint + evidenceStatus)
+        │
+        ▼
+deriveCreditsFromReceipt()     ← formula status: declared
+        │
+        ▼
+append-only usage ledger       ← idempotent on renderId (partial)
+        │
+        ▼
+assertWithinPlanLimits()       ← fail-closed (partial)
+```
+
+### Minimum usage record
+
+```json
+{
+  "userId": "...",
+  "planId": "creator",
+  "renderId": "...",
+  "creditsUsed": 12,
+  "computeSeconds": 8.4,
+  "storageBytes": 4281192,
+  "status": "completed"
+}
+```
+
+`renderId` must join to engine layered evidence. Soft emit from the engine is opt-in (`RT4D_METERING_EMIT=1`) and must not fail the render path.
+
+### What is not claimed
+
+- Stripe / Chargebee / ChatGPT billing live
+- Hosted multi-tenant accounts
+- CIEMS/JCR commercial admission (Drive-G external, **declared**)
+- Cost-calibrated credit economics
+
+CECP trail: `docs/governance/cecp/trails/rt4d-priority6-accounts-metering-pricing-2026-08/`.

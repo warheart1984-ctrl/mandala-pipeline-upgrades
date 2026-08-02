@@ -10,7 +10,8 @@
     "test": "tsx --test test/rt4d-engine.test.mjs test/rt3d-ledger.test.mjs test/rt3d-evidence-bridge.test.mjs"
   },
   "dependencies": {
-    "@mrs/renderer-core": "workspace:*"
+    "@mrs/renderer-core": "workspace:*",
+    "@mrs/rt4d-metering": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

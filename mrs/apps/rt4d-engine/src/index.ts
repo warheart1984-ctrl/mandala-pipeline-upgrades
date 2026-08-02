@@ -17,6 +17,7 @@ import {
 } from "./store.js";
 import { renderScene, computeGeometry, computeProjectionHash, resolveOrderedParams, validateSceneSpec, type RenderParams } from "./renderer.js";
 import { createRt4dEvidenceEnvelope, type Rt4dEvidenceEnvelope } from "./evidence/rt4dEvidenceEnvelope.js";
+import { maybeEmitMetering } from "./meteringEmit.js";
 
 export const DEFAULT_PORT = 8020;
 
@@ -180,6 +181,12 @@ export function createEngineServer(): Server {
         const cached = getReceipt(sceneId, renderKey);
         if (cached) {
           const hitReceipt: RenderReceipt = { ...cached, cached: true };
+          const hitEvidence = buildEvidence(sceneId, record, hitReceipt);
+          maybeEmitMetering({
+            req,
+            receipt: hitReceipt,
+            evidence: hitEvidence,
+          });
           sendJson(
             res,
             200,
@@ -201,7 +208,7 @@ export function createEngineServer(): Server {
                 renderKey,
                 renderReceipt: hitReceipt,
                 pngBase64: cached.pngBase64 ?? "",
-                evidence: buildEvidence(sceneId, record, hitReceipt),
+                evidence: hitEvidence,
                 renderId: cached.renderId,
                 projectionHash: cached.projectionHash,
                 pixelHash: cached.pixelHash,
@@ -234,6 +241,13 @@ export function createEngineServer(): Server {
           pngBase64: result.png.toString("base64"),
         };
         putReceipt(sceneId, renderKey, receipt);
+        const evidence = buildEvidence(sceneId, record, receipt);
+        maybeEmitMetering({
+          req,
+          receipt,
+          evidence,
+          pngByteLength: result.png.length,
+        });
         sendJson(
           res,
           200,
@@ -255,7 +269,7 @@ export function createEngineServer(): Server {
               renderKey,
               renderReceipt: receipt,
               pngBase64: receipt.pngBase64!,
-              evidence: buildEvidence(sceneId, record, receipt),
+              evidence,
               renderId: receipt.renderId,
               projectionHash: receipt.projectionHash,
               pixelHash: receipt.pixelHash,
