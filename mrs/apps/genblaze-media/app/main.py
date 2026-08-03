@@ -12,7 +12,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field, ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -3687,17 +3687,3 @@ def legal_page() -> HTMLResponse:
     if STATIC_LEGAL.is_file():
         return HTMLResponse(STATIC_LEGAL.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>Legal</h1><p>Page missing.</p>", status_code=500)
-
-
-STATIC_PRIVACY_PDF = STATIC_DIR / "RT4D-Privacy-Policy.pdf"
-
-
-@app.get("/privacy-policy", response_class=FileResponse)
-def privacy_policy() -> Response:
-    if STATIC_PRIVACY_PDF.is_file():
-        return FileResponse(
-            STATIC_PRIVACY_PDF,
-            media_type="application/pdf",
-            filename="RT4D-Privacy-Policy.pdf",
-        )
-    return Response("Privacy policy not found.", status_code=404)
