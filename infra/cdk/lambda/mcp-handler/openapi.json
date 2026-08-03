@@ -1,0 +1,215 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "RT4D Scene Studio",
+    "version": "0.2.0",
+    "description": "Create deterministic 4D scenes and render dimensional previews through the RT4D engine.\n\nAuthentication: API Key, type Bearer. In ChatGPT set the key value to your MRS API key only (ChatGPT prepends 'Bearer '). Do not embed the key in prompts, instructions, or this schema.\n\nStatus: partial — dimensional previews, not photoreal anime. Prefer create scene → render preview → inspect provenance."
+  },
+  "servers": [
+    {
+      "url": "https://zs8hkz982h.execute-api.us-east-2.amazonaws.com/dev"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v1/scenes": {
+      "post": {
+        "operationId": "create_rt4d_scene",
+        "summary": "Create an RT4D scene",
+        "description": "Creates a deterministic scene from a natural-language prompt. The same prompt always produces the same sceneId (replayable). Returns sceneId, spec, provenance, continuityState, and shot evidence.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string", "minLength": 1, "description": "Natural-language scene description." },
+                  "mode": { "type": "string", "enum": ["cinematic", "technical", "concept", "storyboard", "previz", "final"], "description": "Product lane. Defaults deterministically from prompt when omitted." },
+                  "width": { "type": "integer", "minimum": 16, "maximum": 2048 },
+                  "height": { "type": "integer", "minimum": 16, "maximum": 2048 },
+                  "continuityState": { "type": "object", "description": "Optional character/world/camera/emotion/rt4d continuity state." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Scene created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Envelope" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ErrorResponse" },
+          "500": { "$ref": "#/components/responses/ErrorResponse" }
+        }
+      }
+    },
+    "/v1/scenes/{sceneId}": {
+      "parameters": [
+        {
+          "name": "sceneId",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "get": {
+        "operationId": "inspect_rt4d_scene",
+        "summary": "Inspect an RT4D scene",
+        "description": "Returns the scene spec, provenance, continuityState, shot evidence, and persistence details for a sceneId.",
+        "responses": {
+          "200": {
+            "description": "Scene details.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Envelope" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/ErrorResponse" },
+          "500": { "$ref": "#/components/responses/ErrorResponse" }
+        }
+      },
+      "patch": {
+        "operationId": "update_rt4d_scene",
+        "summary": "Update an RT4D scene",
+        "description": "Partially update scene rotations (XW/YW/ZW) and/or projection distance (d4/d3). Optional rePreview=true to re-render. The sceneId is stable across updates.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rotations": {
+                    "type": "object",
+                    "properties": {
+                      "xw": { "type": "number" },
+                      "yw": { "type": "number" },
+                      "zw": { "type": "number" }
+                    }
+                  },
+                  "projection": {
+                    "type": "object",
+                    "properties": {
+                      "d4": { "type": "number" },
+                      "d3": { "type": "number" }
+                    }
+                  },
+                  "rePreview": { "type": "boolean" },
+                  "width": { "type": "integer", "minimum": 16, "maximum": 1024 },
+                  "height": { "type": "integer", "minimum": 16, "maximum": 1024 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scene updated (includes preview when rePreview=true).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Envelope" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/ErrorResponse" },
+          "500": { "$ref": "#/components/responses/ErrorResponse" }
+        }
+      }
+    },
+    "/v1/scenes/{sceneId}/render": {
+      "parameters": [
+        {
+          "name": "sceneId",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "post": {
+        "operationId": "render_rt4d_preview",
+        "summary": "Render an RT4D preview",
+        "description": "Renders a dimensional preview of the scene. Returns previewUrl (pre-signed HTTPS image URL fetchable by any browser), sha256, renderBundle hashes, and shot evidence.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": { "type": "string", "enum": ["cinematic", "technical", "concept", "storyboard", "previz", "final"] },
+                  "width": { "type": "integer", "minimum": 16, "maximum": 1024 },
+                  "height": { "type": "integer", "minimum": 16, "maximum": 1024 },
+                  "continuityState": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Render complete. data.previewUrl is a pre-signed S3 URL to the PNG.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Envelope" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/ErrorResponse" },
+          "500": { "$ref": "#/components/responses/ErrorResponse" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "MRS RT4D API key. ChatGPT sends it as 'Authorization: Bearer <key>'."
+      }
+    },
+    "schemas": {
+      "Envelope": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "statusTag": { "type": "string", "enum": ["partial"] },
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Operation payload. For render_rt4d_preview this includes previewUrl (pre-signed HTTPS PNG URL), sha256, renderBundle, and evidence."
+          },
+          "error": {
+            "type": ["object", "null"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          }
+        },
+        "required": ["ok"]
+      }
+    },
+    "responses": {
+      "ErrorResponse": {
+        "description": "Error envelope.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Envelope" }
+          }
+        }
+      }
+    }
+  }
+}

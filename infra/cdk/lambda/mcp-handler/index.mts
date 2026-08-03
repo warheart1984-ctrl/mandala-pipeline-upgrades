@@ -14,9 +14,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { z } from 'zod';
 import * as crypto from 'crypto';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import openApiSpec from './openapi.json';
 
 const s3 = new S3Client({});
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -29,6 +31,10 @@ const RENDERS_BUCKET = process.env.RENDERS_BUCKET || '';
 const EVIDENCE_BUCKET = process.env.EVIDENCE_BUCKET || '';
 const USAGE_TABLE = process.env.USAGE_TABLE || '';
 const DECISIONS_TABLE = process.env.DECISIONS_TABLE || '';
+// Presigned preview URLs must outlive the ChatGPT turn; capped at 7 days (SigV4 max).
+const RENDER_PREVIEW_URL_TTL_SECONDS = Number(
+  process.env.RENDER_PREVIEW_URL_TTL_SECONDS ?? 604800,
+);
 
 interface TraceContext {
   requestId: string;
@@ -225,11 +231,15 @@ async function putObject(
   }));
 }
 
-/** Store PNG/evidence using hashes provided by the engine only; tag with trace fields. */
+/**
+ * Store PNG/evidence using hashes provided by the engine only; tag with trace fields.
+ * Returns the S3 object key written for the PNG (null when not stored) so the caller
+ * can mint a fetchable preview URL.
+ */
 async function storeEngineArtifacts(
   enginePayload: Record<string, unknown>,
   trace: TraceContext,
-): Promise<void> {
+): Promise<{ pngKey: string | null }> {
   const data = asRecord(enginePayload.data) ?? enginePayload;
   const evidence = asRecord(data.evidence) ?? asRecord(enginePayload.evidence);
   const renderId =
@@ -257,17 +267,19 @@ async function storeEngineArtifacts(
     pngSha256: pngSha256 ?? '',
   };
 
-  if (!renderId) return;
+  if (!renderId) return { pngKey: null };
 
   const pngBase64 =
     (typeof data.pngBase64 === 'string' && data.pngBase64) ||
     (typeof data.png === 'string' && data.png) ||
     null;
 
+  let pngKey: string | null = null;
   if (pngBase64 && pngSha256 && RENDERS_BUCKET) {
+    pngKey = `renders/${renderId}/${pngSha256}.png`;
     await putObject(
       RENDERS_BUCKET,
-      `renders/${renderId}/${pngSha256}.png`,
+      pngKey,
       Buffer.from(pngBase64, 'base64'),
       'image/png',
       metadata,
@@ -284,6 +296,18 @@ async function storeEngineArtifacts(
       metadata,
     );
   }
+
+  return { pngKey };
+}
+
+/**
+ * HTTPS pre-signed GET URL for a stored render PNG — reachable by ChatGPT/browsers
+ * without an Authorization header (the object itself stays private in S3).
+ */
+async function buildSignedPreviewUrl(bucket: string, key: string): Promise<string> {
+  return getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), {
+    expiresIn: RENDER_PREVIEW_URL_TTL_SECONDS,
+  });
 }
 
 async function writeUsageLedger(trace: TraceContext, enginePayload: Record<string, unknown>): Promise<void> {
@@ -343,6 +367,193 @@ async function persistEntitlementDecision(trace: TraceContext, approved: boolean
   }
 }
 
+// ── Shared RT4D operations ────────────────────────────────────────────────
+// Single implementation consumed by BOTH the MCP tools and the REST façade
+// (GPT Action / OpenAPI), so the two surfaces never drift.
+
+interface ResolvedScene {
+  /** `{ sceneId, ...engine GET data }` — same shape the inspect tool returns. */
+  payload: Record<string, unknown>;
+  spec: Record<string, unknown>;
+  provenance: Record<string, unknown>;
+  continuityState: Record<string, unknown>;
+}
+
+async function resolveScene(sceneId: string, trace?: TraceContext): Promise<ResolvedScene> {
+  const result = await forwardToEngine('GET', `/v1/scenes/${encodeURIComponent(sceneId)}`, undefined, trace);
+  if (result.status >= 400) {
+    throw new Error(`Scene not found: ${result.status}`);
+  }
+  const env = unwrapEnvelope(result.json);
+  if (!env.ok) {
+    throw new Error(`Scene not found: ${result.status} ${JSON.stringify(env.error ?? env.data)}`);
+  }
+  const data = env.data;
+  return {
+    payload: { sceneId, ...data },
+    spec: asRecord(data.spec) ?? {},
+    provenance: asRecord(data.provenance) ?? {},
+    continuityState: asRecord(data.continuityState) ?? {},
+  };
+}
+
+async function createScene(args: {
+  prompt: string;
+  mode?: string;
+  width?: number;
+  height?: number;
+}): Promise<Record<string, unknown>> {
+  const spec = buildSceneSpec(args);
+  const promptHash =
+    typeof spec.promptHash === 'string' ? spec.promptHash : undefined;
+  const result = await forwardToEngine('POST', '/v1/scenes', { sceneSpec: spec, promptHash });
+  if (result.status >= 400) {
+    throw new Error(`Engine error: ${result.status} ${JSON.stringify(result.json)}`);
+  }
+  const env = unwrapEnvelope(result.json);
+  if (!env.ok) {
+    throw new Error(`Engine error: ${result.status} ${JSON.stringify(env.error ?? env.data)}`);
+  }
+  return { ...env.data, spec };
+}
+
+interface RenderStructuredContent {
+  sceneId: string;
+  previewUrl: string;
+  sha256: string;
+  source: string;
+  width: number;
+  height: number;
+  shotEvidence: Record<string, unknown> | null;
+  provenance: Record<string, unknown>;
+  continuityState: Record<string, unknown>;
+  statusTag: 'partial';
+  visualKind: 'dimensional_preview';
+  renderBundle: Record<string, unknown>;
+  evidence: Record<string, unknown> | null;
+}
+
+async function performRender(
+  sceneId: string,
+  renderParams: Record<string, unknown>,
+  trace?: TraceContext,
+): Promise<{ structured: RenderStructuredContent; payload: Record<string, unknown> }> {
+  const scene = await resolveScene(sceneId, trace);
+  const renderRequest: EngineRenderRequest = {
+    sceneSpec: scene.spec,
+    seed: 42,
+    ...renderParams,
+  };
+
+  if (trace) {
+    await persistEntitlementDecision(trace, true);
+  }
+  const renderResult = await forwardToEngine('POST', `/v1/scenes/${encodeURIComponent(sceneId)}/render`, renderRequest, trace);
+  if (renderResult.status >= 400) {
+    throw new Error(`Render failed: ${renderResult.status} ${JSON.stringify(renderResult.json)}`);
+  }
+  const env = unwrapEnvelope(renderResult.json);
+  if (!env.ok) {
+    throw new Error(`Render failed: ${renderResult.status} ${JSON.stringify(env.error ?? env.data)}`);
+  }
+  const payload = env.data;
+
+  let storedArtifact: { pngKey: string | null } | null = null;
+  if (trace && asRecord(payload)) {
+    try {
+      storedArtifact = await storeEngineArtifacts(payload, trace);
+      await writeUsageLedger(trace, payload);
+    } catch (err) {
+      console.error('artifact_store:', err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  const renderReceipt = asRecord(payload.renderReceipt) ?? {};
+  const evidence = asRecord(payload.evidence);
+  let previewUrl = '';
+  if (storedArtifact?.pngKey && RENDERS_BUCKET) {
+    try {
+      previewUrl = await buildSignedPreviewUrl(RENDERS_BUCKET, storedArtifact.pngKey);
+    } catch (err) {
+      console.error('preview_url:', err instanceof Error ? err.message : String(err));
+    }
+  }
+  previewUrl =
+    previewUrl ||
+    (typeof payload.previewUrl === 'string' && payload.previewUrl) ||
+    (ENGINE_ALB_DNS
+      ? `http://${ENGINE_ALB_DNS}/renders/${String(payload.renderId ?? sceneId)}/preview.png`
+      : '');
+
+  const structured: RenderStructuredContent = {
+    sceneId,
+    previewUrl,
+    sha256: payload.pngHash ?? payload.sha256 ?? '',
+    source: 'rt4d-engine',
+    width: typeof renderReceipt.width === 'number' ? renderReceipt.width : (renderParams.width ?? 128),
+    height: typeof renderReceipt.height === 'number' ? renderReceipt.height : (renderParams.height ?? 128),
+    shotEvidence: evidence,
+    provenance: scene.provenance,
+    continuityState: scene.continuityState,
+    statusTag: 'partial',
+    visualKind: 'dimensional_preview',
+    renderBundle: {
+      renderId: payload.renderId ?? '',
+      projectionHash: payload.projectionHash ?? '',
+      pixelHash: payload.pixelHash ?? '',
+      pngHash: payload.pngHash ?? '',
+      rendererVersion: 'rt4d-engine',
+      runtimeFingerprint: asRecord(payload.runtimeFingerprint) ?? {},
+      evidenceStatus: evidence ? 'attached' : 'missing',
+      promotionStatus: 'partial',
+      replayToken: (evidence && typeof evidence.replayToken === 'string' && evidence.replayToken) || '',
+    },
+    evidence,
+  };
+  return { structured, payload };
+}
+
+async function applySceneUpdate(
+  sceneId: string,
+  updates: Record<string, unknown>,
+): Promise<{ payload: Record<string, unknown>; preview: EngineRenderResponse | undefined }> {
+  const rotations = asRecord(updates.rotations);
+  const projection = asRecord(updates.projection);
+  const specPatch: Record<string, unknown> = {};
+  if (rotations) {
+    specPatch.rotations = Object.entries(rotations)
+      .filter(([k]) => ['xw', 'yw', 'zw'].includes(k))
+      .filter(([, v]) => typeof v === 'number')
+      .map(([k, v]) => ({ plane: k, speed: v }));
+  }
+  if (projection) {
+    specPatch.projection = {
+      type: 'perspective',
+      distance4d: typeof projection.d4 === 'number' ? projection.d4 : undefined,
+      distance3d: typeof projection.d3 === 'number' ? projection.d3 : undefined,
+    };
+  }
+  const result = await forwardToEngine('PATCH', `/v1/scenes/${encodeURIComponent(sceneId)}`, specPatch);
+  if (result.status >= 400) {
+    throw new Error(`Update failed: ${result.status} ${JSON.stringify(result.json)}`);
+  }
+  const env = unwrapEnvelope(result.json);
+  if (!env.ok) {
+    throw new Error(`Update failed: ${result.status} ${JSON.stringify(env.error ?? env.data)}`);
+  }
+  const payload = { sceneId, ...env.data };
+  const rePreview = updates.rePreview === true;
+  let preview: EngineRenderResponse | undefined;
+  if (rePreview) {
+    const renderResult = await forwardToEngine('POST', `/v1/scenes/${encodeURIComponent(sceneId)}/render`, { sceneSpec: payload.spec, seed: 42, width: updates.width, height: updates.height });
+    if (renderResult.status < 400) {
+      const renv = unwrapEnvelope(renderResult.json);
+      preview = renv.data as unknown as EngineRenderResponse;
+    }
+  }
+  return { payload, preview };
+}
+
 function createMcpServer(): McpServer {
   const server = new McpServer(
     {
@@ -378,18 +589,7 @@ function createMcpServer(): McpServer {
       },
     },
     async (args) => {
-      const spec = buildSceneSpec(args);
-      const promptHash =
-        typeof spec.promptHash === 'string' ? spec.promptHash : undefined;
-      const result = await forwardToEngine('POST', '/v1/scenes', { sceneSpec: spec, promptHash });
-      if (result.status >= 400) {
-        throw new Error(`Engine error: ${result.status} ${JSON.stringify(result.json)}`);
-      }
-      const env = unwrapEnvelope(result.json);
-      if (!env.ok) {
-        throw new Error(`Engine error: ${result.status} ${JSON.stringify(env.error ?? env.data)}`);
-      }
-      const payload = { ...env.data, spec };
+      const payload = await createScene(args);
       return {
         content: [
           { type: 'text', text: `Created scene ${String(payload.sceneId ?? '')}` },
@@ -425,74 +625,8 @@ function createMcpServer(): McpServer {
     async (args) => {
       const { sceneId, ...renderParams } = args;
       const trace = activeTrace;
-      const sceneResult = await forwardToEngine('GET', `/v1/scenes/${encodeURIComponent(sceneId)}`, undefined, trace);
-      if (sceneResult.status >= 400) {
-        throw new Error(`Scene not found: ${sceneResult.status}`);
-      }
-      const sceneEnv = unwrapEnvelope(sceneResult.json);
-      if (!sceneEnv.ok) {
-        throw new Error(`Scene not found: ${sceneResult.status} ${JSON.stringify(sceneEnv.error ?? sceneEnv.data)}`);
-      }
-
-      const renderRequest: EngineRenderRequest = {
-        sceneSpec: sceneEnv.data.spec as Record<string, unknown>,
-        seed: 42,
-        ...renderParams,
-      };
-
-      if (trace) {
-        await persistEntitlementDecision(trace, true);
-      }
-      const renderResult = await forwardToEngine('POST', `/v1/scenes/${encodeURIComponent(sceneId)}/render`, renderRequest, trace);
-      if (renderResult.status >= 400) {
-        throw new Error(`Render failed: ${renderResult.status} ${JSON.stringify(renderResult.json)}`);
-      }
-      const env = unwrapEnvelope(renderResult.json);
-      if (!env.ok) {
-        throw new Error(`Render failed: ${renderResult.status} ${JSON.stringify(env.error ?? env.data)}`);
-      }
-      const payload = env.data;
-
-      if (trace && asRecord(payload)) {
-        try {
-          await storeEngineArtifacts(payload as Record<string, unknown>, trace);
-          await writeUsageLedger(trace, payload as Record<string, unknown>);
-        } catch (err) {
-          console.error('artifact_store:', err instanceof Error ? err.message : String(err));
-        }
-      }
-
-      const renderReceipt = asRecord(payload.renderReceipt) ?? {};
-      const evidence = asRecord(payload.evidence);
-      const previewUrl =
-        (typeof payload.previewUrl === 'string' && payload.previewUrl) ||
-        (ENGINE_ALB_DNS ? `http://${ENGINE_ALB_DNS}/renders/${String(payload.renderId ?? sceneId)}/preview.png` : '');
-      const structuredContent = {
-        sceneId,
-        previewUrl,
-        sha256: payload.pngHash ?? payload.sha256 ?? '',
-        source: 'rt4d-engine',
-        width: typeof renderReceipt.width === 'number' ? renderReceipt.width : (renderParams.width ?? 128),
-        height: typeof renderReceipt.height === 'number' ? renderReceipt.height : (renderParams.height ?? 128),
-        shotEvidence: evidence,
-        provenance: sceneEnv.data.provenance,
-        continuityState: sceneEnv.data.continuityState,
-        statusTag: 'partial' as const,
-        visualKind: 'dimensional_preview' as const,
-        renderBundle: {
-          renderId: payload.renderId ?? '',
-          projectionHash: payload.projectionHash ?? '',
-          pixelHash: payload.pixelHash ?? '',
-          pngHash: payload.pngHash ?? '',
-          rendererVersion: 'rt4d-engine',
-          runtimeFingerprint: asRecord(payload.runtimeFingerprint) ?? {},
-          evidenceStatus: evidence ? 'attached' : 'missing',
-          promotionStatus: 'partial',
-          replayToken: (evidence && typeof evidence.replayToken === 'string' && evidence.replayToken) || '',
-        },
-        evidence,
-      };
-
+      const { structured, payload } = await performRender(sceneId, renderParams, trace);
+      const evidence = asRecord(structured.evidence);
       const replayToken =
         (evidence && typeof evidence.replayToken === 'string' && evidence.replayToken) || '';
       const conformance =
@@ -500,9 +634,9 @@ function createMcpServer(): McpServer {
       return {
         content: [
           { type: 'text', text: `Preview for ${sceneId} via rt4d-engine. renderId=${String(payload.renderId ?? '')} evidence=${evidence ? 'attached' : 'missing'}${replayToken ? ` replayToken=${replayToken.slice(0, 16)}…` : ''}${conformance?.ok != null ? ` conformance=${conformance.ok ? 'ok' : 'n/a'}` : ''}` },
-          { type: 'text', text: JSON.stringify(structuredContent, null, 2) },
+          { type: 'text', text: JSON.stringify(structured, null, 2) },
         ],
-        structuredContent,
+        structuredContent: structured,
       };
     }
   );
@@ -518,15 +652,8 @@ function createMcpServer(): McpServer {
       },
     },
     async (args) => {
-      const result = await forwardToEngine('GET', `/v1/scenes/${encodeURIComponent(args.sceneId)}`);
-      if (result.status >= 400) {
-        throw new Error(`Scene not found: ${result.status}`);
-      }
-      const env = unwrapEnvelope(result.json);
-      if (!env.ok) {
-        throw new Error(`Scene not found: ${result.status} ${JSON.stringify(env.error ?? env.data)}`);
-      }
-      const payload = { sceneId: args.sceneId, ...env.data };
+      const scene = await resolveScene(args.sceneId, activeTrace);
+      const payload = scene.payload;
       return {
         content: [
           { type: 'text', text: `Provenance for ${args.sceneId}` },
@@ -561,40 +688,7 @@ function createMcpServer(): McpServer {
     },
     async (args) => {
       const { sceneId, ...updates } = args;
-      const rotations = asRecord(updates.rotations);
-      const projection = asRecord(updates.projection);
-      const specPatch: Record<string, unknown> = {};
-      if (rotations) {
-        specPatch.rotations = Object.entries(rotations)
-          .filter(([k]) => ['xw', 'yw', 'zw'].includes(k))
-          .filter(([, v]) => typeof v === 'number')
-          .map(([k, v]) => ({ plane: k, speed: v }));
-      }
-      if (projection) {
-        specPatch.projection = {
-          type: 'perspective',
-          distance4d: typeof projection.d4 === 'number' ? projection.d4 : undefined,
-          distance3d: typeof projection.d3 === 'number' ? projection.d3 : undefined,
-        };
-      }
-      const result = await forwardToEngine('PATCH', `/v1/scenes/${encodeURIComponent(sceneId)}`, specPatch);
-      if (result.status >= 400) {
-        throw new Error(`Update failed: ${result.status} ${JSON.stringify(result.json)}`);
-      }
-      const env = unwrapEnvelope(result.json);
-      if (!env.ok) {
-        throw new Error(`Update failed: ${result.status} ${JSON.stringify(env.error ?? env.data)}`);
-      }
-      const payload = { sceneId, ...env.data };
-      const rePreview = updates.rePreview === true;
-      let preview: EngineRenderResponse | undefined;
-      if (rePreview) {
-        const renderResult = await forwardToEngine('POST', `/v1/scenes/${encodeURIComponent(sceneId)}/render`, { sceneSpec: payload.spec, seed: 42, width: updates.width, height: updates.height });
-        if (renderResult.status < 400) {
-          const renv = unwrapEnvelope(renderResult.json);
-          preview = renv.data as unknown as EngineRenderResponse;
-        }
-      }
+      const { payload, preview } = await applySceneUpdate(sceneId, updates);
       return {
         content: [
           { type: 'text', text: `Updated scene ${sceneId}` + (preview ? ` + re-preview via rt4d-engine` : '') },
@@ -854,6 +948,17 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       return webResponseToApiGateway(response);
     }
 
+    // REST façade for GPT Actions (OpenAPI): mirrors the MCP tool surface.
+    if (path === '/openapi.json' || path.endsWith('/openapi.json')) {
+      if (httpMethod === 'GET') {
+        return jsonResponse(200, openApiSpec);
+      }
+      return jsonResponse(405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'GET only' } });
+    }
+    if (path.startsWith('/v1/scenes')) {
+      return handleSceneRest(event);
+    }
+
     return jsonResponse(404, { ok: false, error: 'Not found' });
   } catch (err) {
     console.error('MCP handler error:', err);
@@ -862,5 +967,86 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       id: null,
       error: { code: -32603, message: 'Internal error', data: err instanceof Error ? err.message : String(err) },
     });
+  }
+}
+
+// ── REST façade (GPT Action / OpenAPI) ───────────────────────────────────
+
+function parseJsonBody(event: APIGatewayProxyEvent): unknown {
+  if (!event.body) return {};
+  const raw = event.isBase64Encoded
+    ? Buffer.from(event.body, 'base64').toString('utf8')
+    : event.body;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function restOk(statusCode: number, data: unknown): APIGatewayProxyResult {
+  return jsonResponse(statusCode, { ok: true, statusTag: 'partial', data, error: null });
+}
+
+function restError(statusCode: number, code: string, message: string): APIGatewayProxyResult {
+  return jsonResponse(statusCode, { ok: false, statusTag: 'partial', data: null, error: { code, message } });
+}
+
+async function handleSceneRest(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+  const httpMethod = (event.httpMethod || 'GET').toUpperCase();
+  const path = event.path || '';
+  const match = /^\/v1\/scenes(?:\/([^/]+))?(?:\/(render))?$/.exec(path);
+  if (!match) {
+    return restError(404, 'NOT_FOUND', 'unknown route');
+  }
+  const sceneId = match[1];
+  const sub = match[2];
+
+  const requestId = event.headers?.['x-request-id'] || `req-${crypto.randomUUID().slice(0, 12)}`;
+  const trace = buildTraceContext(event, requestId);
+
+  try {
+    if (httpMethod === 'POST' && !sceneId && !sub) {
+      const body = asRecord(parseJsonBody(event)) ?? {};
+      const prompt = typeof body.prompt === 'string' ? body.prompt : '';
+      if (!prompt) {
+        return restError(400, 'BAD_REQUEST', 'prompt is required');
+      }
+      const payload = await createScene({
+        prompt,
+        mode: typeof body.mode === 'string' ? body.mode : undefined,
+        width: typeof body.width === 'number' ? body.width : undefined,
+        height: typeof body.height === 'number' ? body.height : undefined,
+      });
+      return restOk(201, payload);
+    }
+
+    if (!sceneId) {
+      return restError(404, 'NOT_FOUND', 'sceneId required');
+    }
+
+    if (httpMethod === 'GET' && !sub) {
+      const scene = await resolveScene(sceneId, trace);
+      return restOk(200, scene.payload);
+    }
+
+    if (httpMethod === 'PATCH' && !sub) {
+      const body = asRecord(parseJsonBody(event)) ?? {};
+      const { payload, preview } = await applySceneUpdate(sceneId, body);
+      return restOk(200, preview ? { ...payload, preview } : payload);
+    }
+
+    if (httpMethod === 'POST' && sub === 'render') {
+      const body = asRecord(parseJsonBody(event)) ?? {};
+      const { structured } = await performRender(sceneId, body, trace);
+      return restOk(200, structured);
+    }
+
+    return restError(404, 'NOT_FOUND', 'unknown route');
+  } catch (err) {
+    const code = (err as { code?: string })?.code ?? 'ERROR';
+    const message = err instanceof Error ? err.message : String(err);
+    const status = /not found/i.test(message) ? 404 : /SCENE_/.test(code) ? 409 : 400;
+    return restError(status, code, message);
   }
 }

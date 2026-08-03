@@ -196,18 +196,28 @@ export class McpGatewayStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.NONE,
     });
 
+    // GPT Action / OpenAPI façade — importable at <mcpUrl>openapi.json.
+    const openApiResource = this.api.root.addResource('openapi.json');
+    openApiResource.addMethod('GET', proxyIntegration, {
+      authorizationType: apigateway.AuthorizationType.NONE,
+    });
+
     const v1 = this.api.root.addResource('v1');
-    const renders = v1.addResource('renders');
-    const renderId = renders.addResource('{renderId}');
-    renderId.addResource('evidence').addMethod('GET', proxyIntegration, {
+    const scenes = v1.addResource('scenes');
+    scenes.addMethod('POST', proxyIntegration, {
       authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
-    renderId.addResource('png').addMethod('GET', proxyIntegration, {
+    const scene = scenes.addResource('{sceneId}');
+    scene.addMethod('GET', proxyIntegration, {
       authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
-    renders.addMethod('POST', proxyIntegration, {
+    scene.addMethod('PATCH', proxyIntegration, {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+    });
+    scene.addResource('render').addMethod('POST', proxyIntegration, {
       authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
@@ -237,6 +247,11 @@ export class McpGatewayStack extends cdk.Stack {
       value: `${this.mcpUrl}mcp`,
       description: 'POST target for hosted MCP path',
       exportName: `${prefix}-mcp-post-url`,
+    });
+    new cdk.CfnOutput(this, 'OpenApiUrl', {
+      value: `${this.mcpUrl}openapi.json`,
+      description: 'OpenAPI schema for ChatGPT GPT Action import',
+      exportName: `${prefix}-openapi-url`,
     });
     new cdk.CfnOutput(this, 'ApiId', {
       value: this.api.restApiId,
