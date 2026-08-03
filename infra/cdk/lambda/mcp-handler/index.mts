@@ -11,13 +11,48 @@
  */
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { z } from 'zod';
+import * as crypto from 'crypto';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+
+const s3 = new S3Client({});
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 const ENGINE_ALB_DNS = process.env.ENGINE_ALB_DNS || '';
 const ENGINE_PORT = process.env.ENGINE_PORT || '8020';
 const STAGE = process.env.STAGE || 'dev';
 const PROJECT_NAME = process.env.PROJECT_NAME || 'mrs-rt4d';
+const RENDERS_BUCKET = process.env.RENDERS_BUCKET || '';
+const EVIDENCE_BUCKET = process.env.EVIDENCE_BUCKET || '';
+const USAGE_TABLE = process.env.USAGE_TABLE || '';
+const DECISIONS_TABLE = process.env.DECISIONS_TABLE || '';
+
+interface TraceContext {
+  requestId: string;
+  traceId: string;
+  principalId: string;
+  entitlementDecisionId: string;
+}
+
+let activeTrace: TraceContext | undefined;
+
+function sha256Hex(input: string): string {
+  return crypto.createHash('sha256').update(input).digest('hex');
+}
+
+function buildTraceContext(event: APIGatewayProxyEvent, requestId: string): TraceContext {
+  const traceId =
+    event.headers?.['x-amzn-trace-id'] || process.env._X_AMZN_TRACE_ID || '';
+  const principalId =
+    (event.requestContext?.authorizer as Record<string, string> | undefined)
+      ?.principalId ?? 'rt4d-mcp-client';
+  const entitlementDecisionId =
+    `ent-${sha256Hex(`${principalId}:${requestId}:${Date.now()}`).slice(0, 16)}`;
+  return { requestId, traceId, principalId, entitlementDecisionId };
+}
 
 interface EngineRenderRequest {
   sceneSpec: Record<string, unknown>;
@@ -72,14 +107,26 @@ function jsonResponse(statusCode: number, body: unknown): APIGatewayProxyResult 
   };
 }
 
-async function forwardToEngine(method: string, path: string, body?: unknown): Promise<{ status: number; json: unknown }> {
+async function forwardToEngine(
+  method: string,
+  path: string,
+  body?: unknown,
+  trace?: TraceContext,
+): Promise<{ status: number; json: unknown }> {
   if (!ENGINE_ALB_DNS) {
     throw new Error('ENGINE_ALB_DNS not configured');
   }
   const url = `http://${ENGINE_ALB_DNS}:${ENGINE_PORT}${path}`;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (trace) {
+    headers['X-Request-Id'] = trace.requestId;
+    headers['X-Trace-Id'] = trace.traceId;
+    headers['X-Principal-Id'] = trace.principalId;
+    headers['X-Entitlement-Decision-Id'] = trace.entitlementDecisionId;
+  }
   const response = await fetch(url, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await response.text();
@@ -90,6 +137,210 @@ async function forwardToEngine(method: string, path: string, body?: unknown): Pr
     json = { raw: text };
   }
   return { status: response.status, json };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object'
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+interface EngineEnvelope {
+  ok: boolean;
+  data: Record<string, unknown>;
+  error: { code: string; message: string } | null;
+}
+
+/** Engine HTTP responses are wrapped as { ok, statusTag, data, error }. */
+function unwrapEnvelope(raw: unknown): EngineEnvelope {
+  const rec = asRecord(raw) ?? {};
+  const errRec = asRecord(rec.error);
+  return {
+    ok: rec.ok === true,
+    data: asRecord(rec.data) ?? {},
+    error: errRec
+      ? { code: String(errRec.code ?? ''), message: String(errRec.message ?? '') }
+      : null,
+  };
+}
+
+const SURFACE_BY_MODE: Record<string, string> = {
+  technical: 'tesseract',
+  previz: 'tesseract',
+  storyboard: 'trefoil-4d',
+  concept: 'torus-3d',
+  cinematic: 'clifford-torus',
+  final: 'hopf-surface',
+};
+const SURFACES = ['clifford-torus', 'hopf-surface', 'torus-3d', 'trefoil-4d', 'tesseract'];
+const PLANES = ['xy', 'xz', 'xw', 'yz', 'yw', 'zw'];
+
+/** Deterministic SceneSpec derived from the natural-language request (P4 replayable). */
+function buildSceneSpec(args: {
+  prompt: string;
+  mode?: string;
+  width?: number;
+  height?: number;
+}): Record<string, unknown> {
+  const digest = sha256Hex((args.prompt ?? '').toLowerCase());
+  const surface =
+    SURFACE_BY_MODE[args.mode ?? ''] ??
+    SURFACES[parseInt(digest.slice(0, 8), 16) % SURFACES.length];
+  const rotations: Array<{ plane: string; speed: number }> = [];
+  for (let i = 0; i < 3; i++) {
+    const plane = PLANES[parseInt(digest.slice(16 + i * 8, 24 + i * 8), 16) % PLANES.length];
+    const speed =
+      Math.round(((parseInt(digest.slice(24 + i * 8, 32 + i * 8), 16) % 60) / 10 + 0.2) * 100) /
+      100;
+    rotations.push({ plane, speed });
+  }
+  const resolution = Math.min(64, Math.max(8, Math.floor((args.width ?? 128) / 8)));
+  return {
+    surface,
+    resolution,
+    rotations,
+    projection: { type: 'perspective', distance4d: 4, distance3d: 4 },
+    camera: { fovX: 52, fovY: 52, fovZ: 8, fovW: 8, lensRadius: 0 },
+    intentId: `int-${digest.slice(0, 12)}`,
+    timelineId: `tl-${digest.slice(12, 24)}`,
+    worldId: `world-${digest.slice(24, 36)}`,
+    promptHash: sha256Hex(args.prompt ?? ''),
+  };
+}
+
+async function putObject(
+  bucket: string,
+  key: string,
+  body: Buffer,
+  contentType: string,
+  metadata: Record<string, string>,
+): Promise<void> {
+  if (!bucket) return;
+  await s3.send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+    Metadata: metadata,
+  }));
+}
+
+/** Store PNG/evidence using hashes provided by the engine only; tag with trace fields. */
+async function storeEngineArtifacts(
+  enginePayload: Record<string, unknown>,
+  trace: TraceContext,
+): Promise<void> {
+  const data = asRecord(enginePayload.data) ?? enginePayload;
+  const evidence = asRecord(data.evidence) ?? asRecord(enginePayload.evidence);
+  const renderId =
+    (typeof data.renderId === 'string' && data.renderId) ||
+    (typeof data.sceneId === 'string' && data.sceneId) ||
+    (evidence && typeof evidence.renderId === 'string' && evidence.renderId) ||
+    null;
+  const pngSha256 =
+    (typeof data.pngHash === 'string' && data.pngHash) ||
+    (typeof data.pngSha256 === 'string' && data.pngSha256) ||
+    (evidence && typeof evidence.pngSha256 === 'string' && evidence.pngSha256) ||
+    null;
+  const sceneHash =
+    (evidence && typeof evidence.sceneSpecHash === 'string' && evidence.sceneSpecHash) ||
+    (evidence && typeof evidence.sceneSha256 === 'string' && evidence.sceneSha256) ||
+    '';
+  const metadata: Record<string, string> = {
+    requestId: trace.requestId,
+    traceId: trace.traceId,
+    principalId: trace.principalId,
+    entitlementDecisionId: trace.entitlementDecisionId,
+    renderId: renderId ?? '',
+    sceneHash,
+    renderHash: pngSha256 ?? '',
+    pngSha256: pngSha256 ?? '',
+  };
+
+  if (!renderId) return;
+
+  const pngBase64 =
+    (typeof data.pngBase64 === 'string' && data.pngBase64) ||
+    (typeof data.png === 'string' && data.png) ||
+    null;
+
+  if (pngBase64 && pngSha256 && RENDERS_BUCKET) {
+    await putObject(
+      RENDERS_BUCKET,
+      `renders/${renderId}/${pngSha256}.png`,
+      Buffer.from(pngBase64, 'base64'),
+      'image/png',
+      metadata,
+    );
+  }
+
+  if (evidence && EVIDENCE_BUCKET) {
+    const keySuffix = pngSha256 || 'evidence';
+    await putObject(
+      EVIDENCE_BUCKET,
+      `evidence/${renderId}/${keySuffix}.json`,
+      Buffer.from(JSON.stringify(evidence), 'utf8'),
+      'application/json',
+      metadata,
+    );
+  }
+}
+
+async function writeUsageLedger(trace: TraceContext, enginePayload: Record<string, unknown>): Promise<void> {
+  if (!USAGE_TABLE) return;
+  const data = asRecord(enginePayload.data) ?? enginePayload;
+  const evidence = asRecord(data.evidence) ?? asRecord(enginePayload.evidence);
+  const renderId =
+    (typeof data.renderId === 'string' && data.renderId) ||
+    (typeof data.sceneId === 'string' && data.sceneId) ||
+    trace.requestId;
+  const sceneHash =
+    (evidence && typeof evidence.sceneSpecHash === 'string' && evidence.sceneSpecHash) ||
+    '';
+  const renderHash =
+    (typeof data.pngHash === 'string' && data.pngHash) ||
+    (evidence && typeof evidence.pngSha256 === 'string' && evidence.pngSha256) ||
+    '';
+  try {
+    await ddb.send(new PutCommand({
+      TableName: USAGE_TABLE,
+      Item: {
+        tenantId: trace.principalId,
+        renderId,
+        userId: trace.principalId,
+        recordedAt: new Date().toISOString(),
+        entitlementDecisionId: trace.entitlementDecisionId,
+        requestId: trace.requestId,
+        traceId: trace.traceId,
+        sceneHash,
+        renderHash,
+        event: 'render_request',
+      },
+    }));
+  } catch (err) {
+    console.error('usage_ledger_write:', err instanceof Error ? err.message : String(err));
+  }
+}
+
+async function persistEntitlementDecision(trace: TraceContext, approved: boolean): Promise<void> {
+  if (!DECISIONS_TABLE) return;
+  const at = new Date().toISOString();
+  try {
+    await ddb.send(new PutCommand({
+      TableName: DECISIONS_TABLE,
+      Item: {
+        tenantId: trace.principalId,
+        decisionSk: `${at}#${trace.entitlementDecisionId}`,
+        entitlementDecisionId: trace.entitlementDecisionId,
+        requestId: trace.requestId,
+        principalId: trace.principalId,
+        approved,
+        at,
+      },
+    }));
+  } catch (err) {
+    console.error('entitlement_decision_write:', err instanceof Error ? err.message : String(err));
+  }
 }
 
 function createMcpServer(): McpServer {
@@ -127,14 +378,21 @@ function createMcpServer(): McpServer {
       },
     },
     async (args) => {
-      const result = await forwardToEngine('POST', '/v1/scenes', args);
+      const spec = buildSceneSpec(args);
+      const promptHash =
+        typeof spec.promptHash === 'string' ? spec.promptHash : undefined;
+      const result = await forwardToEngine('POST', '/v1/scenes', { sceneSpec: spec, promptHash });
       if (result.status >= 400) {
         throw new Error(`Engine error: ${result.status} ${JSON.stringify(result.json)}`);
       }
-      const payload = result.json as EngineSceneResponse;
+      const env = unwrapEnvelope(result.json);
+      if (!env.ok) {
+        throw new Error(`Engine error: ${result.status} ${JSON.stringify(env.error ?? env.data)}`);
+      }
+      const payload = { ...env.data, spec };
       return {
         content: [
-          { type: 'text', text: `Created scene ${payload.sceneId}` },
+          { type: 'text', text: `Created scene ${String(payload.sceneId ?? '')}` },
           { type: 'text', text: JSON.stringify(payload, null, 2) },
         ],
         structuredContent: payload,
@@ -166,43 +424,82 @@ function createMcpServer(): McpServer {
     },
     async (args) => {
       const { sceneId, ...renderParams } = args;
-      const sceneResult = await forwardToEngine('GET', `/v1/scenes/${encodeURIComponent(sceneId)}`);
+      const trace = activeTrace;
+      const sceneResult = await forwardToEngine('GET', `/v1/scenes/${encodeURIComponent(sceneId)}`, undefined, trace);
       if (sceneResult.status >= 400) {
         throw new Error(`Scene not found: ${sceneResult.status}`);
       }
-      const scene = sceneResult.json as EngineSceneResponse;
+      const sceneEnv = unwrapEnvelope(sceneResult.json);
+      if (!sceneEnv.ok) {
+        throw new Error(`Scene not found: ${sceneResult.status} ${JSON.stringify(sceneEnv.error ?? sceneEnv.data)}`);
+      }
 
       const renderRequest: EngineRenderRequest = {
-        sceneSpec: scene.scene,
+        sceneSpec: sceneEnv.data.spec as Record<string, unknown>,
         seed: 42,
         ...renderParams,
       };
 
-      const renderResult = await forwardToEngine('POST', `/v1/scenes/${encodeURIComponent(sceneId)}/render`, renderRequest);
+      if (trace) {
+        await persistEntitlementDecision(trace, true);
+      }
+      const renderResult = await forwardToEngine('POST', `/v1/scenes/${encodeURIComponent(sceneId)}/render`, renderRequest, trace);
       if (renderResult.status >= 400) {
         throw new Error(`Render failed: ${renderResult.status} ${JSON.stringify(renderResult.json)}`);
       }
-      const payload = renderResult.json as EngineRenderResponse;
+      const env = unwrapEnvelope(renderResult.json);
+      if (!env.ok) {
+        throw new Error(`Render failed: ${renderResult.status} ${JSON.stringify(env.error ?? env.data)}`);
+      }
+      const payload = env.data;
 
+      if (trace && asRecord(payload)) {
+        try {
+          await storeEngineArtifacts(payload as Record<string, unknown>, trace);
+          await writeUsageLedger(trace, payload as Record<string, unknown>);
+        } catch (err) {
+          console.error('artifact_store:', err instanceof Error ? err.message : String(err));
+        }
+      }
+
+      const renderReceipt = asRecord(payload.renderReceipt) ?? {};
+      const evidence = asRecord(payload.evidence);
+      const previewUrl =
+        (typeof payload.previewUrl === 'string' && payload.previewUrl) ||
+        (ENGINE_ALB_DNS ? `http://${ENGINE_ALB_DNS}/renders/${String(payload.renderId ?? sceneId)}/preview.png` : '');
       const structuredContent = {
         sceneId,
-        previewUrl: payload.previewUrl,
-        sha256: payload.sha256,
-        source: payload.source,
-        width: payload.width,
-        height: payload.height,
-        shotEvidence: scene.shotEvidence,
-        provenance: scene.provenance,
-        continuityState: scene.continuityState,
+        previewUrl,
+        sha256: payload.pngHash ?? payload.sha256 ?? '',
+        source: 'rt4d-engine',
+        width: typeof renderReceipt.width === 'number' ? renderReceipt.width : (renderParams.width ?? 128),
+        height: typeof renderReceipt.height === 'number' ? renderReceipt.height : (renderParams.height ?? 128),
+        shotEvidence: evidence,
+        provenance: sceneEnv.data.provenance,
+        continuityState: sceneEnv.data.continuityState,
         statusTag: 'partial' as const,
         visualKind: 'dimensional_preview' as const,
-        renderBundle: payload.renderBundle,
-        evidence: payload.evidence,
+        renderBundle: {
+          renderId: payload.renderId ?? '',
+          projectionHash: payload.projectionHash ?? '',
+          pixelHash: payload.pixelHash ?? '',
+          pngHash: payload.pngHash ?? '',
+          rendererVersion: 'rt4d-engine',
+          runtimeFingerprint: asRecord(payload.runtimeFingerprint) ?? {},
+          evidenceStatus: evidence ? 'attached' : 'missing',
+          promotionStatus: 'partial',
+          replayToken: (evidence && typeof evidence.replayToken === 'string' && evidence.replayToken) || '',
+        },
+        evidence,
       };
 
+      const replayToken =
+        (evidence && typeof evidence.replayToken === 'string' && evidence.replayToken) || '';
+      const conformance =
+        (evidence && asRecord(evidence.conformance)) as { ok?: boolean } | null ?? null;
       return {
         content: [
-          { type: 'text', text: `Preview for ${sceneId} via ${payload.source}. ${payload.note}` + (payload.renderBundle ? ` renderId=${payload.renderBundle.renderId} evidence=${payload.renderBundle.evidenceStatus} promotion=${payload.renderBundle.promotionStatus} replayToken=${payload.evidence?.replayToken?.slice(0, 16)}…` : payload.evidence ? ` replayToken=${payload.evidence.replayToken.slice(0, 16)}… conformance=${payload.evidence.conformance?.ok ?? 'n/a'}` : '') },
+          { type: 'text', text: `Preview for ${sceneId} via rt4d-engine. renderId=${String(payload.renderId ?? '')} evidence=${evidence ? 'attached' : 'missing'}${replayToken ? ` replayToken=${replayToken.slice(0, 16)}…` : ''}${conformance?.ok != null ? ` conformance=${conformance.ok ? 'ok' : 'n/a'}` : ''}` },
           { type: 'text', text: JSON.stringify(structuredContent, null, 2) },
         ],
         structuredContent,
@@ -225,7 +522,11 @@ function createMcpServer(): McpServer {
       if (result.status >= 400) {
         throw new Error(`Scene not found: ${result.status}`);
       }
-      const payload = result.json as EngineSceneResponse;
+      const env = unwrapEnvelope(result.json);
+      if (!env.ok) {
+        throw new Error(`Scene not found: ${result.status} ${JSON.stringify(env.error ?? env.data)}`);
+      }
+      const payload = { sceneId: args.sceneId, ...env.data };
       return {
         content: [
           { type: 'text', text: `Provenance for ${args.sceneId}` },
@@ -260,17 +561,46 @@ function createMcpServer(): McpServer {
     },
     async (args) => {
       const { sceneId, ...updates } = args;
-      const result = await forwardToEngine('PATCH', `/v1/scenes/${encodeURIComponent(sceneId)}`, updates);
+      const rotations = asRecord(updates.rotations);
+      const projection = asRecord(updates.projection);
+      const specPatch: Record<string, unknown> = {};
+      if (rotations) {
+        specPatch.rotations = Object.entries(rotations)
+          .filter(([k]) => ['xw', 'yw', 'zw'].includes(k))
+          .filter(([, v]) => typeof v === 'number')
+          .map(([k, v]) => ({ plane: k, speed: v }));
+      }
+      if (projection) {
+        specPatch.projection = {
+          type: 'perspective',
+          distance4d: typeof projection.d4 === 'number' ? projection.d4 : undefined,
+          distance3d: typeof projection.d3 === 'number' ? projection.d3 : undefined,
+        };
+      }
+      const result = await forwardToEngine('PATCH', `/v1/scenes/${encodeURIComponent(sceneId)}`, specPatch);
       if (result.status >= 400) {
         throw new Error(`Update failed: ${result.status} ${JSON.stringify(result.json)}`);
       }
-      const payload = result.json as EngineSceneResponse & { preview?: EngineRenderResponse };
+      const env = unwrapEnvelope(result.json);
+      if (!env.ok) {
+        throw new Error(`Update failed: ${result.status} ${JSON.stringify(env.error ?? env.data)}`);
+      }
+      const payload = { sceneId, ...env.data };
+      const rePreview = updates.rePreview === true;
+      let preview: EngineRenderResponse | undefined;
+      if (rePreview) {
+        const renderResult = await forwardToEngine('POST', `/v1/scenes/${encodeURIComponent(sceneId)}/render`, { sceneSpec: payload.spec, seed: 42, width: updates.width, height: updates.height });
+        if (renderResult.status < 400) {
+          const renv = unwrapEnvelope(renderResult.json);
+          preview = renv.data as unknown as EngineRenderResponse;
+        }
+      }
       return {
         content: [
-          { type: 'text', text: `Updated scene ${sceneId}` + (payload.preview ? ` + re-preview via ${payload.preview.source}` : '') },
+          { type: 'text', text: `Updated scene ${sceneId}` + (preview ? ` + re-preview via rt4d-engine` : '') },
           { type: 'text', text: JSON.stringify(payload, null, 2) },
         ],
-        structuredContent: payload,
+        structuredContent: preview ? { ...payload, preview } : payload,
         isError: false,
       };
     }
@@ -398,31 +728,81 @@ function createMcpServer(): McpServer {
   return server;
 }
 
-// Session management for Streamable HTTP
-const sessions = new Map<string, { server: McpServer; transport: StreamableHTTPServerTransport }>();
+/**
+ * API Gateway REST → Web Request for MCP Streamable HTTP (Lambda-safe).
+ * Stateless + JSON responses: in-memory Node HTTP mocks previously returned
+ * stub `{status:"handled"}` and dropped protocol payloads (live smoke 2026-08-02).
+ */
+function eventToWebRequest(event: APIGatewayProxyEvent, httpMethod: string): {
+  request: Request;
+  parsedBody: unknown | undefined;
+} {
+  const host =
+    event.headers?.Host ||
+    event.headers?.host ||
+    event.requestContext?.domainName ||
+    'localhost';
+  const path = event.path || '/mcp';
+  const url = `https://${host}${path}`;
 
-function getOrCreateSession(sessionId?: string): { server: McpServer; transport: StreamableHTTPServerTransport; sessionId: string } {
-  if (sessionId && sessions.has(sessionId)) {
-    return { ...sessions.get(sessionId)!, sessionId };
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(event.headers || {})) {
+    if (value) headers.set(key, value);
   }
-  const newSessionId = sessionId || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const server = createMcpServer();
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
+  if (!headers.has('accept')) {
+    headers.set('accept', 'application/json, text/event-stream');
+  }
+
+  let rawBody: string | undefined;
+  if (event.body) {
+    rawBody = event.isBase64Encoded
+      ? Buffer.from(event.body, 'base64').toString('utf8')
+      : event.body;
+  }
+
+  let parsedBody: unknown | undefined;
+  if (rawBody) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      parsedBody = undefined;
+    }
+  }
+
+  const request = new Request(url, {
+    method: httpMethod,
+    headers,
+    body: httpMethod === 'GET' || httpMethod === 'HEAD' || httpMethod === 'DELETE' ? undefined : rawBody,
   });
-  sessions.set(newSessionId, { server, transport });
-  // Cleanup on close
-  transport.onclose = () => {
-    sessions.delete(newSessionId);
+  return { request, parsedBody };
+}
+
+async function webResponseToApiGateway(response: Response): Promise<APIGatewayProxyResult> {
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers':
+      'Content-Type,Authorization,X-Request-Id,mcp-session-id,Accept,Mcp-Session-Id',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS,DELETE',
+    'Access-Control-Expose-Headers': 'mcp-session-id,Mcp-Session-Id',
   };
-  return { server, transport, sessionId: newSessionId };
+  response.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+  if (!headers['Content-Type'] && !headers['content-type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+  const body = await response.text();
+  return {
+    statusCode: response.status,
+    headers,
+    body,
+  };
 }
 
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
     const path = event.path || '';
     const httpMethod = (event.httpMethod || 'GET').toUpperCase();
-    const sessionId = event.headers['mcp-session-id'] || event.headers['Mcp-Session-Id'];
 
     // Health check (no auth required)
     if (path.endsWith('/health') && httpMethod === 'GET') {
@@ -443,54 +823,35 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       });
     }
 
-    // MCP endpoint - Streamable HTTP
-    if (path === '/mcp' || path === '/mcp/') {
+    // MCP endpoint — Web-standard Streamable HTTP (returns real JSON-RPC body)
+    if (path.endsWith('/mcp') || path.endsWith('/mcp/')) {
       if (httpMethod === 'OPTIONS') {
         return jsonResponse(204, null);
       }
 
-      const { server, transport, sessionId: newSessionId } = getOrCreateSession(sessionId);
+      const requestId = event.headers?.['x-request-id'] || `req-${crypto.randomUUID().slice(0, 12)}`;
+      const trace = buildTraceContext(event, requestId);
+      activeTrace = trace;
 
-      // Connect server to transport if not already connected
+      const transport = new WebStandardStreamableHTTPServerTransport({
+        // Stateless: Lambda instances do not share session memory reliably.
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true,
+      });
+      const server = createMcpServer();
+      await server.connect(transport);
+
+      const { request, parsedBody } = eventToWebRequest(event, httpMethod);
+      const response = await transport.handleRequest(request, { parsedBody });
+
+      activeTrace = undefined;
       try {
-        await server.connect(transport);
+        await transport.close();
       } catch {
-        // Already connected
+        // best-effort cleanup
       }
 
-      // Handle the request
-      const response = await transport.handleRequest(
-        {
-          method: httpMethod,
-          headers: event.headers as Record<string, string>,
-          body: event.body || undefined,
-          url: event.path,
-        },
-        {
-          statusCode: 200,
-          headers: {},
-          body: null,
-          setHeader: () => {},
-          writeHead: () => {},
-          write: () => {},
-          end: () => {},
-        } as any
-      );
-
-      // The transport handles response internally; we need to capture it
-      // StreamableHTTPServerTransport writes directly to the response object
-      // For Lambda, we need a different approach - use the transport's internal handling
-
-      return jsonResponse(200, { status: 'handled' });
-    }
-
-    // GET /mcp (SSE fallback not needed for Streamable HTTP)
-    if (httpMethod === 'GET' && path === '/mcp') {
-      return jsonResponse(405, {
-        jsonrpc: '2.0',
-        id: null,
-        error: { code: -32600, message: 'Use POST for Streamable HTTP' },
-      });
+      return webResponseToApiGateway(response);
     }
 
     return jsonResponse(404, { ok: false, error: 'Not found' });

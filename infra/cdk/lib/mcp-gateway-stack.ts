@@ -4,6 +4,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNode from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
@@ -20,6 +21,8 @@ export interface McpGatewayStackProps extends cdk.StackProps {
   rendersBucketName: string;
   evidenceBucketArn: string;
   evidenceBucketName: string;
+  usageTable: dynamodb.Table;
+  decisionsTable: dynamodb.Table;
 }
 
 /**
@@ -48,6 +51,8 @@ export class McpGatewayStack extends cdk.Stack {
       rendersBucketName,
       evidenceBucketArn,
       evidenceBucketName,
+      usageTable,
+      decisionsTable,
     } = props;
     const prefix = `${projectName}-${stage}`;
 
@@ -112,10 +117,12 @@ export class McpGatewayStack extends cdk.Stack {
         STAGE: stage,
         PROJECT_NAME: projectName,
         ENGINE_ALB_DNS: engineAlbDns,
-        ENGINE_PORT: '8020',
+        ENGINE_PORT: '80',
         RENDERS_BUCKET: rendersBucketName,
         EVIDENCE_BUCKET: evidenceBucketName,
         REDIS_ENDPOINT: redisEndpoint,
+        USAGE_TABLE: usageTable.tableName,
+        DECISIONS_TABLE: decisionsTable.tableName,
       },
       bundling: {
         minify: true,
@@ -142,6 +149,9 @@ export class McpGatewayStack extends cdk.Stack {
         ],
       }),
     );
+
+    usageTable.grantWriteData(mcpHandlerFn);
+    decisionsTable.grantWriteData(mcpHandlerFn);
 
     this.api = new apigateway.RestApi(this, 'McpApi', {
       restApiName: `${prefix}-mcp-api`,
