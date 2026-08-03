@@ -75,4 +75,12 @@ new ObservabilityStack(app, `${projectName}-observability-${stage}`, {
   engineServiceName: engineStack.serviceName,
 });
 
+// Priority #7 — durable commercial ledger (DynamoDB). Status: declared until deploy.
+new UsageLedgerStack(app, `${projectName}-usage-ledger-${stage}`, {
+  env,
+  projectName,
+  stage,
+  description: 'DynamoDB usage + entitlement decision ledger (declared until deploy)',
+});
+
 app.synth();
