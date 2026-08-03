@@ -955,6 +955,9 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }
       return jsonResponse(405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'GET only' } });
     }
+    if (path === '/v1/render-prompt' && httpMethod === 'POST') {
+      return handleRenderPrompt(event);
+    }
     if (path.startsWith('/v1/scenes')) {
       return handleSceneRest(event);
     }
@@ -1043,6 +1046,44 @@ async function handleSceneRest(event: APIGatewayProxyEvent): Promise<APIGatewayP
     }
 
     return restError(404, 'NOT_FOUND', 'unknown route');
+  } catch (err) {
+    const code = (err as { code?: string })?.code ?? 'ERROR';
+    const message = err instanceof Error ? err.message : String(err);
+    const status = /not found/i.test(message) ? 404 : /SCENE_/.test(code) ? 409 : 400;
+    return restError(status, code, message);
+  }
+}
+
+/**
+ * One-shot GPT Action: create a deterministic scene from a prompt and render a
+ * preview in a single call, so ChatGPT returns an image in one tool invocation.
+ * Defaults to 512×512 (measured ~8s) to stay well inside the 29s gateway timeout.
+ */
+async function handleRenderPrompt(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+  const requestId = event.headers?.['x-request-id'] || `req-${crypto.randomUUID().slice(0, 12)}`;
+  const trace = buildTraceContext(event, requestId);
+
+  try {
+    const body = asRecord(parseJsonBody(event)) ?? {};
+    const prompt = typeof body.prompt === 'string' ? body.prompt : '';
+    if (!prompt) {
+      return restError(400, 'BAD_REQUEST', 'prompt is required');
+    }
+    const mode = typeof body.mode === 'string' ? body.mode : undefined;
+    const width = typeof body.width === 'number' ? body.width : 512;
+    const height = typeof body.height === 'number' ? body.height : 512;
+    const created = await createScene({ prompt, mode, width, height });
+    const sceneId = typeof created.sceneId === 'string' ? created.sceneId : '';
+    if (!sceneId) {
+      return restError(502, 'ENGINE_ERROR', 'engine did not return a sceneId');
+    }
+    const continuityState = asRecord(body.continuityState);
+    const { structured } = await performRender(
+      sceneId,
+      { mode, width, height, ...(continuityState ? { continuityState } : {}) },
+      trace,
+    );
+    return restOk(200, structured);
   } catch (err) {
     const code = (err as { code?: string })?.code ?? 'ERROR';
     const message = err instanceof Error ? err.message : String(err);

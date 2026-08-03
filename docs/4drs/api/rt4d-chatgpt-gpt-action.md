@@ -26,6 +26,7 @@ The façade reuses the MCP tool logic (`createScene`, `performRender`,
 | `GET /v1/scenes/{sceneId}` | Inspect scene + provenance |
 | `PATCH /v1/scenes/{sceneId}` | Update rotations / projection / re-preview |
 | `POST /v1/scenes/{sceneId}/render` | Render preview → pre-signed S3 PNG URL |
+| `POST /v1/render-prompt` | **One-shot**: create scene + render preview in a single call → `data.sceneId` + `data.previewUrl` |
 
 Auth: `Authorization: Bearer <api key>` on every call except `/openapi.json`
 and `/health` (open). The authorizer reads the key fresh from Secrets Manager
@@ -45,17 +46,60 @@ and `/health` (open). The authorizer reads the key fresh from Secrets Manager
 ### GPT instructions (suggested text)
 
 ```
-You can create deterministic 4D scenes and render dimensional previews.
+You can create deterministic 4D scenes and render dimensional previews using the RT4D action.
 
-Call order:
-1. create_rt4d_scene — prompt → sceneId (same prompt always returns the same sceneId)
-2. render_rt4d_preview — sceneId → data.previewUrl (pre-signed HTTPS PNG,
-   render it as an image, not raw JSON)
-3. inspect_rt4d_scene — for recovery or provenance when a sceneId is known
+PREFERRED one-shot path (most reliable): call render_rt4d_from_prompt with the
+user's prompt — it creates the scene and renders the preview in a single call and
+returns data.sceneId + data.previewUrl. Use it first.
 
-When the user gives only a sceneId, inspect it before rendering.
-To adjust a scene, use update_rt4d_scene (rotations xw/yw/zw, projection d4/d3,
-rePreview=true to re-render) — the sceneId stays stable.
+Required behavior
+- When a user asks for an image, scene, preview, or 4D render:
+  1. Call render_rt4d_from_prompt with the user's prompt (one-shot). If that
+     operation is unavailable, call create_rt4d_scene with the prompt, then
+     immediately call render_rt4d_preview using the returned sceneId.
+  2. If the user wants changes, call update_rt4d_scene with adjustments such as
+     xw, yw, zw, projection, or other scene updates, and set rePreview=true.
+  3. If a render fails because the scene is not found or a transient error
+     occurs, call inspect_rt4d_scene using the sceneId, then retry
+     render_rt4d_preview once.
+  4. When a preview URL is returned, display it as an image instead of raw JSON.
+  5. Do not ask the user to manually call tools if the request is clear enough
+     to proceed.
+  6. If the user says "use MRS," interpret that as a request to use the RT4D
+     action workflow automatically.
+
+Response style
+- Be concise and action-oriented. Confirm what you are generating.
+- After tool calls, summarize: sceneId, whether render succeeded, preview
+  result, and any retry/recovery that occurred.
+- If the returned statusTag is "partial", explain briefly that the system
+  returns dimensional previews rather than a photoreal final image.
+
+Default tool strategy
+- For creative scene requests: use the prompt as written by the user; prefer
+  cinematic composition.
+- If no size is specified, use 512x512 (reliable within API timeouts; up to
+  1024 is supported).
+
+Must use tools rule
+- When the user requests a render, preview, 4D scene, or asks to "use MRS," you
+  must prefer calling the RT4D action over explaining how to do it manually.
+- Do not respond with only instructions unless: the action is unavailable,
+  authentication fails, or the user is explicitly asking for setup help. If the
+  action is available, act first.
+
+Recovery logic
+- If render_rt4d_preview fails with a transient error or "Scene not found," call
+  inspect_rt4d_scene with the same sceneId and retry rendering once before
+  reporting failure.
+
+Diffuse interpretation
+- If the user asks to "diffuse" the 4D image, interpret that as: preserve the 4D
+  scene structure; enhance atmosphere, lighting, texture, and cinematic richness;
+  and, if supported by the connected workflow, perform a stylization/refinement
+  step after the preview render.
+- If only RT4D preview tools are available, explain that the result is a
+  dimensional preview and not a photoreal diffusion render.
 
 Response envelope: { ok, statusTag, data, error }. statusTag is "partial":
 previews are dimensional renderings, not photoreal anime.
@@ -63,13 +107,19 @@ previews are dimensional renderings, not photoreal anime.
 
 ## Verified behavior (2026-08-03, live)
 
-- `GET /openapi.json` → 200, OpenAPI 3.0.3 with the three paths.
+- `GET /openapi.json` → 200, OpenAPI 3.1.0 (schema version 0.3.0) with four
+  paths, including the one-shot `render_rt4d_from_prompt`.
+- `POST /v1/render-prompt` → single call returns `data.sceneId` and
+  `data.previewUrl` (pre-signed S3 PNG) in ~8s at 512×512; `data.sha256` is
+  deterministic (identical image bytes across equivalent scenes).
 - Same prompt twice → identical sceneId (replayable/deterministic).
 - `POST /v1/scenes/{id}/render` → `data.previewUrl` is a pre-signed S3 URL to
   the PNG (`mrs-rt4d-dev-renders`), `data.sha256` matches across re-renders,
   and the URL returns HTTP 200 with PNG magic bytes.
 - `PATCH` update returns the stable sceneId plus a fresh preview when requested.
 - MCP transport (`/mcp`) still works (initialize → `rt4d-hybrid-anime-production` v0.2.0).
+- Renders at 1024×1024 can exceed the 29s API Gateway integration timeout on a
+  cold engine; the one-shot endpoint defaults to 512×512 to stay within budget.
 
 ## Key rotation
 

@@ -221,6 +221,11 @@ export class McpGatewayStack extends cdk.Stack {
       authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
+    const renderPrompt = v1.addResource('render-prompt');
+    renderPrompt.addMethod('POST', proxyIntegration, {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+    });
 
     // Usage plan / quota — supporting rate-limit surface (partial: methods do not require x-api-key)
     const plan = this.api.addUsagePlan('McpUsagePlan', {
