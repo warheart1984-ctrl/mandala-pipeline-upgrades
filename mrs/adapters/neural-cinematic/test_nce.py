@@ -267,3 +267,81 @@ def test_audio_and_quality_probes():
     assert q["cosmos"]["cosmosRequired"] is False
     assert isinstance(q["gaps"], list) and q["gaps"]
 
+
+def test_sculpt_under_lock_honest_without_zbrush(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    import sculpt_under_lock as sul
+
+    prod = tmp_path / "production" / "warrior-anthro-fox-01"
+    monkeypatch.setattr(
+        sul,
+        "ensure_production_intake",
+        lambda character_id="warrior-anthro-fox-01": (
+            prod.mkdir(parents=True, exist_ok=True) or prod
+        ),
+    )
+    monkeypatch.setattr(sul, "find_production_dir", lambda character_id=None: prod)
+    monkeypatch.setattr(sul, "find_sculptor_root", lambda: None)
+    monkeypatch.setattr(
+        sul,
+        "_fixture_paths",
+        lambda: {"root": None, "constitutional": None, "preview": None, "glb": None},
+    )
+    out = sul.resolve_sculpt_under_lock("warrior-anthro-fox-01", ensure_intake=True)
+    assert out["productionSculpt"] is False
+    assert out["statusTag"] == "core-enforced-fixture-not-production-sculpt"
+    assert "zbrush" in " ".join(out["gaps"]).lower() or "fixture" in out["statusTag"]
+
+
+def test_sculpt_under_lock_production_when_obj_present(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import sculpt_under_lock as sul
+
+    prod = tmp_path / "warrior-anthro-fox-01"
+    prod.mkdir(parents=True)
+    obj = prod / "sculpt.obj"
+    obj.write_text("\n".join(["v 0 0 0", "v 1 0 0", "v 0 1 0", "f 1 2 3"] * 80) + "\n")
+    (prod / "preview.png").write_bytes(solid_png(32, 32, (1, 2, 3)))
+    monkeypatch.setattr(sul, "ensure_production_intake", lambda character_id=None: prod)
+    monkeypatch.setattr(sul, "find_production_dir", lambda character_id=None: prod)
+    out = sul.resolve_sculpt_under_lock("warrior-anthro-fox-01")
+    assert out["productionSculpt"] is True
+    assert out["statusTag"] == "partial_with_gaps"
+    assert out["identityLock"]["meshHash"].startswith("sha256:")
+    assert "PENDING" not in out["identityLock"]["meshHash"]
+
+
+def test_enrich_and_demo_from_fixture_build(tmp_path: Path):
+    from infinity_bridge import map_build_to_mandala
+    from demo_from_build import run_from_build
+
+    fixture = (
+        ROOT.parents[1]
+        / "adapters"
+        / "storyforge-boundary"
+        / "contract"
+        / "fixtures"
+        / "infinity-backend-build-warrior-courtyard.json"
+    )
+    if not fixture.is_file():
+        fixture = Path(
+            "/media/jon/New Volume/Mandala Rendering Software/mrs/adapters/"
+            "storyforge-boundary/contract/fixtures/infinity-backend-build-warrior-courtyard.json"
+        )
+    if not fixture.is_file():
+        pytest.skip(f"warrior fixture missing: {fixture}")
+    mapped = map_build_to_mandala(json.loads(fixture.read_text(encoding="utf-8")))
+    assert mapped["identityEqual"] is True
+    summary = run_from_build(
+        build_json=fixture,
+        out_dir=tmp_path,
+        dry_run=True,
+        frames_per_shot=2,
+        fps=4.0,
+    )
+    assert summary["identityEqual"] is True
+    assert summary["pressPlayMp4"]["ok"] is True
+    assert summary["status"] == "partial_with_gaps"
+    # Without a dropped ZBrush OBJ, must not claim production sculpt
+    assert summary["productionSculpt"] is False
+    assert "zbrush" in " ".join(summary["gaps"]).lower()

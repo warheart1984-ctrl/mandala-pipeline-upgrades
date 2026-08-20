@@ -50,3 +50,24 @@ python3 quality_probe.py            # sculpt/Daniel/Cosmos ladder
 
 Infinity root: `/media/jon/New Volume/Project Infinity` (`INFINITY_ROOT`).
 Book-drop shots from markdown are **heuristic** until `--build-json` from Story Forge Movie Lane.
+
+## Live Story Forge + ZBrush production intake
+
+```bash
+cd mrs/adapters/neural-cinematic
+python3 import_zbrush_production.py --character-id warrior-anthro-fox-01   # ensure drop folder
+# Drop ZBrush sculpt.obj into packages/sovereign-sculptor/production/warrior-anthro-fox-01/
+python3 import_zbrush_production.py --character-id warrior-anthro-fox-01 --mesh /path/to/sculpt.obj
+python3 emit_storyforge_build.py --out outputs/live-build.json
+python3 demo_from_build.py --build-json outputs/live-build.json
+# or: bash demo-live-sf.sh
+```
+
+| Surface | Status | Notes |
+|---------|--------|-------|
+| `emit_storyforge_build.py` | `partial_with_gaps` | Live Infinity `StoryForgeBackendPipeline` + Mandala enrichment (`identityLock` operator/sculpt) |
+| `sculpt_under_lock.py` | `partial_with_gaps` / fixture | `productionSculpt=true` **only** when OBJ/FBX present; else fixture + honest tag |
+| Blender preview bake | `partial_with_gaps` | Workbench 384², low-memory settings — **not** lookdev |
+| SD-Turbo beauty | `partial_with_gaps` | **512² only** on RX 580 (~8GB VRAM); no Cosmos |
+
+**Hardware honesty:** System RAM is whatever was already working before any upgrade attempt (do **not** document 32GB). Extra stick DOA does not change VRAM limits.
