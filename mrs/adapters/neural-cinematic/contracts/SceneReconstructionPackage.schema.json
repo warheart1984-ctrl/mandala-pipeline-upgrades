@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mrs.local/adapters/neural-cinematic/contracts/SceneReconstructionPackage.schema.json",
+  "title": "SceneReconstructionPackage",
+  "description": "Photo→3D reconstruction package. Status: declared_stub — fields exist for contract wiring only. No monocular depth, normals, or mesh recon in this adapter.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "status",
+    "sourceImageRef",
+    "capabilityId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "neural-cinematic/0.1"
+    },
+    "kind": { "type": "string", "const": "SceneReconstructionPackage" },
+    "status": {
+      "type": "string",
+      "const": "declared_stub",
+      "description": "Honest: SRP is not implemented; photo→depth/mesh remains declared."
+    },
+    "capabilityId": {
+      "type": "string",
+      "const": "neural_cinematic_simulation_backend"
+    },
+    "sourceImageRef": { "type": "string", "minLength": 1 },
+    "depthRef": { "type": ["string", "null"] },
+    "normalsRef": { "type": ["string", "null"] },
+    "segmentationRef": { "type": ["string", "null"] },
+    "camera": {
+      "type": ["object", "null"],
+      "description": "Optional camera estimate — declared stub, not computed."
+    },
+    "limitation": {
+      "type": "string",
+      "description": "Human-readable honesty note."
+    }
+  }
+}

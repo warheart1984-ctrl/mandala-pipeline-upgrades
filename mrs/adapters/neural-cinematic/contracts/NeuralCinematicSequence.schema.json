@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mrs.local/adapters/neural-cinematic/contracts/NeuralCinematicSequence.schema.json",
+  "title": "NeuralCinematicSequence",
+  "description": "Governed stills/frame sequence artifact from NCE demo path. Status: partial for stills+flipbook; not temporal AI video.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "status",
+    "sequenceId",
+    "stillRefs",
+    "modelIds",
+    "provenance",
+    "capabilityId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "neural-cinematic/0.1"
+    },
+    "kind": { "type": "string", "const": "NeuralCinematicSequence" },
+    "status": {
+      "type": "string",
+      "enum": ["partial", "declared"],
+      "description": "partial = runnable stills/flipbook path; declared = video paint / Cosmos."
+    },
+    "capabilityId": {
+      "type": "string",
+      "const": "neural_cinematic_simulation_backend"
+    },
+    "sequenceId": { "type": "string", "minLength": 1 },
+    "productionId": { "type": ["string", "null"] },
+    "sceneId": { "type": ["string", "null"] },
+    "clipMetadata": {
+      "type": "object",
+      "properties": {
+        "label": { "type": "string" },
+        "frameCount": { "type": "integer", "minimum": 0 },
+        "fps": { "type": "number", "minimum": 0 },
+        "motionBackend": { "type": "string" }
+      }
+    },
+    "stillRefs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "uri", "sha256"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "base_keyframe",
+              "beauty",
+              "sim_frame",
+              "copy_fallback"
+            ]
+          },
+          "uri": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "camera": {
+            "type": "object",
+            "description": "Per-frame camera metadata from Simulation Chamber."
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "frameRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "uri": { "type": "string" },
+          "sha256": { "type": "string" },
+          "camera": { "type": "object" }
+        }
+      }
+    },
+    "modelIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "AAIS-style: external model ids recorded in evidence (e.g. SD-Turbo)."
+    },
+    "beautyStatus": {
+      "type": "string",
+      "enum": [
+        "beauty_applied_sd_turbo",
+        "beauty_skipped_bridge_down",
+        "beauty_skipped_disabled",
+        "beauty_skipped_dry_run"
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intentId", "worldId", "timelineId"],
+      "properties": {
+        "intentId": { "type": "string" },
+        "worldId": { "type": "string" },
+        "timelineId": { "type": "string" },
+        "limitation": { "type": "string" }
+      }
+    },
+    "mytharAudioRef": {
+      "type": ["object", "null"],
+      "description": "Declared Mythar handoff — scoreIdentity/audioPlan refs only."
+    },
+    "aaisWorkers": {
+      "type": ["object", "null"],
+      "description": "AAIS Factory Worker ID stubs — declared, not a Mandala AAIS runtime."
+    },
+    "organs": {
+      "type": ["object", "null"],
+      "description": "Honest organ status map for this sequence."
+    },
+    "limitation": { "type": "string" }
+  }
+}

@@ -1,0 +1,12 @@
+outputs/
+*.pyc
+__pycache__/
+.pytest_cache/
+
+# Root repo ignores *.json / *.png; keep NCE contracts + fixture trackable.
+!contracts/
+!contracts/*.json
+!fixtures/
+!fixtures/*.png
+!outputs/
+!outputs/.gitignore

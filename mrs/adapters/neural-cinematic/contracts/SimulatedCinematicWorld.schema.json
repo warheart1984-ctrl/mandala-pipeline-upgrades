@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mrs.local/adapters/neural-cinematic/contracts/SimulatedCinematicWorld.schema.json",
+  "title": "SimulatedCinematicWorld",
+  "description": "Simulation Chamber world state for local cinematic motion without Cosmos. Status: partial when produced by simulation_chamber; declared when only sketched.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "status",
+    "sceneId",
+    "productionId",
+    "shotSpec",
+    "capabilityId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "neural-cinematic/0.1"
+    },
+    "kind": { "type": "string", "const": "SimulatedCinematicWorld" },
+    "status": {
+      "type": "string",
+      "enum": ["declared", "partial"],
+      "description": "partial = Simulation Chamber emitted frames/stills; declared = contract only."
+    },
+    "capabilityId": {
+      "type": "string",
+      "const": "neural_cinematic_simulation_backend"
+    },
+    "sceneId": { "type": "string", "minLength": 1 },
+    "productionId": { "type": "string", "minLength": 1 },
+    "characterId": {
+      "type": ["string", "null"],
+      "description": "Must come from storyforge-boundary / Infinity — never invented from filenames."
+    },
+    "identityLock": {
+      "type": ["object", "null"],
+      "description": "Optional subset of storyforge-mandala-contract/1.1 identityLock keys."
+    },
+    "shotSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cameraPathId"],
+      "properties": {
+        "cameraPathId": {
+          "type": "string",
+          "enum": ["push-in", "orbit", "close-up"],
+          "description": "Simulation Chamber camera path template."
+        },
+        "mood": { "type": "string" },
+        "weatherTags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "frameCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        }
+      }
+    },
+    "baseKeyframeRef": { "type": ["string", "null"] },
+    "cosmosRequired": {
+      "type": "boolean",
+      "const": false,
+      "description": "Simulation Chamber is the skip-Cosmos local motion path."
+    },
+    "rendererBackend": {
+      "type": "string",
+      "enum": [
+        "camera_orbit_flipbook",
+        "engine3d_soft_raster",
+        "declared_unimplemented"
+      ]
+    },
+    "emotionalVector": {
+      "type": ["object", "null"],
+      "description": "Mood / emotion_intensity from request — not narrative identity."
+    },
+    "organ": { "type": "string", "const": "Mandala Simulation Chamber" },
+    "role": { "type": "string", "const": "Motion Organ" },
+    "limitation": { "type": "string" }
+  }
+}

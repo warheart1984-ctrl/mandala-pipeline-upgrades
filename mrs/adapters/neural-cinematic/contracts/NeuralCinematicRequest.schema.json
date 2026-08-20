@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mrs.local/adapters/neural-cinematic/contracts/NeuralCinematicRequest.schema.json",
+  "title": "NeuralCinematicRequest",
+  "description": "Visual Body–shaped request into Mandala NCE / Simulation Chamber. Must not invent narrative identity from filenames — characterId/identityLock are caller-supplied or null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "style",
+    "emotion_intensity",
+    "requires_simulation",
+    "shotSpec",
+    "capabilityId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "neural-cinematic/0.1"
+    },
+    "kind": { "type": "string", "const": "NeuralCinematicRequest" },
+    "capabilityId": {
+      "type": "string",
+      "const": "neural_cinematic_simulation_backend"
+    },
+    "style": { "type": "string", "minLength": 1 },
+    "emotion_intensity": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "requires_simulation": {
+      "type": "boolean",
+      "description": "If true, Simulation Chamber must run (flipbook or soft-raster)."
+    },
+    "baseKeyframePath": {
+      "type": ["string", "null"],
+      "description": "Filesystem path to PNG/JPEG. Optional; demo may synthesize a fixture."
+    },
+    "shotSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cameraPathId"],
+      "properties": {
+        "cameraPathId": {
+          "type": "string",
+          "enum": ["push-in", "orbit", "close-up"]
+        },
+        "mood": { "type": "string" },
+        "weatherTags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "frameCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        }
+      }
+    },
+    "productionId": { "type": ["string", "null"] },
+    "sceneId": { "type": ["string", "null"] },
+    "characterId": {
+      "type": ["string", "null"],
+      "description": "From Story Forge / storyforge-boundary — not derived from image basename."
+    },
+    "identityLock": {
+      "type": ["object", "null"],
+      "description": "Compatible with storyforge-mandala-contract/1.1 identityLock when provided."
+    },
+    "audioPlan": {
+      "type": ["object", "null"],
+      "description": "Optional Mythar/Beatbox handoff stub (scoreIdentity, cues) — declared boundary."
+    },
+    "dryRun": { "type": "boolean" }
+  }
+}
