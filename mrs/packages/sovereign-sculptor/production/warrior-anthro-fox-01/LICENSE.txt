@@ -1,0 +1,12 @@
+Creative Commons Attribution 4.0 International (CC-BY 4.0)
+
+Source asset: "Low Poly Fox" by Mathilde_Lea
+https://opengameart.org/content/low-poly-fox
+
+Full license text: https://creativecommons.org/licenses/by/4.0/
+
+You must give appropriate credit, provide a link to the license, and indicate
+if changes were made. See ATTRIBUTION.md in this directory.
+
+This file is redistributed here solely for Mandala / sovereign-sculptor
+pipeline testing under the terms of CC-BY 4.0.

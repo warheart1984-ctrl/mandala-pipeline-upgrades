@@ -38,7 +38,8 @@ def import_mesh(src: Path, character_id: str, *, bake: bool = True) -> dict:
     prod = ensure_production_intake(character_id)
     dest_name = "sculpt.obj" if src.suffix.lower() == ".obj" else "sculpt.fbx"
     dest = prod / dest_name
-    shutil.copy2(src, dest)
+    if src.resolve() != dest.resolve():
+        shutil.copy2(src, dest)
     # remove opposite format to avoid ambiguity
     other = prod / ("sculpt.fbx" if dest_name.endswith(".obj") else "sculpt.obj")
     if other.is_file() and other != dest:
