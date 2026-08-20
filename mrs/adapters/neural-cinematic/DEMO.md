@@ -18,7 +18,19 @@ Style mirrors `mrs/apps/rt4d-chatgpt-plugin/demo-warrior.sh`.
 Story Forge contract: [`../storyforge-boundary/`](../storyforge-boundary/) (v1.1).  
 Organ map: [`BOUNDARY.md`](BOUNDARY.md).
 
-## Ports (RX 580)
+## Warrior press-Play short
+
+Identity-locked courtyard flipbook from storyforge-boundary fixture:
+
+```bash
+bash demo-short-warrior.sh
+# or
+python3 demo_short_warrior.py --out-dir ./outputs --frames-per-shot 4
+```
+
+Produces `press-play.mp4` tagged `flipbook-not-motion` (click bed ≠ Beatbox score).
+S01 `characterStateHash` / `scoreIdentity` must equal S08.
+
 
 | Port | Service | Role |
 |------|---------|------|

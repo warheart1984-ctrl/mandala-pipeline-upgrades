@@ -220,3 +220,50 @@ def test_warrior_short_press_play(tmp_path: Path):
     assert summary["status"] == "partial_with_gaps"
     ncs = json.loads(Path(summary["ncsPath"]).read_text(encoding="utf-8"))
     validate_ncs(ncs)
+
+
+def test_infinity_bridge_and_book_drop(tmp_path: Path):
+    from infinity_bridge import parity_report
+    from book_drop import run_book_drop
+
+    report = parity_report()
+    assert report["warriorFixtureParity"]["identityEqual"] is True
+    assert report["infinityRoot"]
+    lock = {
+        "species": "human",
+        "rigSpecies": "human",
+        "faceRefId": "face-archive-witness",
+        "bodyBuild": "lean",
+        "armorId": "none",
+        "weaponId": "none",
+        "weaponHeldIn": "none",
+        "meshHash": "sha256:test-mesh",
+        "rigHash": "sha256:test-rig",
+        "prohibitedMutations": ["identity-drift"],
+    }
+    summary = run_book_drop(
+        chapter_path=ROOT / "fixtures" / "archive-consent-ch1-excerpt.md",
+        out_dir=tmp_path,
+        character_id="archive-witness-01",
+        identity_lock=lock,
+        score_identity="archive-consent-ch1-theme-v1",
+        dry_run=True,
+        frames_per_shot=2,
+        fps=4.0,
+    )
+    assert summary["identityEqual"] is True
+    assert summary["pressPlayMp4"]["ok"] is True
+    assert summary["status"] == "partial_with_gaps"
+
+
+def test_audio_and_quality_probes():
+    from audio_handoff import audio_handoff
+    from quality_probe import probe
+
+    hand = audio_handoff({"scoreIdentity": "t", "cues": []})
+    assert hand["status"] == "partial_with_gaps"
+    assert "gaps" in hand
+    q = probe()
+    assert q["cosmos"]["cosmosRequired"] is False
+    assert isinstance(q["gaps"], list) and q["gaps"]
+
