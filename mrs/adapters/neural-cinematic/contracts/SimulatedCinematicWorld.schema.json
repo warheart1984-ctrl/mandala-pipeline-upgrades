@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mrs.local/adapters/neural-cinematic/contracts/SimulatedCinematicWorld.schema.json",
   "title": "SimulatedCinematicWorld",
-  "description": "Simulation Chamber world state for local cinematic motion without Cosmos. Status: partial when produced by simulation_chamber; declared when only sketched.",
+  "description": "Simulation Chamber world state for local cinematic motion without Cosmos. Status: partial_with_gaps when produced by simulation_chamber flipbook/Ken-Burns path; declared when only sketched.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,7 +12,8 @@
     "sceneId",
     "productionId",
     "shotSpec",
-    "capabilityId"
+    "capabilityId",
+    "gaps"
   ],
   "properties": {
     "schemaVersion": {
@@ -22,8 +23,8 @@
     "kind": { "type": "string", "const": "SimulatedCinematicWorld" },
     "status": {
       "type": "string",
-      "enum": ["declared", "partial"],
-      "description": "partial = Simulation Chamber emitted frames/stills; declared = contract only."
+      "enum": ["declared", "partial", "partial_with_gaps"],
+      "description": "partial_with_gaps = flipbook/Ken-Burns Motion Organ; declared = contract only."
     },
     "capabilityId": {
       "type": "string",
@@ -81,6 +82,16 @@
     },
     "organ": { "type": "string", "const": "Mandala Simulation Chamber" },
     "role": { "type": "string", "const": "Motion Organ" },
-    "limitation": { "type": "string" }
+    "limitation": { "type": "string" },
+    "gaps": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Explicit known limitations (honest status)."
+    },
+    "kenBurnsBackend": {
+      "type": "string",
+      "description": "Synthetic 2D Ken-Burns / orbit metadata backend id."
+    }
   }
 }

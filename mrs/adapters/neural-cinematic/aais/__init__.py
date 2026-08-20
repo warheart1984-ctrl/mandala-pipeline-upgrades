@@ -5,14 +5,16 @@ Full AAIS runtime is **not** hosted in Mandala. AIKI has an optional
 Infinity/AAIS owns worker orchestration.
 
 This module records worker IDs + enforcement notes for the NCE evidence chain.
-Status: **declared** (stubs). Do not invent a Mandala AAIS runtime here.
+Status: **declared** (stubs) with explicit `gaps: []`.
+Do not invent a Mandala AAIS runtime here.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-# Worker IDs — Factory Workers organ (expression pipeline, not narrative law)
+STATUS = "declared"
+
 WORKER_IDS = (
     "aais.scene_breakdown",
     "aais.depth_estimate",
@@ -22,6 +24,13 @@ WORKER_IDS = (
     "aais.sound_alignment",
     "aais.continuity_check",
 )
+
+GAPS = [
+    "no_mandala_aais_scheduler_or_runtime",
+    "worker_ids_are_contract_labels_not_execution_proof",
+    "depth_geometry_physics_solves_not_wired",
+    "sound_alignment_not_executed_in_nce",
+]
 
 ENFORCEMENT_NOTES = (
     "AAIS workers are Factory Workers: they execute expression tasks under "
@@ -40,12 +49,13 @@ def worker_stub_manifest() -> dict[str, Any]:
     return {
         "organ": "AAIS",
         "role": "Factory Workers",
-        "status": "declared",
+        "status": STATUS,
         "runtimeHostedInMandala": False,
         "aikiProviderId": "aais",
         "aikiProviderPath": "aiki/pipeline/inference/adapters/aais_stub.py",
         "workerIds": list(WORKER_IDS),
         "enforcementNotes": list(ENFORCEMENT_NOTES),
+        "gaps": list(GAPS),
     }
 
 

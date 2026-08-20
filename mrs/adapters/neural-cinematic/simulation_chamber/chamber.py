@@ -2,9 +2,11 @@
 
 Inputs: Story Forge scene truth refs, optional reconstruction stub, camera path,
 weather intent, emotional vectors (via request mood/intensity).
-Outputs: flipbook frames + camera metadata; depth/normal buffers declared stubs.
+Outputs: flipbook frames + Ken-Burns / camera-orbit metadata;
+depth/normal/motion buffers as synthetic declared stubs.
 
-Cosmos Transfer = optional rented-NVIDIA polish later — never required here.
+Status: **partial_with_gaps**. Cosmos Transfer = optional rented-NVIDIA polish
+later — never required here (`cosmosRequired: false`).
 """
 
 from __future__ import annotations
@@ -18,10 +20,20 @@ from typing import Any
 from nce import CAPABILITY_ID, SCHEMA_VERSION
 from nce.canonical import file_sha256
 
+STATUS = "partial_with_gaps"
+
+GAPS = [
+    "no_soft_body_or_cloth_physics",
+    "no_computed_depth_normals_or_optical_flow",
+    "no_temporal_ai_video_or_cosmos_transfer",
+    "no_weather_or_lighting_solver",
+    "ken_burns_or_orbit_metadata_only_not_true_3d_motion",
+]
+
 LIMITATION = (
     "Simulation Chamber is the Mandala Motion Organ and replaces Cosmos Transfer "
-    "for local demo motion. Backend here is a camera-path flipbook of a governed "
-    "still — not soft-body physics, not monocular depth, not temporal AI video."
+    "for local demo motion. Backend here is a camera-path / Ken-Burns flipbook of a "
+    "governed still — not soft-body physics, not monocular depth, not temporal AI video."
 )
 
 
@@ -50,6 +62,38 @@ def camera_pose(path_id: str, t: float) -> dict[str, float]:
     }
 
 
+def ken_burns_meta(path_id: str, t: float) -> dict[str, Any]:
+    """Synthetic 2D Ken-Burns crop/zoom metadata (not true parallax)."""
+    t = max(0.0, min(1.0, float(t)))
+    if path_id == "push-in":
+        scale = 1.0 + 0.35 * t
+        return {
+            "status": "partial_with_gaps",
+            "mode": "ken_burns_zoom",
+            "scale": round(scale, 4),
+            "pan_x": 0.0,
+            "pan_y": round(-0.05 * t, 4),
+            "note": "2D zoom stub — not depth-aware dolly",
+        }
+    if path_id == "close-up":
+        return {
+            "status": "partial_with_gaps",
+            "mode": "ken_burns_pan",
+            "scale": round(1.15 + 0.1 * t, 4),
+            "pan_x": round(0.08 * math.sin(t * math.pi), 4),
+            "pan_y": 0.02,
+            "note": "2D pan stub — not facial tracking",
+        }
+    return {
+        "status": "partial_with_gaps",
+        "mode": "ken_burns_orbit_proxy",
+        "scale": 1.08,
+        "pan_x": round(0.12 * math.sin(t * 2 * math.pi), 4),
+        "pan_y": round(0.04 * math.cos(t * 2 * math.pi), 4),
+        "note": "Orbit proxied as 2D pan; camera.azimuth_deg carries the true orbit angle",
+    }
+
+
 def _png_chunk(tag: bytes, data: bytes) -> bytes:
     return (
         struct.pack(">I", len(data))
@@ -71,6 +115,7 @@ def solid_png(width: int, height: int, rgb: tuple[int, int, int]) -> bytes:
 
 
 def _tint_png_bytes(src: bytes, frame_index: int, frame_count: int) -> bytes:
+    """Visual flipbook differentiation only — not a beauty or photoreal pass."""
     if len(src) < 400:
         t = frame_index / max(1, frame_count - 1)
         r = int(40 + 80 * t) % 256
@@ -81,22 +126,28 @@ def _tint_png_bytes(src: bytes, frame_index: int, frame_count: int) -> bytes:
 
 
 def declared_buffer_stubs(frame_index: int) -> dict[str, Any]:
-    """Depth/normal motion buffers — declared stubs (not computed)."""
+    """Synthetic depth/normal/motion stubs — not computed geometry."""
     return {
         "depthBuffer": {
             "status": "declared",
             "uri": None,
+            "synthetic": True,
             "note": f"depth buffer not computed (frame {frame_index})",
+            "gaps": ["no_monocular_or_stereo_depth"],
         },
         "normalBuffer": {
             "status": "declared",
             "uri": None,
+            "synthetic": True,
             "note": f"normal buffer not computed (frame {frame_index})",
+            "gaps": ["no_surface_normals"],
         },
         "motionBuffer": {
             "status": "declared",
             "uri": None,
+            "synthetic": True,
             "note": f"optical flow / motion vectors not computed (frame {frame_index})",
+            "gaps": ["no_optical_flow"],
         },
     }
 
@@ -113,7 +164,7 @@ def run_chamber(
     weather_intent: list[str] | None = None,
     emotional_vector: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Emit SCW + frame still refs. Status: partial (flipbook Motion Organ)."""
+    """Emit SCW + frame still refs. Status: partial_with_gaps."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     path_id = shot_spec["cameraPathId"]
@@ -126,6 +177,7 @@ def run_chamber(
     for i in range(frame_count):
         t = 0.0 if frame_count == 1 else i / (frame_count - 1)
         cam = camera_pose(path_id, t)
+        kb = ken_burns_meta(path_id, t)
         name = f"sim_{path_id.replace('-', '_')}_{i:03d}.png"
         dest = out_dir / name
         dest.write_bytes(_tint_png_bytes(src_bytes, i, frame_count))
@@ -135,15 +187,19 @@ def run_chamber(
                 "uri": str(dest),
                 "sha256": file_sha256(dest),
                 "camera": cam,
+                "kenBurns": kb,
                 "buffers": declared_buffer_stubs(i),
-                "notes": f"Simulation Chamber flipbook frame {i}/{frame_count - 1}",
+                "notes": (
+                    f"Simulation Chamber flipbook frame {i}/{frame_count - 1} "
+                    "(Ken-Burns / orbit metadata; not photoreal motion)"
+                ),
             }
         )
 
     scw: dict[str, Any] = {
         "schemaVersion": SCHEMA_VERSION,
         "kind": "SimulatedCinematicWorld",
-        "status": "partial",
+        "status": STATUS,
         "capabilityId": CAPABILITY_ID,
         "sceneId": scene_id,
         "productionId": production_id,
@@ -162,5 +218,7 @@ def run_chamber(
         "organ": "Mandala Simulation Chamber",
         "role": "Motion Organ",
         "limitation": LIMITATION,
+        "gaps": list(GAPS),
+        "kenBurnsBackend": "synthetic_2d_metadata",
     }
     return scw, frames

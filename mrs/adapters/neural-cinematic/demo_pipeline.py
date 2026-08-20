@@ -38,10 +38,18 @@ def _utc_stamp() -> str:
 def ensure_keyframe(path: Path | None, fixtures: Path) -> Path:
     if path and path.is_file():
         return path.resolve()
-    fixtures.mkdir(parents=True, exist_ok=True)
-    dest = fixtures / "keyframe-64.png"
-    dest.write_bytes(solid_png(64, 64, (48, 72, 120)))
-    return dest.resolve()
+    try:
+        fixtures.mkdir(parents=True, exist_ok=True)
+        dest = fixtures / "keyframe-64.png"
+        dest.write_bytes(solid_png(64, 64, (48, 72, 120)))
+        return dest.resolve()
+    except OSError:
+        # Worktree / sandbox may deny writes under package fixtures/
+        fallback = Path("/tmp/nce-fixtures")
+        fallback.mkdir(parents=True, exist_ok=True)
+        dest = fallback / "keyframe-64.png"
+        dest.write_bytes(solid_png(64, 64, (48, 72, 120)))
+        return dest.resolve()
 
 
 def stub_srp(source_image: Path) -> dict:
@@ -59,6 +67,13 @@ def stub_srp(source_image: Path) -> dict:
             "Photo→SRP reconstruction is declared_stub — no monocular depth, "
             "normals, segmentation, or mesh in this scaffold."
         ),
+        "gaps": [
+            "no_monocular_depth",
+            "no_normals",
+            "no_segmentation",
+            "no_mesh_reconstruction",
+            "no_camera_solve",
+        ],
     }
 
 
@@ -175,10 +190,22 @@ def run_demo(args: argparse.Namespace) -> dict:
         *[{k: v for k, v in fr.items() if k != "buffers"} for fr in frames],
     ]
 
+    model_ids = list(painted.get("modelIds") or []) + [
+        "simulation_chamber.camera_orbit_flipbook"
+    ]
+    ncs_gaps = [
+        "not_movie_lane_assemble",
+        "simulation_chamber_ken_burns_not_true_3d",
+        "srp_declared_stub",
+        "cosmos_skipped_local",
+        "mythar_audio_declared_only",
+    ]
+    if painted.get("painterStatus") == "partial_with_gaps":
+        ncs_gaps.extend(painted.get("gaps") or ["ai_painter_partial_with_gaps"])
     ncs = {
         "schemaVersion": SCHEMA_VERSION,
         "kind": "NeuralCinematicSequence",
-        "status": "partial",
+        "status": "partial_with_gaps",
         "capabilityId": CAPABILITY_ID,
         "sequenceId": f"ncs-{run_dir.name}",
         "productionId": scw["productionId"],
@@ -199,14 +226,22 @@ def run_demo(args: argparse.Namespace) -> dict:
             }
             for i, fr in enumerate(frames)
         ],
-        "modelIds": list(painted.get("modelIds") or []) + ["simulation_chamber.camera_orbit_flipbook"],
+        "modelIds": model_ids,
         "beautyStatus": painted["beautyStatus"],
+        "gaps": ncs_gaps,
         "provenance": {
             "intentId": args.intent_id or f"intent-{run_dir.name}",
             "worldId": args.world_id or scw["sceneId"],
             "timelineId": args.timeline_id or "timeline-nce-demo",
+            "capabilityId": CAPABILITY_ID,
+            "modelIds": model_ids,
+            "artifactHashes": {
+                "keyframe": file_sha256(keyframe),
+                "painted": painted["sha256"],
+                **{f"frame_{i:03d}": fr["sha256"] for i, fr in enumerate(frames)},
+            },
             "limitation": (
-                "partial stills + Simulation Chamber flipbook only. "
+                "partial_with_gaps stills + Simulation Chamber flipbook only. "
                 "No Cosmos. No Movie Lane assemble. SRP declared_stub."
             ),
         },
@@ -221,7 +256,7 @@ def run_demo(args: argparse.Namespace) -> dict:
             "mandala": "this_package",
             "mythar": "declared_boundary",
             "aais": "declared_stubs",
-            "simulationChamber": "partial_flipbook",
+            "simulationChamber": "partial_with_gaps",
             "cosmos": "declared_optional_skipped",
             "movieLaneAssemble": "declared_infinity",
         },
@@ -246,9 +281,15 @@ def run_demo(args: argparse.Namespace) -> dict:
             "SRP": "declared_stub",
             "SCW": scw["status"],
             "NCS": ncs["status"],
-            "SimulationChamber": "partial",
+            "SimulationChamber": scw["status"],
             "AIPainter": painted.get("painterStatus"),
             "Cosmos": "declared_optional_skipped",
+        },
+        "gaps": {
+            "SRP": srp.get("gaps"),
+            "SCW": scw.get("gaps"),
+            "NCS": ncs.get("gaps"),
+            "AIPainter": painted.get("gaps"),
         },
     }
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")

@@ -10,7 +10,8 @@
     "kind",
     "status",
     "sourceImageRef",
-    "capabilityId"
+    "capabilityId",
+    "gaps"
   ],
   "properties": {
     "schemaVersion": {
@@ -38,6 +39,11 @@
     "limitation": {
       "type": "string",
       "description": "Human-readable honesty note."
+    },
+    "gaps": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
     }
   }
 }

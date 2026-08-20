@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mrs.local/adapters/neural-cinematic/contracts/NeuralCinematicSequence.schema.json",
   "title": "NeuralCinematicSequence",
-  "description": "Governed stills/frame sequence artifact from NCE demo path. Status: partial for stills+flipbook; not temporal AI video.",
+  "description": "Governed stills/frame sequence artifact from NCE demo path. Status: partial_with_gaps for stills+flipbook; not temporal AI video.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,7 +13,8 @@
     "stillRefs",
     "modelIds",
     "provenance",
-    "capabilityId"
+    "capabilityId",
+    "gaps"
   ],
   "properties": {
     "schemaVersion": {
@@ -23,8 +24,8 @@
     "kind": { "type": "string", "const": "NeuralCinematicSequence" },
     "status": {
       "type": "string",
-      "enum": ["partial", "declared"],
-      "description": "partial = runnable stills/flipbook path; declared = video paint / Cosmos."
+      "enum": ["partial", "partial_with_gaps", "declared"],
+      "description": "partial_with_gaps = runnable stills/flipbook with explicit gaps; declared = video paint / Cosmos."
     },
     "capabilityId": {
       "type": "string",
@@ -65,6 +66,7 @@
             "type": "object",
             "description": "Per-frame camera metadata from Simulation Chamber."
           },
+          "kenBurns": { "type": "object" },
           "notes": { "type": "string" }
         }
       }
@@ -95,14 +97,35 @@
         "beauty_skipped_dry_run"
       ]
     },
+    "gaps": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["intentId", "worldId", "timelineId"],
+      "required": ["intentId", "worldId", "timelineId", "capabilityId", "artifactHashes"],
       "properties": {
         "intentId": { "type": "string" },
         "worldId": { "type": "string" },
         "timelineId": { "type": "string" },
+        "capabilityId": {
+          "type": "string",
+          "const": "neural_cinematic_simulation_backend"
+        },
+        "modelIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "artifactHashes": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
         "limitation": { "type": "string" }
       }
     },
@@ -118,6 +141,10 @@
       "type": ["object", "null"],
       "description": "Honest organ status map for this sequence."
     },
-    "limitation": { "type": "string" }
+    "limitation": { "type": "string" },
+    "pressPlayMp4": {
+      "type": ["string", "null"],
+      "description": "Optional assembled flipbook MP4 path (partial_with_gaps)."
+    }
   }
 }

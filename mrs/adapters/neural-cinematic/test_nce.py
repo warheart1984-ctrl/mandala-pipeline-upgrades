@@ -53,6 +53,7 @@ def test_srp_must_be_declared_stub():
         "status": "declared_stub",
         "capabilityId": CAPABILITY_ID,
         "sourceImageRef": "fixtures/keyframe-64.png",
+        "gaps": ["no_monocular_depth"],
     }
     validate_srp(ok)
     bad = {**ok, "status": "partial"}
@@ -83,13 +84,14 @@ def test_scw_cosmos_must_not_be_required():
     scw = {
         "schemaVersion": SCHEMA_VERSION,
         "kind": "SimulatedCinematicWorld",
-        "status": "partial",
+        "status": "partial_with_gaps",
         "capabilityId": CAPABILITY_ID,
         "sceneId": "s1",
         "productionId": "p1",
         "shotSpec": {"cameraPathId": "push-in", "frameCount": 2},
         "cosmosRequired": False,
         "rendererBackend": "camera_orbit_flipbook",
+        "gaps": ["ken_burns_or_orbit_metadata_only_not_true_3d_motion"],
     }
     validate_scw(scw)
     with pytest.raises(NceContractError, match="cosmosRequired"):
@@ -109,8 +111,9 @@ def test_simulation_chamber_flipbook_dry(tmp_path: Path):
         identity_lock=None,
     )
     validate_scw(scw)
-    assert scw["status"] == "partial"
+    assert scw["status"] == "partial_with_gaps"
     assert scw["cosmosRequired"] is False
+    assert isinstance(scw["gaps"], list) and len(scw["gaps"]) >= 1
     assert len(frames) == 4
     assert frames[0]["sha256"] != frames[-1]["sha256"]
     assert "azimuth_deg" in camera_pose("orbit", 0.5)
@@ -124,16 +127,19 @@ def test_ncs_partial_with_honest_beauty_status(tmp_path: Path):
     ncs = {
         "schemaVersion": SCHEMA_VERSION,
         "kind": "NeuralCinematicSequence",
-        "status": "partial",
+        "status": "partial_with_gaps",
         "capabilityId": CAPABILITY_ID,
         "sequenceId": "ncs-test",
         "stillRefs": [{"role": "base_keyframe", "uri": str(png), "sha256": sha}],
         "modelIds": ["simulation_chamber.camera_orbit_flipbook"],
         "beautyStatus": "beauty_skipped_dry_run",
+        "gaps": ["not_movie_lane_assemble"],
         "provenance": {
             "intentId": "i",
             "worldId": "w",
             "timelineId": "t",
+            "capabilityId": CAPABILITY_ID,
+            "artifactHashes": {"keyframe": sha},
         },
     }
     validate_ncs(ncs)
@@ -159,10 +165,12 @@ def test_demo_pipeline_dry_run(tmp_path: Path):
     runs = list(tmp_path.glob("nce-run-*"))
     assert len(runs) == 1
     ncs = json.loads((runs[0] / "ncs.json").read_text(encoding="utf-8"))
-    assert ncs["status"] == "partial"
+    assert ncs["status"] == "partial_with_gaps"
     assert ncs["beautyStatus"] == "beauty_skipped_dry_run"
     assert ncs["organs"]["cosmos"] == "declared_optional_skipped"
     assert ncs["mytharAudioRef"]["scoreIdentity"] == "demo-theme-v1"
+    assert ncs["provenance"]["capabilityId"] == CAPABILITY_ID
+    assert ncs["gaps"]
     validate_ncs(ncs)
 
 

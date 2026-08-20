@@ -2,6 +2,7 @@
 
 Status: **partial** — schema-shaped checks; no GPU.
 Does not invent narrative identity from filenames.
+Requires explicit `gaps: []` on SCW / NCS / SRP where applicable.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ BEAUTY_STATUSES = frozenset(
         "beauty_skipped_dry_run",
     }
 )
+STATUS_TAGS = frozenset({"declared", "declared_stub", "partial", "partial_with_gaps"})
 
 
 class NceContractError(ValueError):
@@ -36,6 +38,18 @@ def _req_str(obj: dict[str, Any], key: str) -> str:
     if not isinstance(val, str) or not val.strip():
         raise NceContractError(f"missing or empty string: {key}")
     return val
+
+
+def _req_gaps(obj: dict[str, Any], *, allow_empty: bool = False) -> list[Any]:
+    gaps = obj.get("gaps")
+    if not isinstance(gaps, list):
+        raise NceContractError("gaps must be an array")
+    if not allow_empty and len(gaps) < 1:
+        raise NceContractError("gaps must list at least one known limitation")
+    for i, g in enumerate(gaps):
+        if not isinstance(g, str) or not g.strip():
+            raise NceContractError(f"gaps[{i}] must be a non-empty string")
+    return gaps
 
 
 def _version(obj: dict[str, Any]) -> None:
@@ -70,7 +84,6 @@ def _optional_identity(obj: dict[str, Any]) -> None:
         return
     if not isinstance(lock, dict):
         raise NceContractError("identityLock must be an object or null")
-    # Only known keys; unknown keys are rejected to avoid silent story mutation
     for key in lock:
         if key not in IDENTITY_LOCK_KEYS:
             raise NceContractError(f"identityLock unknown key {key!r} (storyforge-boundary compatible subset only)")
@@ -85,6 +98,7 @@ def validate_srp(data: Any) -> dict[str, Any]:
     if obj.get("status") != "declared_stub":
         raise NceContractError("SRP status must be declared_stub (photo→3D not implemented)")
     _req_str(obj, "sourceImageRef")
+    _req_gaps(obj)
     return obj
 
 
@@ -95,14 +109,15 @@ def validate_scw(data: Any) -> dict[str, Any]:
     if obj.get("kind") != "SimulatedCinematicWorld":
         raise NceContractError("kind must be SimulatedCinematicWorld")
     status = obj.get("status")
-    if status not in ("declared", "partial"):
-        raise NceContractError("SCW status must be declared or partial")
+    if status not in ("declared", "partial", "partial_with_gaps"):
+        raise NceContractError("SCW status must be declared, partial, or partial_with_gaps")
     _req_str(obj, "sceneId")
     _req_str(obj, "productionId")
     _shot_spec(obj.get("shotSpec"))
     _optional_identity(obj)
     if obj.get("cosmosRequired") not in (None, False):
         raise NceContractError("cosmosRequired must be false or omitted (Simulation Chamber skip-Cosmos path)")
+    _req_gaps(obj)
     return obj
 
 
@@ -112,8 +127,8 @@ def validate_ncs(data: Any) -> dict[str, Any]:
     _capability(obj)
     if obj.get("kind") != "NeuralCinematicSequence":
         raise NceContractError("kind must be NeuralCinematicSequence")
-    if obj.get("status") not in ("partial", "declared"):
-        raise NceContractError("NCS status must be partial or declared")
+    if obj.get("status") not in ("partial", "partial_with_gaps", "declared"):
+        raise NceContractError("NCS status must be partial, partial_with_gaps, or declared")
     _req_str(obj, "sequenceId")
     stills = obj.get("stillRefs")
     if not isinstance(stills, list) or len(stills) < 1:
@@ -131,9 +146,21 @@ def validate_ncs(data: Any) -> dict[str, Any]:
     prov = _req_dict(obj.get("provenance"), "provenance")
     for key in ("intentId", "worldId", "timelineId"):
         _req_str(prov, key)
+    if prov.get("capabilityId") != CAPABILITY_ID:
+        raise NceContractError(f"provenance.capabilityId must be {CAPABILITY_ID!r}")
+    hashes = prov.get("artifactHashes")
+    if not isinstance(hashes, dict) or not hashes:
+        raise NceContractError("provenance.artifactHashes must be a non-empty object")
+    for hk, hv in hashes.items():
+        if not isinstance(hv, str) or len(hv) != 64 or any(c not in "0123456789abcdef" for c in hv):
+            raise NceContractError(f"provenance.artifactHashes[{hk}] must be 64 lowercase hex")
+    mid = prov.get("modelIds")
+    if mid is not None and not isinstance(mid, list):
+        raise NceContractError("provenance.modelIds must be an array when present")
     beauty = obj.get("beautyStatus")
     if beauty is not None and beauty not in BEAUTY_STATUSES:
         raise NceContractError(f"beautyStatus invalid: {beauty!r}")
+    _req_gaps(obj)
     return obj
 
 
@@ -151,8 +178,6 @@ def validate_request(data: Any) -> dict[str, Any]:
         raise NceContractError("requires_simulation must be boolean")
     _shot_spec(obj.get("shotSpec"))
     _optional_identity(obj)
-    # Explicit: basename of baseKeyframePath must not become characterId
     if obj.get("characterId") is None and obj.get("baseKeyframePath"):
-        # allowed — identity absent is honest
         pass
     return obj
