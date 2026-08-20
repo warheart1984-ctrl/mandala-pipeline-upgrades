@@ -201,3 +201,22 @@ def test_filename_must_not_become_identity():
     out = validate_request(req)
     assert out["characterId"] is None
     assert "warrior" not in (out.get("characterId") or "")
+
+
+def test_warrior_short_press_play(tmp_path: Path):
+    from demo_short_warrior import run_warrior_short
+
+    summary = run_warrior_short(
+        out_dir=tmp_path,
+        dry_run=True,
+        frames_per_shot=2,
+        fps=4.0,
+    )
+    assert summary["identityCompare"]["equal"] is True
+    assert summary["scoreIdentityCompare"]["equal"] is True
+    assert summary["characterId"] == "warrior-anthro-fox-01"
+    assert summary["pressPlayMp4"]["ok"] is True
+    assert Path(summary["pressPlayMp4"]["path"]).is_file()
+    assert summary["status"] == "partial_with_gaps"
+    ncs = json.loads(Path(summary["ncsPath"]).read_text(encoding="utf-8"))
+    validate_ncs(ncs)
