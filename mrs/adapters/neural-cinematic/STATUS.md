@@ -37,10 +37,16 @@ Every durable artifact should carry an explicit `gaps: []` array (may be empty o
 - AAIS/Mythar surfaces are **declared** stubs with `gaps: []` — do not treat worker IDs or scoreIdentity as live runtime proof.
 - Provenance on NCS records `capabilityId`, model ids, file sha256 hashes, and intent/world/timeline ids.
 
-## Offline verification
+## End-to-end operators (book → press Play)
 
 ```bash
 cd mrs/adapters/neural-cinematic
-python -m pytest test_nce.py -q
-python demo_pipeline.py --dry-run --frames 4
+python3 infinity_bridge.py          # Infinity clone + warrior parity
+bash demo-short-warrior.sh          # fixture short MP4
+bash demo-book-drop.sh              # Archive Ch1 excerpt heuristic → MP4
+python3 audio_handoff.py            # Mythar/Beatbox probe (declared/partial)
+python3 quality_probe.py            # sculpt/Daniel/Cosmos ladder
 ```
+
+Infinity root: `/media/jon/New Volume/Project Infinity` (`INFINITY_ROOT`).
+Book-drop shots from markdown are **heuristic** until `--build-json` from Story Forge Movie Lane.
