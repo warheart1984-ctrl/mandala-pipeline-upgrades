@@ -89,6 +89,13 @@ function downsampleRegion(indices, srcW, x0, y0, x1, y1, level) {
   return out;
 }
 
+function assertNonEmptyCPO(cpo, fn) {
+  const { width, height } = cpo.payload;
+  if (!(width > 0 && height > 0)) {
+    throw new Error(`${fn}: CPO has empty dimensions ${width}x${height}; refusing to fabricate pyramid pixels`);
+  }
+}
+
 /**
  * Build the full token pyramid (all FULL_FRAME_LEVELS). Each level carries the
  * grid indices, its RLE string and a deterministic level_hash.
@@ -96,6 +103,7 @@ function downsampleRegion(indices, srcW, x0, y0, x1, y1, level) {
  * @returns {{ source_hash:string, levels: Record<number, object> }}
  */
 export function buildPyramid(cpo) {
+  assertNonEmptyCPO(cpo, "buildPyramid");
   const { width, height } = cpo.payload;
   const indices = indicesOf(cpo);
   const levels = {};
@@ -132,6 +140,7 @@ export function inspectGrid(imageHashOrCPO, level, opts = {}) {
     throw new Error(`inspectGrid: level must be one of ${FULL_FRAME_LEVELS.join(",")}, got ${level}`);
   }
   const cpo = resolveCPO(imageHashOrCPO, opts, "inspectGrid");
+  assertNonEmptyCPO(cpo, "inspectGrid");
   const { width, height } = cpo.payload;
   const indices = indicesOf(cpo);
   const grid = downsampleRegion(indices, width, 0, 0, width, height, level);
@@ -174,6 +183,7 @@ export function inspectRegion(imageHashOrCPO, x, y, width, height, level, opts =
     throw new Error("inspectRegion: region exceeds image bounds");
   }
   const cpo = resolveCPO(imageHashOrCPO, opts, "inspectRegion");
+  assertNonEmptyCPO(cpo, "inspectRegion");
   const srcW = cpo.payload.width;
   const srcH = cpo.payload.height;
   const indices = indicesOf(cpo);

@@ -6,7 +6,7 @@ Appearance under certified Mandala constraints. Does not commit physics.
 |------|--------|
 | CPU field-tint | **working** |
 | Free SD-Turbo (64×64 / 4 steps) | **partial** (Lemonade `:13307` → sd-server `:13306`) |
-| Open local Anything-V5 | **working** golden — see [`docs/mandala/GOLDEN_PATH_PRO_PAINTER.md`](../../docs/mandala/GOLDEN_PATH_PRO_PAINTER.md) |
+| Open local Anything-V5 | **partial** — blocked-with-evidence when local model/services are missing; live test skipped by default — see [`docs/mandala/GOLDEN_PATH_PRO_PAINTER.md`](../../docs/mandala/GOLDEN_PATH_PRO_PAINTER.md) |
 | Pro dual-key billing | **declared** — see [`docs/mandala/AI_PAINTER_PRO_TIER.md`](../../docs/mandala/AI_PAINTER_PRO_TIER.md) |
 
 ## Quick enable (open local)

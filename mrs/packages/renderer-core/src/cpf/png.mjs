@@ -121,6 +121,7 @@ export function decodePngToRgba(buf) {
   let height = 0;
   let bitDepth = 0;
   let colorType = 0;
+  let interlace = 0;
   const idats = [];
   let offset = 8;
   while (offset + 12 <= png.length) {
@@ -132,12 +133,16 @@ export function decodePngToRgba(buf) {
       height = data.readUInt32BE(4);
       bitDepth = data[8];
       colorType = data[9];
+      interlace = data[12];
     } else if (type === "IDAT") {
       idats.push(data);
     } else if (type === "IEND") {
       break;
     }
     offset += 12 + len;
+  }
+  if (interlace !== 0) {
+    throw new Error("decodePngToRgba: Adam7 interlaced PNG is not supported (reject, do not mis-decode as sequential scanlines)");
   }
   if (bitDepth !== 8 || (colorType !== 0 && colorType !== 2 && colorType !== 6)) {
     throw new Error(`decodePngToRgba: unsupported PNG depth=${bitDepth} color=${colorType}`);

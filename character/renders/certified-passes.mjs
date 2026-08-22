@@ -332,9 +332,15 @@ export function beautyMaterialSpec(asset) {
 }
 
 // ---------------------------------------------------------------------------
-// The three passes — each returns { rgba, width, height }
+// The three passes — each returns { rgba, width, height, provenance }
+// `provenance` is the certified stage record (stageHash chain). Callers that
+// encode/store the frame keep lineage instead of dropping it to pixels only.
 // ---------------------------------------------------------------------------
-export function renderEnergyPass(asset, field, lines, cam, w, h) {
+function withProvenance(frame, provenance) {
+  return { ...frame, provenance: provenance ?? null };
+}
+
+export function renderEnergyPass(asset, field, lines, cam, w, h, provenance = null) {
   const { buf, zbuf } = newFrame(w, h, [4, 6, 12]);
   const proj = (p) => project(p, cam, w, h);
   // faint structural wire (the structure the energy rides on)
@@ -349,10 +355,10 @@ export function renderEnergyPass(asset, field, lines, cam, w, h) {
       drawLine(buf, zbuf, w, h, proj(line[i]), proj(line[i + 1]), col, "add");
     }
   }
-  return { rgba: buf, width: w, height: h };
+  return withProvenance({ rgba: buf, width: w, height: h }, provenance);
 }
 
-export function renderClayPass(asset, cam, w, h) {
+export function renderClayPass(asset, cam, w, h, provenance = null) {
   const { buf, zbuf } = newFrame(w, h, [20, 20, 24]);
   const proj = (p) => project(p, cam, w, h);
   const view = [Math.sin(cam.yaw), 0.2, Math.cos(cam.yaw)];
@@ -378,10 +384,10 @@ export function renderClayPass(asset, cam, w, h) {
     setPixel(buf, w, h, j.x + 1, j.y, 255, 220, 80);
     setPixel(buf, w, h, j.x, j.y + 1, 255, 220, 80);
   }
-  return { rgba: buf, width: w, height: h };
+  return withProvenance({ rgba: buf, width: w, height: h }, provenance);
 }
 
-export function renderBeautyPass(asset, sim, cam, w, h) {
+export function renderBeautyPass(asset, sim, cam, w, h, provenance = null) {
   const { buf, zbuf } = newFrame(w, h, [18, 16, 22]);
   const proj = (p) => project(p, cam, w, h);
   const view = [Math.sin(cam.yaw), 0.2, Math.cos(cam.yaw)];
@@ -406,7 +412,7 @@ export function renderBeautyPass(asset, sim, cam, w, h) {
       }
     }
   }
-  return { rgba: buf, width: w, height: h };
+  return withProvenance({ rgba: buf, width: w, height: h }, provenance);
 }
 
 /** Encode an RGBA frame to a PNG buffer (reuses the character PNG encoder). */

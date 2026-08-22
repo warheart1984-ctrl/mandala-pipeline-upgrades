@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { CertifiedEnvironment } from "../rt4d/environment/CertifiedEnvironment.js";
 import { EnvironmentLighting } from "../lighting/EnvironmentLighting.js";
 import { PhysicalCamera } from "../camera/PhysicalCamera.js";
@@ -276,19 +277,16 @@ export class PhotorealEnvironment {
   }
 
   _generateReplayToken(frameIndex) {
-    const crypto = require("crypto");
-    return crypto.createHash("sha256")
+    return createHash("sha256")
       .update(`${frameIndex}-${this.constants.CANONICAL_SEED}-${this.constants.WORLD_ID}`)
       .digest("hex").slice(0, 32);
   }
 
   _hashArray(arr) {
-    const crypto = require("crypto");
-    return crypto.createHash("sha256").update(Buffer.from(new Float32Array(arr).buffer)).digest("hex").slice(0, 32);
+    return createHash("sha256").update(Buffer.from(new Float32Array(arr).buffer)).digest("hex").slice(0, 32);
   }
 
   _hashAOVs(aovs) {
-    const crypto = require("crypto");
     const data = Buffer.concat([
       Buffer.from(new Float32Array(aovs.albedo).buffer),
       Buffer.from(new Float32Array(aovs.normal).buffer),
@@ -296,7 +294,7 @@ export class PhotorealEnvironment {
       Buffer.from(new Float32Array(aovs.direct).buffer),
       Buffer.from(new Float32Array(aovs.indirect).buffer)
     ]);
-    return crypto.createHash("sha256").update(data).digest("hex").slice(0, 32);
+    return createHash("sha256").update(data).digest("hex").slice(0, 32);
   }
 
   fingerprint() {

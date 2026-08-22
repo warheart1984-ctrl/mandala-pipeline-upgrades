@@ -228,10 +228,19 @@ export function validateCPO(packet) {
       errors.push(`palette[${k}] is not [r,g,b,a]`);
       continue;
     }
-    paletteBytes[k * 4] = c[0] & 255;
-    paletteBytes[k * 4 + 1] = c[1] & 255;
-    paletteBytes[k * 4 + 2] = c[2] & 255;
-    paletteBytes[k * 4 + 3] = c[3] & 255;
+    let canonical = true;
+    for (let i = 0; i < 4; i++) {
+      const v = c[i];
+      if (!Number.isInteger(v) || v < 0 || v > 255) {
+        errors.push(`palette[${k}][${i}]=${v} is not an integer in 0..255`);
+        canonical = false;
+      }
+    }
+    if (!canonical) continue;
+    paletteBytes[k * 4] = c[0];
+    paletteBytes[k * 4 + 1] = c[1];
+    paletteBytes[k * 4 + 2] = c[2];
+    paletteBytes[k * 4 + 3] = c[3];
   }
   const paletteHash = sha256Hex(paletteBytes);
   if (paletteHash !== p.palette_hash) errors.push("palette_hash mismatch");

@@ -32,6 +32,10 @@
  *   --cam-az-max R           Max azimuth (radians) of the eased ping-pong camera sweep (default 1.8).
  *   --cam-sweeps N           Number of smooth there-and-back sweeps over the take (default 1).
  *   --cam-orbit-360          Legacy continuous one-way orbit (default is a bounded ping-pong sweep).
+ *   --field-volume           Composite certified φ/∇φ/η as a primary-ray volume (partial).
+ *   --per-actor-grad         Each actor steps by local −∇φ at its own lattice cell.
+ *   --grad-scale N           Scale for per-actor −∇φ motion (default 6).
+ *   --holo                   Redirect to scripts/simulation-chamber-holo.mjs (raw .bin recorder).
  *
  * Camera motion: by default the observer performs a smooth, eased there-and-back
  * sweep (0.5 - 0.5·cos(2π·N·p)) over a bounded azimuth arc and looks at a stable
@@ -458,6 +462,7 @@ class MultiActorSim {
   async step() {
     const dt = 1 / this.fps;
     this.time += dt;
+    if (this.duration > 0 && this.time > this.duration) this.time = this.duration;
     this.tickCount++;
 
     // Build the certified-field sampler once per tick (shared by per-actor
@@ -581,7 +586,8 @@ class MultiActorSim {
       // does not jitter when actors take discrete solver/beat steps. Fall back
       // to the actors' center of mass only when the card has no explicit center.
       const card = this.sceneCardCamera || {};
-      const cardTarget = Array.isArray(card.lookAt)
+      const explicitLookAt = Array.isArray(card.lookAt);
+      const cardTarget = explicitLookAt
         ? card.lookAt
         : (Array.isArray(card.center) ? card.center : null);
       let centerX, centerY, centerZ;
@@ -595,7 +601,7 @@ class MultiActorSim {
         centerX = 0; centerY = 1.2; centerZ = 0;
       }
 
-      const p = this.duration > 0 ? this.time / this.duration : 0; // 0..1
+      const p = this.duration > 0 ? Math.min(1, Math.max(0, this.time / this.duration)) : 0;
       let orbitAngle;
       if (this.camOrbit360) {
         // Legacy: continuous one-way orbit (kept for back-compat).
@@ -621,7 +627,9 @@ class MultiActorSim {
       }
       if (this.camera.lookAt) {
         this.camera.lookAt.x = centerX;
-        this.camera.lookAt.y = centerY + 0.15;
+        // Honor an authored lookAt exactly; keep a small framing lift only for
+        // inferred targets (card.center or actor center of mass).
+        this.camera.lookAt.y = explicitLookAt ? centerY : centerY + 0.15;
         this.camera.lookAt.z = centerZ;
       }
       if (typeof this.camera._buildBasis === "function") {
@@ -794,6 +802,15 @@ class MultiActorSim {
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
+function parseFiniteFlag(name, raw) {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) {
+    console.error(`Invalid ${name}: ${raw} (expected a finite number)`);
+    process.exit(1);
+  }
+  return n;
+}
+
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -816,6 +833,10 @@ if (args.length === 0) {
   console.error("         --cam-az-min R --cam-az-max R  azimuth arc (radians) for the eased ping-pong sweep (default 0.7..1.8)");
   console.error("         --cam-sweeps N          number of smooth there-and-back sweeps over the take (default 1)");
   console.error("         --cam-orbit-360         legacy: continuous one-way orbit (may pan off the lit scene)");
+  console.error("         --field-volume          composite certified φ/∇φ/η as a primary-ray volume (partial)");
+  console.error("         --per-actor-grad        each actor steps by local −∇φ at its own lattice cell");
+  console.error("         --grad-scale N          scale for per-actor −∇φ motion (default 6)");
+  console.error("         --holo                  redirects to scripts/simulation-chamber-holo.mjs (raw .bin)");
   process.exit(1);
 }
 
@@ -835,10 +856,13 @@ for (let i = 0; i < args.length; i++) {
     else options.characterGlb = CHAR_RIGGED_GLB;
   }
   else if (args[i] === "--solver" && args[i + 1]) { options.solver = args[++i]; }
-  else if (args[i] === "--cam-az-min" && args[i + 1]) { options.camAzMin = parseFloat(args[++i]); }
-  else if (args[i] === "--cam-az-max" && args[i + 1]) { options.camAzMax = parseFloat(args[++i]); }
-  else if (args[i] === "--cam-sweeps" && args[i + 1]) { options.camSweeps = parseFloat(args[++i]); }
+  else if (args[i] === "--cam-az-min" && args[i + 1]) { options.camAzMin = parseFiniteFlag("--cam-az-min", args[++i]); }
+  else if (args[i] === "--cam-az-max" && args[i + 1]) { options.camAzMax = parseFiniteFlag("--cam-az-max", args[++i]); }
+  else if (args[i] === "--cam-sweeps" && args[i + 1]) { options.camSweeps = parseFiniteFlag("--cam-sweeps", args[++i]); }
   else if (args[i] === "--cam-orbit-360") { options.camOrbit360 = true; }
+  else if (args[i] === "--field-volume") { options.fieldVolume = true; }
+  else if (args[i] === "--per-actor-grad") { options.perActorGrad = true; }
+  else if (args[i] === "--grad-scale" && args[i + 1]) { options.gradMotionScale = parseFiniteFlag("--grad-scale", args[++i]); }
   else { positionalArgs.push(args[i]); }
 }
 

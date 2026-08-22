@@ -37,6 +37,7 @@
  *   --vignette F       Vignette angle divisor; smaller = stronger (default 4.6)
  *   --ca F             Chromatic-aberration pixel shift (default 1.1 * strength)
  *   --warm F           Color-temperature split-tone amount (default 1.0 * strength)
+ *   --seed N           Stable film-grain seed (default 42; required for replayable output)
  *   --no-lens          Disable barrel lens distortion
  *   --crf N            x264 CRF (default 18)
  *   --print            Print the ffmpeg command and exit (no render)
@@ -74,7 +75,10 @@ const grain = num(args.grain, 7 * strength);
 const vignette = num(args.vignette, 4.6);
 const ca = num(args.ca, 1.1 * strength);
 const warm = num(args.warm, 1.0 * strength);
+const grainSeed = Math.trunc(num(args.seed, 42));
 const lens = !args["no-lens"];
+const fpsExplicit = args.fps != null;
+const fromVideo = typeof args.input === "string";
 
 const out = typeof args.out === "string" ? resolve(args.out) : null;
 if (!out) {
@@ -125,7 +129,7 @@ grade.push(`curves=all='0/${cb(0.018 * strength)} 1/0.985'`);
 grade.push(`vignette=PI/${cb(vignette)}`);
 if (ca > 0) grade.push(`rgbashift=rh=${Math.round(ca)}:bh=${-Math.round(ca)}`);
 if (lens) grade.push(`lenscorrection=k1=${cb(-0.035 * strength)}:k2=${cb(-0.008 * strength)}:i=bilinear`);
-if (grain > 0) grade.push(`noise=alls=${Math.round(grain)}:allf=t+u`);
+if (grain > 0) grade.push(`noise=alls=${Math.round(grain)}:allf=t+u:all_seed=${grainSeed}`);
 if (scale > 0) grade.push(`scale=${scale}:${scale}:flags=lanczos`);
 grade.push("format=yuv420p");
 
@@ -136,10 +140,19 @@ const ffmpegArgs = [
   ...inputArgs,
   "-filter_complex", filtergraph,
   "-map", "[v]",
-  "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", String(crf),
-  "-r", String(fps),
-  out,
 ];
+if (fromVideo) {
+  // Keep source audio when present; `0:a?` is a no-op if the input is silent.
+  ffmpegArgs.push("-map", "0:a?", "-c:a", "aac");
+}
+ffmpegArgs.push("-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", String(crf));
+// Still sequences need an output rate. For --input, only override cadence when
+// the caller passed --fps; otherwise keep the source frame timing.
+if (!fromVideo || fpsExplicit) {
+  ffmpegArgs.push("-r", String(fps));
+  if (fromVideo && fpsExplicit) ffmpegArgs.push("-shortest");
+}
+ffmpegArgs.push(out);
 
 if (args.print) {
   process.stdout.write(`${ffmpeg} ${ffmpegArgs.map((a) => (/[\s'"]/.test(a) ? JSON.stringify(a) : a)).join(" ")}\n`);

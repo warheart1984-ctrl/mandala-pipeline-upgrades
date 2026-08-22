@@ -199,9 +199,9 @@ async function main() {
 
   const heroCam = cameraForFrame(0.5);
   const frames = {
-    energy: renderEnergyPass(asset, field, lines, heroCam, width, height),
-    clay_rig: renderClayPass(asset, heroCam, width, height),
-    beauty: renderBeautyPass(asset, sim, heroCam, width, height),
+    energy: renderEnergyPass(asset, field, lines, heroCam, width, height, chain.energy),
+    clay_rig: renderClayPass(asset, heroCam, width, height, chain.clay_rig),
+    beauty: renderBeautyPass(asset, sim, heroCam, width, height, chain.beauty),
   };
   const stills = {};
   for (const stage of STAGES) {
@@ -276,9 +276,9 @@ async function main() {
         const p = mp4Frames === 1 ? 0.5 : i / (mp4Frames - 1);
         const cam = cameraForFrame(p);
         let frame;
-        if (stage === "energy") frame = renderEnergyPass(asset, field, lines, cam, width, height);
-        else if (stage === "clay_rig") frame = renderClayPass(asset, cam, width, height);
-        else frame = renderBeautyPass(asset, sim, cam, width, height);
+        if (stage === "energy") frame = renderEnergyPass(asset, field, lines, cam, width, height, chain.energy);
+        else if (stage === "clay_rig") frame = renderClayPass(asset, cam, width, height, chain.clay_rig);
+        else frame = renderBeautyPass(asset, sim, cam, width, height, chain.beauty);
         writeFileSync(join(framesDir, `frame-${String(i).padStart(4, "0")}.png`), encodeFrame(frame));
       }
       const mp4 = join(outDir, `${stage}.mp4`);

@@ -69,10 +69,19 @@ export function rigHash(asset) {
     head: b.head.map(q),
     tail: b.tail.map(q),
   }));
+  const skin = asset.skin
+    ? {
+        joints: asset.skin.joints,
+        weights: (asset.skin.weights || []).map((w) => w.map(q)),
+      }
+    : null;
+  const ibm = (asset.ibm || []).map((m) => (Array.isArray(m) ? m.map(q) : m));
   return sha256Canonical({
     kind: "rig-binding:v1",
     bones,
     boneGroups: asset.bones,
+    skin,
+    ibm,
   });
 }
 

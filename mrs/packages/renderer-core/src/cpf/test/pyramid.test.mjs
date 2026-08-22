@@ -135,3 +135,9 @@ test("queries are deterministic and hash-addressable via CPOStore", () => {
   // Without a store, a bare hash must throw (no hidden global state).
   assert.throws(() => inspectRegion(hash, 0.1, 0.2, 0.3, 0.3, 32), /no \{ store \} resolver/);
 });
+
+test("buildPyramid and inspectGrid reject empty CPO instead of fabricating pixels", () => {
+  const cpo = encodeCPO(Buffer.alloc(0), 0, 0);
+  assert.throws(() => buildPyramid(cpo), /empty dimensions/);
+  assert.throws(() => inspectGrid(cpo, 8), /empty dimensions/);
+});

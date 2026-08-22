@@ -16,6 +16,7 @@ import {
   decodeCPOToPng,
 } from "../cpo.mjs";
 import { encodeRgbaPng, decodePngToRgba } from "../png.mjs";
+import { createHash } from "node:crypto";
 
 /** Build a small deterministic RGBA image. */
 function makeImage(width, height, fn) {
@@ -149,4 +150,29 @@ test("single-color image encodes as one run", () => {
   assert.equal(cpo.payload.grid, "64:0");
   const { rgba: decoded } = decodeCPO(cpo);
   assert.deepEqual(Buffer.from(decoded), rgba);
+});
+
+test("decodePngToRgba rejects Adam7 interlaced input", () => {
+  const png = encodeRgbaPng(1, 1, Buffer.from([0, 0, 0, 255]));
+  png[28] = 1; // IHDR interlace method (Adam7)
+  assert.throws(() => decodePngToRgba(png), /interlac/);
+});
+
+test("validateCPO rejects noncanonical palette components instead of masking", () => {
+  const rgba = makeImage(2, 1, (x) => (x === 0 ? [0, 0, 0, 255] : [255, 255, 255, 255]));
+  const cpo = encodeCPO(rgba, 2, 1);
+  const bad = JSON.parse(JSON.stringify(cpo));
+  bad.payload.palette[0][0] = 256;
+  const maskedBytes = Buffer.alloc(bad.payload.palette.length * 4);
+  for (let k = 0; k < bad.payload.palette.length; k++) {
+    const c = bad.payload.palette[k];
+    maskedBytes[k * 4] = c[0] & 255;
+    maskedBytes[k * 4 + 1] = c[1] & 255;
+    maskedBytes[k * 4 + 2] = c[2] & 255;
+    maskedBytes[k * 4 + 3] = c[3] & 255;
+  }
+  bad.payload.palette_hash = createHash("sha256").update(maskedBytes).digest("hex");
+  const res = validateCPO(bad);
+  assert.equal(res.valid, false);
+  assert.ok(res.errors.some((e) => e.includes("0..255")));
 });
