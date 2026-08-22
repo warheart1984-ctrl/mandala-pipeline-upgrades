@@ -55,3 +55,11 @@ Helper: `rotate2d(x, y, theta)`.
 - 4D helper `lengthPreserved4` applies the **same geometric statement** (orthogonal length preservation) to `vec4`; it does not add new physics beyond the document’s \(R^\top R = I\) argument.
 - Existing SO(4) BRDF / PDF invariance tests in `normalization.test.js` are unchanged and remain the SoT for material math.
 - **Invariant stack layer:** PI-* are registered as foundational constitutional math invariants under [`../invariants/`](../invariants/) (`STACK.md`). 4DRS engine invariants (EI-*) derive from these IDs; see [`docs/4drs/contracts/INVARIANT_STACK.md`](../../../../../../../docs/4drs/contracts/INVARIANT_STACK.md).
+- **Python encoding (same method):** [`physical_invariants.py`](./physical_invariants.py) — `Invariant → boolean predicate on states`. Do not invent a second encoding. Catalog of other repo claims: [`docs/math4d/PHYSICAL_INVARIANTS.md`](../../../../../../../docs/math4d/PHYSICAL_INVARIANTS.md).
+
+## See also
+
+- Projection contract + layer 3 **declared**: [`docs/math4d/CONTRACT.md`](../../../../../../../docs/math4d/CONTRACT.md)
+- Compose / compiler / Rosetta (shared state only; not a physics proof): [`docs/math4d/ROSETTA.md`](../../../../../../../docs/math4d/ROSETTA.md)
+
+**Passing a predicate does not prove physical validity.** CONTRACT.md layer 3 stays **declared**.

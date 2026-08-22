@@ -110,6 +110,12 @@ Anime Pictures for training/
 !docs/proofs/rt4d-fox-fixture-smoke/**/*.png
 !docs/proofs/rt4d-fox-fixture-smoke/**/*.glb
 
+# math4d pipeline infographic (user-provided; reused, not regenerated)
+!docs/assets/
+!docs/assets/**
+!docs/assets/**/*.png
+!docs/assets/**/*.jpg
+
 # Character production pipeline (Mandala + Simulation Chamber)
 !character/**/*.json
 !character/**/*.mjs

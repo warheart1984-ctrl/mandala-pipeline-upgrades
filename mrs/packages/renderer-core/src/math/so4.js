@@ -213,28 +213,12 @@ export function buildSO4(rotations) {
 }
 
 /**
- * Interpolate between two SO(4) rotations using SLERP-like approach.
- * For simplicity, we interpolate in the Lie algebra (exponential map).
- *
- * @param {Float64Array} R0 - start rotation
- * @param {Float64Array} R1 - end rotation
- * @param {number} t - interpolation parameter [0,1]
- * @returns {Float64Array} interpolated rotation
+ * Gram-Schmidt re-orthogonalization of a 4×4 matrix (column vectors).
+ * Preserves orientation when det stays positive after projection.
+ * @param {Float64Array|number[]} blended
+ * @returns {Float64Array}
  */
-export function slerpSO4(R0, R1, t) {
-  // Simple approach: decompose into plane rotations, interpolate angles
-  // This is approximate but works well for small differences
-  // A proper SLERP would use quaternion double-cover of SO(4)
-
-  // For now, use matrix interpolation via eigendecomposition
-  // Simplified: just blend and re-orthogonalize
-  const blended = new Float64Array(16);
-  for (let i = 0; i < 16; i++) {
-    blended[i] = (1 - t) * R0[i] + t * R1[i];
-  }
-
-  // Re-orthogonalize using Gram-Schmidt on columns
-  // Treat columns as 4D vectors
+export function reorthogonalizeSO4(blended) {
   const cols = [
     [blended[0], blended[4], blended[8], blended[12]],
     [blended[1], blended[5], blended[9], blended[13]],
@@ -242,16 +226,15 @@ export function slerpSO4(R0, R1, t) {
     [blended[3], blended[7], blended[11], blended[15]],
   ];
 
-  // Gram-Schmidt orthogonalization
   for (let i = 0; i < 4; i++) {
     for (let j = 0; j < i; j++) {
-      const dot = cols[i][0] * cols[j][0] + cols[i][1] * cols[j][1] +
-                  cols[i][2] * cols[j][2] + cols[i][3] * cols[j][3];
-      for (let k = 0; k < 4; k++) {
-        cols[i][k] -= dot * cols[j][k];
-      }
+      const d =
+        cols[i][0] * cols[j][0] +
+        cols[i][1] * cols[j][1] +
+        cols[i][2] * cols[j][2] +
+        cols[i][3] * cols[j][3];
+      for (let k = 0; k < 4; k++) cols[i][k] -= d * cols[j][k];
     }
-    // Normalize
     const len = Math.sqrt(
       cols[i][0] ** 2 + cols[i][1] ** 2 + cols[i][2] ** 2 + cols[i][3] ** 2
     );
@@ -260,7 +243,6 @@ export function slerpSO4(R0, R1, t) {
     }
   }
 
-  // Rebuild matrix from columns
   const result = new Float64Array(16);
   for (let i = 0; i < 4; i++) {
     result[0 + i] = cols[i][0];
@@ -269,5 +251,59 @@ export function slerpSO4(R0, R1, t) {
     result[12 + i] = cols[i][3];
   }
 
+  // Flip last column if det drifted to −1 (improper)
+  if (mat4det(result) < 0) {
+    result[3] *= -1;
+    result[7] *= -1;
+    result[11] *= -1;
+    result[15] *= -1;
+  }
   return result;
+}
+
+/**
+ * Interpolate between two SO(4) rotations.
+ * Status: **partial** — relative skew + Taylor exp (geodesic approx for moderate angles).
+ * Prefer `math4d/quat4.js` `quat4SlerpMat` when endpoints are Quat4 pairs (double-cover).
+ *
+ * @param {Float64Array|number[]} R0 - start rotation
+ * @param {Float64Array|number[]} R1 - end rotation
+ * @param {number} t - interpolation parameter [0,1]
+ * @returns {Float64Array} interpolated rotation
+ */
+export function slerpSO4(R0, R1, t) {
+  if (t <= 0) return new Float64Array(R0);
+  if (t >= 1) return new Float64Array(R1);
+
+  // Rel = R0^T R1; approximate log(Rel) ≈ skew(Rel) = (Rel − Rel^T)/2
+  const Rel = mat4mul(mat4transpose(R0), R1);
+  const RelT = mat4transpose(Rel);
+  const S = new Float64Array(16);
+  let skewFrob = 0;
+  for (let i = 0; i < 16; i++) {
+    S[i] = 0.5 * (Rel[i] - RelT[i]);
+    skewFrob += S[i] * S[i];
+  }
+
+  // Large relative rotation: fall back to linear blend + reorth (stable, not geodesic)
+  if (skewFrob > 2.5) {
+    const blended = new Float64Array(16);
+    for (let i = 0; i < 16; i++) blended[i] = (1 - t) * R0[i] + t * R1[i];
+    return reorthogonalizeSO4(blended);
+  }
+
+  for (let i = 0; i < 16; i++) S[i] *= t;
+
+  // Taylor exp(S) ≈ I + S + S²/2! + S³/3! + S⁴/4!
+  let pow = new Float64Array(S);
+  const expM = new Float64Array(IDENTITY4);
+  for (let i = 0; i < 16; i++) expM[i] += pow[i];
+  pow = mat4mul(pow, S);
+  for (let i = 0; i < 16; i++) expM[i] += pow[i] / 2;
+  pow = mat4mul(pow, S);
+  for (let i = 0; i < 16; i++) expM[i] += pow[i] / 6;
+  pow = mat4mul(pow, S);
+  for (let i = 0; i < 16; i++) expM[i] += pow[i] / 24;
+
+  return mat4mul(R0, reorthogonalizeSO4(expM));
 }

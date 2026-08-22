@@ -86,6 +86,106 @@ export function edgeIntersect(plane, v0, v1) {
 }
 
 /**
+ * Intersect segment [a,b] with hyperplane H = {x | n·x = d}.
+ * Returns null if no crossing within the open segment (or parallel miss);
+ * otherwise { point, t } with t ∈ [0,1] and point = a + t(b−a).
+ *
+ * Spec alias for edgeIntersect / edgeIntersectT with explicit miss handling.
+ *
+ * @param {Hyperplane} plane
+ * @param {{x,y,z,w}} a
+ * @param {{x,y,z,w}} b
+ * @returns {{ point: {x,y,z,w}, t: number } | null}
+ */
+export function intersectSegment(plane, a, b) {
+  const da = signedDistance(plane, a);
+  const db = signedDistance(plane, b);
+  if (Math.abs(da) < 1e-10) return { point: { ...a }, t: 0 };
+  if (Math.abs(db) < 1e-10) return { point: { ...b }, t: 1 };
+  if (da * db > 0) return null; // same side — no crossing
+  if (Math.abs(da - db) < 1e-10) return null; // parallel
+  const t = da / (da - db);
+  if (t < -1e-10 || t > 1 + 1e-10) return null;
+  const tc = Math.max(0, Math.min(1, t));
+  return {
+    t: tc,
+    point: {
+      x: a.x + tc * (b.x - a.x),
+      y: a.y + tc * (b.y - a.y),
+      z: a.z + tc * (b.z - a.z),
+      w: a.w + tc * (b.w - a.w),
+    },
+  };
+}
+
+/**
+ * Orthogonal projection of point onto hyperplane: x' = x − (n·x − d) n.
+ * @param {Hyperplane} plane
+ * @param {{x,y,z,w}} point
+ * @returns {{x,y,z,w}}
+ */
+export function projectOntoHyperplane(plane, point) {
+  const dist = signedDistance(plane, point);
+  return {
+    x: point.x - dist * plane.n.x,
+    y: point.y - dist * plane.n.y,
+    z: point.z - dist * plane.n.z,
+    w: point.w - dist * plane.n.w,
+  };
+}
+
+/**
+ * Orthonormal basis (e1,e2,e3) spanning the hyperplane (perp to n).
+ * Deterministic Gram–Schmidt from canonical axes.
+ * @param {{x,y,z,w}} normal - preferably unit
+ * @returns {[{x,y,z,w},{x,y,z,w},{x,y,z,w}]}
+ */
+export function hyperplaneBasis(normal) {
+  const n = normalize(normal);
+  const candidates = [
+    { x: 1, y: 0, z: 0, w: 0 },
+    { x: 0, y: 1, z: 0, w: 0 },
+    { x: 0, y: 0, z: 1, w: 0 },
+    { x: 0, y: 0, z: 0, w: 1 },
+  ];
+  let bestIdx = 0;
+  let bestDot = Infinity;
+  for (let i = 0; i < candidates.length; i++) {
+    const d = Math.abs(dot(n, candidates[i]));
+    if (d < bestDot) {
+      bestDot = d;
+      bestIdx = i;
+    }
+  }
+  const u1raw = {
+    x: candidates[bestIdx].x - n.x * dot(n, candidates[bestIdx]),
+    y: candidates[bestIdx].y - n.y * dot(n, candidates[bestIdx]),
+    z: candidates[bestIdx].z - n.z * dot(n, candidates[bestIdx]),
+    w: candidates[bestIdx].w - n.w * dot(n, candidates[bestIdx]),
+  };
+  const basis = [normalize(u1raw)];
+  for (let i = 0; i < candidates.length; i++) {
+    if (i === bestIdx) continue;
+    let v = { ...candidates[i] };
+    v = {
+      x: v.x - n.x * dot(n, v),
+      y: v.y - n.y * dot(n, v),
+      z: v.z - n.z * dot(n, v),
+      w: v.w - n.w * dot(n, v),
+    };
+    for (const b of basis) {
+      const db = dot(b, v);
+      v = { x: v.x - b.x * db, y: v.y - b.y * db, z: v.z - b.z * db, w: v.w - b.w * db };
+    }
+    if (Math.sqrt(dot(v, v)) > 1e-6) {
+      basis.push(normalize(v));
+      if (basis.length === 3) break;
+    }
+  }
+  return basis;
+}
+
+/**
  * Classify vertices of a triangle against the hyperplane.
  * Returns array of signed distances.
  */
