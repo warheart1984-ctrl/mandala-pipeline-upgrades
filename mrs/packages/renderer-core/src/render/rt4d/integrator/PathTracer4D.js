@@ -141,62 +141,8 @@ export class PathTracer4D {
    * @param {object} ray
    * @param {object} scene
    * @param {number} depth
-   * @param {object} [constitutionalContext] - Constitutional tracing context
-   *   - geometryHash: string (sha256 of vertex/face/edge data)
-   *   - sceneHash: string (sha256 of scene spec)
-   *   - surfaceId: string (surface identifier)
-   *   - rngSeed: number (RNG seed)
-   *   - prevSceneHash: string (previous scene hash for comparison)
    */
-  trace(ray, scene, depth = 0, constitutionalContext = {}) {
-    // Constitutional invariant: trace entry must carry geometry evidence
-    const surfaceId = extractSurfaceIdentity(scene);
-    const sceneGeometryHash = computeSceneGeometryHash(scene);
-    const sceneHash = constitutionalContext.sceneHash ?? "none";
-    const rngSeed = constitutionalContext.rngSeed ?? "unknown";
-    const geometryEvidenceId = constitutionalContext.geometryEvidenceId ?? scene.geometryEvidenceId ?? null;
-    const metricId = constitutionalContext.metricId ?? scene.metric?.id ?? DEFAULT_METRIC_ID;
-
-    // Constitutional invariant: trace entry must carry geometry evidence.
-    // Emit at most once per scene — the ChatGPT render_4d_prompt path and the
-    // engine suite otherwise flood stdout with one warning per ray, drowning
-    // real output. The fail-fast identity boundary below still asserts when a
-    // geometryEvidenceId is supplied.
-    if (!constitutionalContext.geometryHash) {
-      if (!this._warnedMissingGeometryHash.has(sceneGeometryHash)) {
-        this._warnedMissingGeometryHash.add(sceneGeometryHash);
-        console.warn(`[PathTracer4D] CONSTITUTIONAL VIOLATION: trace() called without geometryHash. surfaceId=${surfaceId}, sceneHash=${sceneHash}`);
-      }
-    } else {
-      // Constitutional invariant: geometryHash must be non-empty
-      if (!constitutionalContext.geometryHash || constitutionalContext.geometryHash === "") {
-        console.warn(`[PathTracer4D] CONSTITUTIONAL VIOLATION: geometryHash is empty. surfaceId=${surfaceId}`);
-      }
-    }
-
-    // Constitutional invariant: sceneHash must differ for different surfaces
-    if (constitutionalContext.sceneHash && constitutionalContext.prevSceneHash) {
-      if (constitutionalContext.sceneHash === constitutionalContext.prevSceneHash) {
-        console.warn(`[PathTracer4D] CONSTITUTIONAL VIOLATION: sceneHash identical to previous. surfaceId=${surfaceId}`);
-      }
-    }
-
-    // Fail-fast identity boundary (AC-R10 / RendererSurfaceDispatch): when the
-    // render intent supplies a geometryEvidenceId, the scene's bound geometry
-    // evidence must match it exactly. Verified once per scene; asserts throw.
-    if (geometryEvidenceId && !scene._renderIdentityVerified) {
-      scene.verifyRenderIdentity({
-        surfaceId,
-        geometryEvidenceId,
-        metricId,
-      });
-      scene._renderIdentityVerified = true;
-    }
-
-    if (TRACE_DEBUG) {
-      console.debug(`[PathTracer4D] trace entry: surfaceId=${surfaceId}, sceneGeometryHash=${sceneGeometryHash}, geometryEvidenceId=${geometryEvidenceId ?? "none"}, sceneHash=${sceneHash}, rngSeed=${rngSeed}, depth=${depth}`);
-    }
-
+  trace(ray, scene, depth = 0) {
     if (depth >= this.maxDepth) return vec4(0, 0, 0, 0);
 
     const hit = scene.intersect(ray);
@@ -382,7 +328,7 @@ export class PathTracer4D {
     const pdfArea = 1 / (area + 1e-12);
     // 4D: dA → dω Jacobian uses r³ (S³ area scales as r³).
     const pdfSolid = (pdfArea * dist * dist * dist) / (cosLight + 1e-9);
-    const pdf = pdfSolid * pdfSelect;
+    const pdf = pdfSolid / lights.length;
 
     const mat = scene.getMaterial(light.materialId);
     // Raw emission — cos_light lives in the estimator via pdf_ω, not here.
@@ -462,22 +408,7 @@ export class PathTracer4D {
 
     const area = hypersphereArea(light.radius);
     const pdfArea = 1 / (area + 1e-12);
-    const pdfSolid = (pdfArea * dist * dist * dist) / (cosLight + 1e-9);
-
-    // Match _sampleLight power×area selection probability.
-    let sumW = 0;
-    let wHit = 0;
-    for (const L of lights) {
-      const mat = scene.getMaterial(L.materialId);
-      const em = mat?.emission ?? vec4(0, 0, 0, 0);
-      const power = Math.max(1e-6, length(em));
-      const R = L.radius > 0 ? L.radius : 1e-3;
-      const w = power * hypersphereArea(R);
-      sumW += w;
-      if (L === light) wHit = w;
-    }
-    const pdfSelect = sumW > 0 ? wHit / sumW : 1 / lights.length;
-    return pdfSolid * pdfSelect;
+    return ((pdfArea * dist * dist * dist) / (cosLight + 1e-9)) / lights.length;
   }
 
   _misWeight(pdfA, pdfB) {

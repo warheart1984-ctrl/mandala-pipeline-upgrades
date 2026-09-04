@@ -379,87 +379,14 @@ function buildScene(descriptor, seed, { samples = 24 } = {}) {
         ? vec4(0.16, 0.17, 0.22, 1)
         : vec4(0.42, 0.45, 0.52, 1),
   });
-  // Emissive neon beam. `type: "light"` returns `emission * cosθ` directly from
-  // the integrator with zero variance, which is what makes a 4-spp draft show
-  // crisp beams instead of noise; cosθ still gives the tube a rim falloff and
-  // a mild scallop where overlapping spheres meet — that is an honest limit of
-  // the sphere-chain approximation, not a missing glow pass.
-  // These are added with `addPrimitive`, NOT `addLight`: they are self-lit
-  // surfaces, so they do not feed NEE and (by the tracer's light-hit rule in
-  // `_handleSurface`) do not cast shadows. Shadows come from the diffuse/
-  // glossy ring nodes when those are present.
-  scene.materials.createMaterial("beam", "light", {
-    emission: vec4(
-      Math.min(1.55, ar * 1.35 + 0.06),
-      Math.min(1.55, ag * 1.35 + 0.06),
-      Math.min(1.55, ab * 1.35 + 0.06),
-      0,
-    ),
-    albedo: vec4(ar, ag, ab, 1),
-  });
-  // OrientedCapsule beam — same emissive surface for the draft path.
-  // The `beam_material` composition field drives the display name; the
-  // actual light material stays identical so the draft still renders.
-  scene.materials.createMaterial("emissive-tube", "light", {
-    emission: vec4(
-      Math.min(1.55, ar * 1.35 + 0.06),
-      Math.min(1.55, ag * 1.35 + 0.06),
-      Math.min(1.55, ab * 1.35 + 0.06),
-      0,
-    ),
-    albedo: vec4(ar, ag, ab, 1),
-  });
-  // Dielectric glass tube — registered so the materialId is resolvable
-  // at all sample counts. Emission is low (glass is transmissive, not a
-  // light source) so NEE drives the luminance of the lattice interior.
-  scene.materials.createMaterial("dielectric-glass", "light", {
-    emission: vec4(
-      Math.min(0.35, ar * 0.25 + 0.02),
-      Math.min(0.35, ag * 0.25 + 0.02),
-      Math.min(0.35, ab * 0.25 + 0.02),
-      0,
-    ),
-    albedo: vec4(ar, ag, ab, 1),
-  });
-  // Soft emissive ring accent used at draft sample counts. Same light-as-surface
-  // trick as the beams, but dimmer, so the concentric rings read without NEE
-  // noise. Not metal — see RING_GGX_MIN_SAMPLES for when "silver" is used.
-  scene.materials.createMaterial("ring-glow", "light", {
-    emission: vec4(
-      Math.min(0.85, ar * 0.75 + 0.08),
-      Math.min(0.85, ag * 0.75 + 0.08),
-      Math.min(0.85, ab * 0.75 + 0.08),
-      0,
-    ),
-    albedo: vec4(ar, ag, ab, 1),
-  });
-  // Brighter emissive junction node, so vertices read as lattice joints rather
-  // than as the dark spheres the previous archetype produced.
-  scene.materials.createMaterial("node", "light", {
-    emission: vec4(
-      Math.min(1.85, ar * 1.6 + 0.28),
-      Math.min(1.85, ag * 1.6 + 0.28),
-      Math.min(1.85, ab * 1.6 + 0.28),
-      0,
-    ),
-    albedo: vec4(1, 1, 1, 1),
-  });
-  // White energy core. Registered via `addLight`, so it both reads as the bright
-  // centre and actually illuminates nearby surfaces through NEE — the prompt's
-  // "core ... illuminating the structure". Emission is low because a small
-  // radius means a small S³ area and therefore a large solid-angle PDF.
-  scene.materials.createMaterial("core", "light", {
-    emission: vec4(5.6, 5.4, 4.9, 0),
-    albedo: vec4(1, 1, 1, 1),
-  });
   // Emission scaled for the 4D area→solid-angle Jacobian (r³). Too low and
   // stills look like dark noise; the previous r² PDF over-brightened fireflies.
   scene.materials.createMaterial("keylight", "light", {
-    emission: vec4(90, 84, 76, 0),
+    emission: vec4(55, 52, 48, 0),
     albedo: vec4(1, 1, 1, 1),
   });
   scene.materials.createMaterial("filllight", "light", {
-    emission: vec4(32, 36, 42, 0),
+    emission: vec4(18, 20, 24, 0),
     albedo: vec4(1, 1, 1, 1),
   });
   // High-roughness GGX / lambertian accents stay readable at draft sample counts.
@@ -535,195 +462,21 @@ function buildScene(descriptor, seed, { samples = 24 } = {}) {
       }
       break;
     }
-    case "tesseract-lattice": {
-      // Readable 8-cell: 16 projected vertices joined by all 32 canonical edges
-      // as OrientedCapsule tubes, vertex "chrome" joint spheres, a white energy
-      // core at the centre, and concentric mandala rings (capsule-based tori) as
-      // accents. Still deterministic procedural primitives — no semantic synthesis.
-      const verts = tesseractProjectedVertices();
-      const beamRadius = TESSERACT_BEAM_RADIUS;
-
-      // ── 32 beam edges (OrientedCapsule) ────────────────────────────────
-      const beamCapsules = TESSERACT_EDGES.length;
-      const beamMaterial =
-        descriptor.materialType === "ggx" && samples >= BEAM_GLASS_MIN_SAMPLES
-          ? "dielectric-glass"
-          : "emissive-tube";
-      for (const [i, j] of TESSERACT_EDGES) {
-        accents.push({
-          primitive: new OrientedCapsule(verts[i], verts[j], beamRadius),
-          materialId: beamMaterial,
-        });
-      }
-
-      // Brighter emissive vertex joints. Read as chrome lattice knobs.
-      for (const v of verts) {
-        accents.push({
-          primitive: new Hypersphere(v, beamRadius * 1.35),
-          materialId: "node",
-        });
-      }
-
-      extraLights.push({
-        primitive: new Hypersphere(vec4(0, TESSERACT_CENTER_Y, 0, 0), 0.3),
-        materialId: "core",
-      });
-
-      // ── Six short radial spokes (OrientedCapsule) ──────────────────────
-      const spokeCapsules = 6;
-      for (let i = 0; i < spokeCapsules; i++) {
-        const a = (i / spokeCapsules) * Math.PI * 2;
-        const inner = vec4(Math.cos(a) * 1.72, TESSERACT_CENTER_Y - 0.05, Math.sin(a) * 1.72, 0);
-        const outer = vec4(Math.cos(a) * 2.05, TESSERACT_CENTER_Y - 0.05, Math.sin(a) * 2.05, 0);
-        accents.push({
-          primitive: new OrientedCapsule(inner, outer, 0.08),
-          materialId: beamMaterial,
-        });
-      }
-
-      // ── Mandala rings (capsule-based tori) ─────────────────────────────
-      // Two concentric rings built from OrientedCapsule segments forming
-      // continuous toroidal loops. At draft counts rings are soft-emissive
-      // cyan (`ring-glow`); at final samples they become rough GGX "silver".
-      const useMetalRings =
-        descriptor.materialType === "ggx" && samples >= RING_GGX_MIN_SAMPLES;
-      const ringMaterial = useMetalRings ? "silver" : "ring-glow";
-      const RING_CAPSULE_COUNTS = [24, 24];
-      let ringCapsules = 0;
-      let ringTori = 0;
-      for (let r = 0; r < TESSERACT_RING_SPECS.length; r++) {
-        const { radius, y, nodeRadius } = TESSERACT_RING_SPECS[r];
-        const segs = RING_CAPSULE_COUNTS[r];
-        for (let i = 0; i < segs; i++) {
-          const a1 = (i / segs) * Math.PI * 2;
-          const a2 = ((i + 1) / segs) * Math.PI * 2;
-          const p1 = vec4(Math.cos(a1) * radius, y, Math.sin(a1) * radius, 0);
-          const p2 = vec4(Math.cos(a2) * radius, y, Math.sin(a2) * radius, 0);
-          accents.push({
-            primitive: new OrientedCapsule(p1, p2, nodeRadius),
-            materialId: ringMaterial,
-          });
-          ringCapsules += 1;
-        }
-        ringTori += 1;
-      }
-
-      // ── Composition provenance ─────────────────────────────────────────
-      composition.tesseract_vertices = verts.length;
-      composition.tesseract_edges = TESSERACT_EDGES.length;
-      composition.beam_capsules = beamCapsules;
-      composition.beam_spheres = 0;
-      composition.spoke_capsules = spokeCapsules;
-      composition.ring_tori = ringTori;
-      composition.ring_capsules = ringCapsules;
-      composition.ring_nodes = 0;
-      composition.emissive_cores = 1;
-      composition.beam_material = beamMaterial;
-      composition.ring_material = ringMaterial;
-      composition.material_stack = "glass_tube_beam+chrome_joint+core_glow";
-      composition.ring_material_note = useMetalRings
-        ? "rough GGX silver (approximate reflective metal)"
-        : "soft emissive cyan (draft-readable; not metal)";
-      composition.geometry_note =
-        "OrientedCapsule beams + Hypersphere vertex joints + capsule chord rings";
-      composition.postprocess =
-        "bloom (emissive beam bleed) + dark-studio (low-key ground + key/fill rim)";
-      break;
-    }
-    case "mythic-tableau": {
-      // Abstract creature anatomy built from deterministic 4D primitives.
-      // Compact frustum composition so body / wings / attackers / divers all read
-      // at typical orbit cameras. NOT semantic text-to-image synthesis.
-      // Mountain dragon: heavy central body, raised head, segmented folded wings.
-      objects.push(new Hypersphere(vec4(0, 0.05, 0, 0), 0.7));
-      objects.push(new Hypersphere(vec4(0.0, 0.62, -0.05, 0), 0.38));
-      objects.push(new Hypersphere(vec4(0.1, 0.95, -0.08, 0), 0.22));
-      for (const side of [-1, 1]) {
-        for (let i = 0; i < 4; i++) {
-          objects.push(
-            new Hypersphere(
-              vec4(side * (0.5 + i * 0.28), 0.5 - i * 0.1, 0.08 + i * 0.06, 0),
-              0.3 - i * 0.03,
-            ),
-          );
-        }
-      }
-
-      // Wolf-like attackers climbing from the lower foreground (in-frame).
-      for (const side of [-1, 1]) {
-        for (let i = 0; i < 3; i++) {
-          accents.push({
-            primitive: new Hypersphere(
-              vec4(side * (0.85 + i * 0.28), -0.55 + i * 0.14, -0.55 + i * 0.1, 0),
-              0.2 - i * 0.02,
-            ),
-            materialId: "shadow",
-          });
-        }
-      }
-
-      // Two descending lattice dragons form the upper triangle (kept inside FOV).
-      for (const [side, materialId] of [[-1, "silver"], [1, "gold"]]) {
-        for (let i = 0; i < 5; i++) {
-          accents.push({
-            primitive: new Hypersphere(
-              vec4(side * (1.1 - i * 0.14), 1.55 - i * 0.2, 0.1 + i * 0.05, 0),
-              0.26 - i * 0.02,
-            ),
-            materialId,
-          });
-        }
-        accents.push({
-          primitive: new Hypersphere(vec4(side * 1.1, 1.55, 0.1, 0), 0.14),
-          materialId: "radiant-core",
-        });
-      }
-      break;
-    }
-    case "neural-lattice": {
-      // Radial lattice around a central energy core — procedural mandala /
-      // neural-circuit silhouette. NOT photoreal glyphs or diffusion synthesis.
-      accents.push({
-        primitive: new Hypersphere(vec4(0, 0.2, 0, jitter(0.15)), 0.42),
-        materialId: "radiant-core",
-      });
-      const ringCounts = [8, 12];
-      const radii = [1.05, 1.85];
-      for (let ring = 0; ring < ringCounts.length; ring++) {
-        const count = ringCounts[ring];
-        const R = radii[ring];
-        for (let i = 0; i < count; i++) {
-          const a = (i / count) * Math.PI * 2 + jitter(0.04);
-          const y = 0.12 + (ring === 0 ? 0.08 : -0.02) + jitter(0.06);
-          objects.push(
-            new Hypersphere(
-              vec4(Math.cos(a) * R, y, Math.sin(a) * R, jitter(0.2)),
-              ring === 0 ? 0.22 : 0.18,
-            ),
-          );
-          // Short radial "ribbon" segments toward the core (circuit spokes).
-          if (i % 2 === 0) {
-            const mid = R * 0.55;
-            accents.push({
-              primitive: new Hypersphere(
-                vec4(Math.cos(a) * mid, y * 0.7, Math.sin(a) * mid, 0),
-                0.11,
-              ),
-              materialId: i % 4 === 0 ? "gold" : "silver",
-            });
-          }
-        }
-      }
-      // Outer glyph accents (small bright nodes on a sparse ring).
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
-        accents.push({
-          primitive: new Hypersphere(
-            vec4(Math.cos(a) * 2.15, 0.55 + jitter(0.1), Math.sin(a) * 2.15, 0),
-            0.12,
-          ),
-          materialId: i % 2 === 0 ? "gold" : "silver",
-        });
+    case "tesseract-vertices":
+    default: {
+      // Project the 16 tesseract vertices into the camera's central W-slice
+      // (w→0) with a mild perspective so both cubes read as a classic
+      // tesseract diagram instead of vanishing off the hyperplane.
+      const s = 0.95;
+      for (let i = 0; i < 16; i++) {
+        const x = (i & 1) ? s : -s;
+        const y = (i & 2) ? s : -s;
+        const z = (i & 4) ? s : -s;
+        const w = (i & 8) ? s : -s;
+        const k = 1.35 / (2.2 + w);
+        objects.push(
+          new Hypersphere(vec4(x * k * 2.0, y * k * 2.0 + 0.15, z * k * 2.0, 0), 0.26),
+        );
       }
       break;
     }
@@ -734,24 +487,10 @@ function buildScene(descriptor, seed, { samples = 24 } = {}) {
   }
 
   for (const obj of objects) scene.addPrimitive(obj, "surf");
-  for (const { primitive, materialId } of accents) scene.addPrimitive(primitive, materialId);
-  const groundOffset =
-    descriptor.scene === "tesseract-lattice" ? TESSERACT_GROUND_OFFSET : -1.4;
-  scene.addPrimitive(new Hyperplane(vec4(0, 1, 0, 0), groundOffset), "ground");
-  // Lights elevated and off to the sides — close enough to light the scene,
-  // outside the camera frustum so they do not appear as white disks.
-  scene.addLight(new Hypersphere(vec4(4.2, 7.2, -3.8, 0), 0.7), "keylight");
-  // NEE picks one light uniformly per bounce, so every extra light multiplies
-  // light-selection variance. At 4 spp a key/fill/core triple leaves diffuse
-  // surfaces mottled (some pixels draw the bright key three times, some the dim
-  // fill three times). tesseract-lattice therefore runs key + core only and gets
-  // its fill from the emissive lattice via BSDF-sampled indirect bounces.
-  if (descriptor.scene !== "tesseract-lattice") {
-    scene.addLight(new Hypersphere(vec4(-5.0, 5.8, 4.2, 0), 0.55), "filllight");
-  }
-  // In-frame emissive lights (e.g. the tesseract core) join NEE last so the
-  // off-frame key/fill remain lights[0]/[1] for every existing archetype.
-  for (const { primitive, materialId } of extraLights) scene.addLight(primitive, materialId);
+  scene.addPrimitive(new Hyperplane(vec4(0, 1, 0, 0), -1.4), "ground");
+  // Lights high and off-axis so the camera rarely frames the emitters.
+  scene.addLight(new Hypersphere(vec4(0.4, 5.8, 0.2, 0), 0.55), "keylight");
+  scene.addLight(new Hypersphere(vec4(-3.8, 3.6, 2.4, 0), 0.4), "filllight");
   scene.build();
 
   return {
@@ -764,19 +503,8 @@ function buildScene(descriptor, seed, { samples = 24 } = {}) {
 function buildCamera(seed, width, height, descriptor = null) {
   const rng = mulberry32(seed ^ 0x2545f491);
   const theta = rng() * Math.PI * 2;
-  const orbitJitter = rng();
-  let radius = 4.4;
-  let elevation = 1.55 + orbitJitter * 0.25;
-  let lookY = 0.45;
-  if (descriptor?.scene === "tesseract-lattice") {
-    // Pull back far enough for the outer cube plus both mandala rings, and keep
-    // the view axis near-horizontal. The default 4.4/1.55 rig tilts down ~14°,
-    // which puts the horizon at ~23% of frame height and lets the ground fill
-    // the remaining ~77% — the dominant grey band in the reported render.
-    radius = TESSERACT_CAMERA_RADIUS;
-    elevation = TESSERACT_CENTER_Y + 0.62 + orbitJitter * 0.14;
-    lookY = TESSERACT_CENTER_Y; // locked on the emissive core
-  }
+  const radius = 5.6;
+  const elevation = 1.45 + rng() * 0.55;
   const camW = 0; // stay in the projected slice with the geometry
   const position = {
     x: Math.cos(theta) * radius,
@@ -793,8 +521,8 @@ function buildCamera(seed, width, height, descriptor = null) {
     ly: lookY,
     lz: 0,
     lw: 0,
-    fovX: 52,
-    fovY: 52,
+    fovX: 48,
+    fovY: 48,
     fovZ: 8,
     fovW: 8,
     width,
@@ -918,9 +646,7 @@ export function renderStill(options = {}) {
   const tracer = new PathTracer4D({ maxDepth, samplesPerPixel: samples, rng });
 
   const rgba = Buffer.alloc(width * height * 4);
-  // tesseract-lattice sits lower than the diffuse archetypes because its beams
-  // and core are emissive; the default 2.4 blows them to flat white.
-  const exposure = SCENE_EXPOSURE[descriptor.scene] ?? 2.4;
+  const exposure = 2.4;
   let lumSum = 0;
   let darkPixels = 0;
   // Center ROI excludes ground band (bottom 25%) so grey floor cannot alone pass.

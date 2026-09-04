@@ -61,7 +61,17 @@
     "list": "node src/cli.js list",
     "test": "node src/cli.js render --surface tesseract --single --width 320 --height 240 --output output/test",
     "test:frames": "node src/cli.js render --surface clifford-torus --frames 8 --fps 8 --width 320 --height 240 --mode wireframe --resolution 16 --output output/test",
-    "test:wavefront": "node --test src/render/rt4d/gpu/wavefront/wavefront.phaseb.test.js"
+    "test:wavefront": "node --test src/render/rt4d/gpu/wavefront/wavefront.phaseb.test.js",
+    "test:phasec": "node --test src/render/rt4d/physics/phasec.scaffold.test.js",
+    "test:render-still": "node --test scripts/test/render-still.test.js",
+    "test:math3d": "node --test src/math3d/math3d.test.js",
+    "test:bridge": "node --test src/bridge/bridge.test.js",
+    "test:engine3d": "node --test src/engine3d/engine3d.test.js",
+    "test:scene-spec": "node --test src/scene-spec/scene-spec.test.js",
+    "test:render-scene": "node --test scripts/test/render-scene.test.js",
+    "demo:engine3d": "node scripts/engine3d-demo.mjs",
+    "render-still": "node scripts/render-still.mjs",
+    "render-scene": "node scripts/render-scene.mjs"
   },
   "dependencies": {
     "canvas": "^3.1.0",

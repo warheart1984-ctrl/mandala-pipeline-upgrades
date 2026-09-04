@@ -1525,63 +1525,12 @@ def _run_generate_common(
             public["then_scene_error"] = exc.detail
         except Exception as exc:  # noqa: BLE001 — never fail the FLUX still
             public["then_scene_error"] = str(exc)
-    # Opt-in polish path: after successful generate, also run diffusion img2img.
-    if (
-        not video
-        and body.then_polish
-        and settings.polish_enabled
-        and public.get("run_id")
-    ):
-        try:
-            polish_prompt = body.polish_prompt or body.prompt
-            if not (body.polish_prompt or "").strip() and looks_like_lattice_prompt(
-                body.prompt
-            ):
-                polish_prompt = resolve_lattice_polish_prompt(
-                    body.polish_prompt, lattice=True
-                ) or LATTICE_POLISH_DEFAULT_PROMPT
-            polish_prompt, _ = apply_style_steer(polish_prompt, style)
-            pol_res = _polish_pipeline(
-                # Polish is out of BYOK scope — never proxy per-request keys into polish.
-                base_settings,
-                run_id=str(public["run_id"]),
-                prompt=polish_prompt,
-                strength=body.polish_strength,
-            )
-            public["polish"] = pol_res
-            public["dual_path_note"] = (
-                "Structure still preserved; polish is a separate diffusion edit "
-                "(not a replacement)."
-            )
-        except HTTPException as exc:
-            public["polish_error"] = exc.detail
-        except Exception as exc:  # noqa: BLE001 — never fail the original still
-            public["polish_error"] = str(exc)
-
     logger.info(
-        "generate done · modality=%s run=%s byok=%s elapsed_s=%.1f",
+        "generate done · modality=%s run=%s elapsed_s=%.1f",
         kind,
         public.get("run_id") or "—",
-        bool(byok_meta.get("byok_used")),
         time.monotonic() - started,
     )
-    if byok_meta:
-        # Never include raw keys — meta is boolean provenance only.
-        public["byok"] = {
-            k: v
-            for k, v in byok_meta.items()
-            if k
-            in {
-                "byok_used",
-                "byok_key_present",
-                "byok_model_override",
-                "byok_source",
-                "byok_scope",
-                "byok_permitted",
-                "assistOnly",
-                "printSoT",
-            }
-        }
     return public
 
 

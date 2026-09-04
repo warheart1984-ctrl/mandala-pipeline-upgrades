@@ -168,46 +168,6 @@ RUN printf '%s' '{"schemaVersion":"1.0","kind":"SceneSpecification","id":"docker
 RUN node /app/renderer-core/scripts/engine3d-demo.mjs 4 > /tmp/engine3d-smoke.json \
  && rm -f /tmp/engine3d-smoke.json
 
-# Engine3D structure still smoke (demo portrait soft-raster).
-RUN ENGINE3D_STILL=1 node /app/engine3d-core/scripts/render-engine3d-still.mjs \
-      --engine3d-still --out-dir /tmp/e3d-still --width 64 --height 64 \
-      --aov depth,normal > /tmp/e3d-still.json \
- && rm -rf /tmp/e3d-still /tmp/e3d-still.json
-
-# Engine3D short cinematic sequence smoke (2 frames @ 4fps / 0.5s).
-RUN ENGINE3D_SEQUENCE=1 node /app/engine3d-core/scripts/render-engine3d-sequence.mjs \
-      --engine3d-sequence --out-dir /tmp/e3d-seq --width 48 --height 36 \
-      --duration 0.5 --fps 4 > /tmp/e3d-seq.json \
- && rm -rf /tmp/e3d-seq /tmp/e3d-seq.json
-
-# Prompt→scene bridge smoke (stub lane; Infinity not in image). Expand stays off by ENV.
-RUN python /app/prompt-scene-bridge/run_bridge.py \
-      --prompt "docker bridge smoke" --json > /tmp/prompt-scene-smoke.json \
- && rm -f /tmp/prompt-scene-smoke.json
-
-# Expand smoke (opt-in CLI --expand; ENV stays 0). Asserts non-empty objects (~few s with dist).
-# Operator check if skipped: PROMPT_SCENE_EXPAND_WORLD=1 python …/run_bridge.py --prompt x --json --expand
-RUN python /app/prompt-scene-bridge/run_bridge.py \
-      --prompt "docker expand smoke" --json --expand > /tmp/prompt-scene-expand-smoke.json \
- && python -c "import json; d=json.load(open('/tmp/prompt-scene-expand-smoke.json')); o=(d.get('engine3dWorldDocument') or {}).get('objects') or []; assert len(o)>0, 'expand smoke: objects empty'" \
- && rm -f /tmp/prompt-scene-expand-smoke.json
-
-# RenderRequest boundary smoke (scene-spec → PNG). Opt-in execute for build proof.
-RUN mkdir -p /app/data/output \
- && MRS_RENDER_REQUEST_EXECUTE=1 MRS_RENDER_OUTPUT_DIR=/tmp/sf-out \
-      python /app/storyforge-boundary/run_pipeline.py \
-      -r /app/storyforge-boundary/fixtures/sample-render-request-executable.json \
-      --execute --out-dir /tmp/sf-out --result /tmp/sf-result.json \
- && python -c "import json; from pathlib import Path; d=json.load(open('/tmp/sf-result.json')); assert d.get('status')=='ok', d; arts=d.get('artifacts') or []; assert any(a.get('role')=='beauty-png' for a in arts), d" \
- && rm -rf /tmp/sf-out /tmp/sf-result.json
-
-# Digital print dry-run smoke (sovereignty + evidence; no heavy spp).
-RUN python /app/storyforge-boundary/run_print.py \
-      -r /app/storyforge-boundary/fixtures/sample-render-request-cinematic-scene.json \
-      --out-dir /tmp/print-smoke --dry-run \
- && python -c "import json; from pathlib import Path; e=json.loads(Path('/tmp/print-smoke/evidence.json').read_text()); assert e.get('printState')=='OK', e" \
- && rm -rf /tmp/print-smoke
-
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 

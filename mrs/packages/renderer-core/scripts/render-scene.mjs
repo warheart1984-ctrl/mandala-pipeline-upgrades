@@ -265,13 +265,14 @@ export function renderSceneFromSpec(spec, frameSel = {}) {
   const xLo = Math.floor(width * 0.25);
   const xHi = Math.floor(width * 0.75);
 
-  let samplesUsedSum = 0;
-  let earlyStopCount = 0;
-
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const sampleFn = (s) => {
-        const [u1, u2] = stratifiedJitter2d(s, samples, rng);
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      for (let s = 0; s < samples; s++) {
+        const u1 = rng();
+        const u2 = rng();
         // Central 4D slice — see render-still.mjs for why u3/u4 stay fixed.
         const ray = camera.generateRay(x, y, u1, u2, 0.5, 0.5);
         const hit = scene.intersect(ray);
