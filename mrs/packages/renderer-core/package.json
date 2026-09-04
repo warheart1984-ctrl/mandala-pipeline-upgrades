@@ -61,22 +61,7 @@
     "list": "node src/cli.js list",
     "test": "node src/cli.js render --surface tesseract --single --width 320 --height 240 --output output/test",
     "test:frames": "node src/cli.js render --surface clifford-torus --frames 8 --fps 8 --width 320 --height 240 --mode wireframe --resolution 16 --output output/test",
-    "test:wavefront": "node --test src/render/rt4d/gpu/wavefront/wavefront.phaseb.test.js",
-    "test:phasec": "node --test src/render/rt4d/physics/phasec.scaffold.test.js",
-    "test:render-still": "node --test scripts/test/render-still.test.js",
-    "test:engine3d-bridge": "node --test src/render/rt4d/bridge/engine3dBridgeScene.test.js",
-    "test:math3d": "node --test src/math3d/math3d.test.js",
-    "test:bridge": "node --test src/bridge/bridge.test.js",
-    "test:engine3d": "node --test src/engine3d/engine3d.test.js",
-    "test:scene-spec": "node --test src/scene-spec/scene-spec.test.js",
-    "test:interop": "node --test src/interop/fourd-shading-types.test.js",
-    "test:shading-wire": "node --test src/live-link/shadingWire.test.js src/live-link/publishToggleLifecycle.test.js",
-    "test:projection": "node --test src/render/rt4d/test/projection.continuity.test.js src/render/rt4d/test/projection.invariants.test.js src/render/rt4d/test/projection.lens.northstar.test.js src/render/rt4d/test/projection.kernel.strength.test.js",
-    "validate:shading-ws": "node scripts/validate-shading-ws.mjs --harness",
-    "test:render-scene": "node --test scripts/test/render-scene.test.js",
-    "demo:engine3d": "node scripts/engine3d-demo.mjs",
-    "render-still": "node scripts/render-still.mjs",
-    "render-scene": "node scripts/render-scene.mjs"
+    "test:wavefront": "node --test src/render/rt4d/gpu/wavefront/wavefront.phaseb.test.js"
   },
   "dependencies": {
     "canvas": "^3.1.0",

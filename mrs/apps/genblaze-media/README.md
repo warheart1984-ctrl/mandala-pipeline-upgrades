@@ -643,12 +643,8 @@ provider-contract replay metadata before persisting the clip and manifest to B2.
 ## Cross-links
 
 - Operator B2 notes: [`docs/ops/BACKBLAZE_B2_S3.md`](../../../docs/ops/BACKBLAZE_B2_S3.md)
-- **Free-tier / Class C demo day:** [`docs/ops/B2_FREE_TIER_DEMO_PLAYBOOK.md`](../../../docs/ops/B2_FREE_TIER_DEMO_PLAYBOOK.md)
 - Genblaze media v2 (**ops roadmap**): [`docs/ops/GENBLAZE_MEDIA_V2_ROADMAP.md`](../../../docs/ops/GENBLAZE_MEDIA_V2_ROADMAP.md)
 - Scorecard: [`docs/scorecards/genblaze-media.md`](../../../docs/scorecards/genblaze-media.md)
-- Seedance constitution (**declared**): [`docs/constitutional/CMM-Seedance-v1.0.md`](./docs/constitutional/CMM-Seedance-v1.0.md)
-- Seedance env fragment: [`env.seedance.example`](./env.seedance.example)
-- CROS package (separate; not implemented by this app): [`mrs/packages/cros`](../../packages/cros)
 - Node B2 scaffold: [`mrs/packages/storage-b2`](../../packages/storage-b2)
 - Genblaze upstream: https://github.com/backblaze-labs/genblaze
 - Local shallow clone (reference only, gitignored): `vendor/genblaze` — see `examples/b2_storage_pipeline.py`

@@ -8,19 +8,13 @@
 
 ```text
 mrs/packages/renderer-core/src/render/rhi/
-  MultiGpuArbitrator.js         # Phase C declared stub (strategy "single")
+  MultiGpuArbitrator.js
 cssv/multi-gpu/
   cssv-multi-gpu-schema.json
-  README.md                     # runtime appends frames.ndjson (not committed)
-  .gitkeep
+  frames.ndjson                 # runtime artifact — gitignore locally
 constitution/
   CKL_MULTI_GPU.md              # declared policy text
 ```
-
-## Wave tiling (conceptual only — not implemented)
-
-A future `planWaveTiles(gridSize, devices)` could partition ψ slabs across devices.
-Phase C does **not** implement multi-device wave execution; use CPU `WaveField.step` locally.
 
 ## Strategies (declared)
 

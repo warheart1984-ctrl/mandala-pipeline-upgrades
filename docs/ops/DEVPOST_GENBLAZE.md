@@ -35,8 +35,6 @@ Evidence-bound copy for the Backblaze Generative AI Media Hackathon. Paste only 
 
 This is **concept media for MRS / 4D scene authoring** — Genblaze does **not** render 4D; MRS remains the 4D renderer.
 
-**Look lane (2026-07-31):** Prefer `GENBLAZE_STYLE=anime` or API `"style":"anime"` for stylized FLUX/Lemonade/polish stills (**partial** — prompt steer, not Full Photoreal). Cycles photoreal (`external-pbr`) stays optional.
-
 v2 ops themes (durable search, authoring bridge, CI): [`GENBLAZE_MEDIA_V2_ROADMAP.md`](./GENBLAZE_MEDIA_V2_ROADMAP.md) — **planned**, distinct from RT4D GPU v2.
 
 ### Hook to the 4D stack (honest)

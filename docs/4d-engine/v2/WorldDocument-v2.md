@@ -1,43 +1,21 @@
-# WorldDocument v2 — Constitutional World Format
+# WorldDocument v2 — declared schema intent
 
-> **Status:** **declared / Phase C** (Drive-G-1). Schema exists; full runtime loaders not claimed.  
-> Machine schema: [`schemas/world-document-v2.json`](../../../schemas/world-document-v2.json)  
-> PLP: [`PLP-v2.md`](./PLP-v2.md) · Math: [`../rt4d/RT4D_V2_MATH_NOTES.md`](../rt4d/RT4D_V2_MATH_NOTES.md)
+> **Status:** **declared / roadmap** (Drive-G-1). Not implemented.  
+> v1: [`docs/4d-engine/v1/world-format/WORLD_FORMAT_V1.md`](../v1/world-format/WORLD_FORMAT_V1.md)  
+> Umbrella: [`docs/4drs/roadmap/MRS_V2_ARCHITECTURAL_ROADMAP.md`](../../4drs/roadmap/MRS_V2_ARCHITECTURAL_ROADMAP.md) § VI
 
-## Top-level structure (declared)
+## Planned field groups (not in code yet)
 
-```json
-{
-  "version": "2.0",
-  "metadata": {},
-  "lineage": {},
-  "geometry": {},
-  "materials": {},
-  "curvature": {},
-  "physics": {},
-  "wave": {},
-  "render": {},
-  "rhi": {}
-}
-```
-
-### `wave` (optional)
-
-| Field | Intent |
+| Group | Intent |
 | --- | --- |
-| `enabled` | When true, PLP wave rules apply |
-| `gridSize` | `{ nx, ny, nz }` positive integers |
-| `c`, `dt` | Wave speed / time step (> 0) |
-| `beta`, `gamma` | Curvature / force coupling |
-| `waveDir` | `{ x, y, z }` non-zero when enabled |
-| `initialState` | Optional seed ψ |
+| Curvature | Tensor / geodesic descriptors for MRS-CRC v2 |
+| Physics | Force-field / particle hooks |
+| RHI | Preferred backend hints for hosts |
+| Lineage | CSSV / provenance map references |
 
-**Local CPU/GPU sketch only — not B2.** Demo day should not burn Class C traffic to “show” waves.
-
-Required schema fields: `version`, `metadata`, `lineage`, `geometry`, `materials`, `render`.
+Formal JSON Schema path (planned): `schemas/world-document-v2.json` — **not present** until Phase C+.
 
 ## Non-claims
 
-- [ ] Full PLP enforcement beyond minimal PlpValidator skeleton  
-- [ ] Multi-GPU wave tiling implemented  
-- [ ] Wave fields via B2  
+- [ ] WorldDocument v2 schema shipped  
+- [ ] Runtime validators enforce v2 fields  
