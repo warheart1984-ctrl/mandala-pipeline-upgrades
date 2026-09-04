@@ -1,128 +1,185 @@
-# Mandala Engine
+# Mandala RT4D Pipeline Upgrades: Organic Environments
 
-**Constitutional 4D simulation and rendering platform** — a governed synthetic-world runtime. Organs propose transitions; a constitutional gate certifies state; Mandala observes pixels. Movie Lane owns playback, not time integration.
+## Overview
+Extends the real-time 3D pipeline from human rendering to full organic environments with grass, foliage, and animals. Three architectural upgrades:
 
-Not a Unity/Unreal competitor claim. Not “beats Unreal.” Status tags: **working** · **partial** · **skeleton** · **declared** · **blocked-with-evidence**.
+1. **Instanced Grass Geometry** - GPU-driven blade rendering with wind simulation
+2. **Animal Shell Fur** - DQS normal extrusion with alpha-noise hair strands
+3. **Terrain Heightmap Integration** - Ground plane snapshots for both systems
 
----
+## Key Files Modified/Created
 
-## Working now
+### New Shaders
+- `mrs/packages/renderer-core/src/render/rt4d/gpu/MorphCorrective.wgsl` - Vertex shader extension for 12 corrective morph targets
+- `mrs/packages/renderer-core/src/render/rt4d/gpu/LensEffects.frag.wgsl` - Hexagonal bokeh DOF + optical vignette
 
-| Piece | How to run |
-|-------|------------|
-| **Simulation Chamber** (cinematic + `--solver mandala-proto`) | `node scripts/simulation-chamber.mjs scripts/scene-cards/scene-salt-atlas.json` |
-| Pose fallback | same + `--solver pose` |
-| **Salt-atlas** scene card + speech (edge-tts when available) | outputs under `output/simulation/` |
-| **Character Stage 1** (procedural wire GLB + PNG) | `node character/cli.mjs build --id char --species anthro` · `node character/tools/export-character.mjs` |
-| **Mandala proto** four proofs (32³×64 CPU) | `npm run test:mandala-proto` |
-| **Mandala engine e2e** | `node mandala/engine/run-e2e.mjs` · `npm run test:mandala-engine` |
-| **H_gov** demo + dashboard | `python3 mandala/engine/hamiltonian/governance_api.py` → [http://127.0.0.1:8765/dashboard](http://127.0.0.1:8765/dashboard) |
-| **AAIS organ ABI** freeze `mandala-engine-organ.v1` | see `mandala/engine/ABI.md` |
-| **RT4D CPU** path tracer | `mrs/packages/renderer-core` · normalization suite in package tests |
-| **Actor LLM** (Lemonade) | Dolphin uncensored preferred; Instruct fallback — `:13307` |
-| **AI Painter open golden** (Anything-V5) | `node scripts/golden-painter.mjs` → `output/mandala-painter-open/` (no pro exports) |
+### Enhanced Shaders
+- `mrs/packages/renderer-core/src/render/rt4d/gpu/shaders.js` - Skin BRDF with dual-lobe specular, micro-detail, multi-layer SSS
 
-Chamber with character hook (mesh path logged; still renders capsules until mesh adapter lands):
+### New Source Files
+- `mrs/packages/engine3d-core/src/renderer/backend/GpuProfiler.ts` - WebGPU timestamp profiler with `smooth_k = 0.12` EMA
 
-```bash
-node scripts/simulation-chamber.mjs scripts/scene-cards/scene-salt-atlas.json --character-glb
+## 1. Instanced Grass Geometry
+
+### Concept
+GPU-instanced rendering of millions of grass blades using a single draw call. Each blade is a low-poly quad strip (5 vertices) generated procedurally in the vertex shader. Instance transforms (position, scale, rotation) drive placement and animation.
+
+### Technical Design
+- **Storage Buffer**: `GrassInstance` structs packed at `@group(0) @binding(1)` containing `position_xz: vec2<f32>`, `scale: f32`, `rotation: f32`
+- **Vertex Shader**: `vs_grass()` generates 5 vertices per blade from `get_blade_vertex(idx)` - tapered strip from base(-0.05) to tip(1.0)
+- **Wind Displacement**: `calculate_wind_displacement()` uses scrolling sine waves: `sin(pos.x*1.5 + pos.z*0.8 + time*2.5)`
+- **Terrain Heightmap**: Samples `terrain_heightmap` to snap blade bases to ground elevation
+- **Fragment Shader**: Linear color gradient from dark roots (`0.08, 0.18, 0.04`) to vibrant tips (`0.42, 0.72, 0.15`)
+
+### Draw Call
+```javascript
+// Single draw call: 5 vertices per blade × instanceCount
+passEncoder.draw(5, instanceCount, 0, 0);
 ```
 
----
-
-## Partial / prototype
-
-| Piece | Tag | Notes |
-|-------|-----|--------|
-| Character Stages 2–3 | **partial** | Skinning, beauty shaders, sim stand-ins |
-| Blender / ZBrush path | **blocked-with-evidence** | Not on PATH / unavailable |
-| Mandala substrate + Möbius | **partial** | `mandala/substrate/` — RHFD mapping; Chamber motion ≠ full ∇V |
-| Scene graph | **skeleton** → **partial** | `mandala/engine/scenegraph.mjs` |
-| Physics / materials / painter / Mythar | **partial** | Tiny CPU lattice; look still primitive |
-| Vulkan ∇φ / compute | **partial** | RX 580 path exists; not a mature GPU substrate |
-| Chamber mesh consume | **partial** | GLB accepted; RT4D still uses 15-part capsules |
-| Full GPU substrate | **declared** / thin **partial** | One kernel + async queue; certified evolution still CPU truth |
-
----
-
-## Declared / not started
-
-- Mandala IDE, live shader debugger, GLB→lattice compiler
-- Full GPU-driven renderer (mesh shaders, bindless, TAA)
-- Production-rank physics / film PBR
-- Independence from Unreal/Unity/Blender as a product claim
-- Real CAR/CDR store beyond H_gov demo graph
-
-Direction SoT: [`docs/mandala/MANDALA_ENGINE_ROADMAP.md`](docs/mandala/MANDALA_ENGINE_ROADMAP.md).
-
----
-
-## Organ map
-
-| Organ | Owns | Does not own |
-|-------|------|----------------|
-| **Story Forge** | Intent, narrative constraints, world-law | Pixels, time integration |
-| **Mandala** | Geometry, fields, visibility, projection | Certified truth |
-| **Simulation Chamber** | Temporal evolution `t → t+1` | Observer playback |
-| **AI Painter** | Appearance under state constraints | Reality |
-| **Mythar** | Breath, acoustic field, speech | Time |
-| **AAIS** | Contracts, invariants, provenance | Creative authorship |
-| **Movie Lane** | Observer path, editing, assembly | Time (must not own the integrator) |
-
-Do not invent organs. Details: [`docs/mandala/GOVERNED_SYNTHETIC_WORLD_RUNTIME.md`](docs/mandala/GOVERNED_SYNTHETIC_WORLD_RUNTIME.md).
-
----
-
-## Quick start
-
-```bash
-# Chamber (salt-atlas cinematic)
-node scripts/simulation-chamber.mjs scripts/scene-cards/scene-salt-atlas.json
-
-# Character Stage 1 export
-node character/tools/export-character.mjs
-
-# Mandala proto + engine
-npm run test:mandala-proto
-node mandala/engine/run-e2e.mjs
-
-# Governance dashboard
-python3 mandala/engine/hamiltonian/governance_api.py
-# → http://127.0.0.1:8765/dashboard
-
-# Broader tests (as available)
-npm test
-npm run test:conformance   # 16/16 when green
+### Wind Formula
+```wgsl
+fn calculate_wind_displacement(pos: vec3<f32>, time: f32) -> vec3<f32> {
+    let wave1 = sin(pos.x * 1.5 + pos.z * 0.8 + time * 2.5);
+    let wave2 = cos(pos.x * 0.4 - pos.z * 1.2 + time * 1.8);
+    let wind_force = vec2<f32>(wave1 + wave2, wave2 * 0.5) * 0.25;
+    return vec3<f32>(wind_force.x, 0.0, wind_force.y);
+}
 ```
 
----
+## 2. Animal Shell Fur via DQS Normal Extrusion
 
-## Hardware reality (this demo machine)
+### Concept
+Extends Dual Quaternion Skinning (DQS) by extruding concentric "shells" along vertex normals. Fragment pass uses 3D alpha-noise to clip pixels, forming dense fur strands without geometry expansion.
 
-| Resource | Reality |
-|----------|---------|
-| CPU / RAM | FX-8350 · ~15 GB |
-| GPU | AMD RX 580 · Vulkan (Polaris) |
-| Lemonade chat / actor LLM | `:13307` |
-| sd-server (SD-Turbo) | `:13306` — keep 512×512; 1024 can OOM |
-| TTS | **edge-tts** preferred; Lemonade kokoro AVX2 **blocked** on this host |
+### Technical Design
+- **Shell Uniforms**: `@group(1) @binding(0) var<uniform> shell_cfg: ShellUniforms` with `fur_length`, `shell_index`, `total_shells`, `density`
+- **Vertex Shader**: `vs_shell_fur()` extrudes vertices along `deformed_normal * extrusion_distance` where `extrusion_distance = (shell_index / total_shells) * fur_length`
+- **3D Noise Generator**: `fur_strand_noise(p: vec3<f32>, scale: f32)` uses PCG-like hash: `fract(sin(dot(q, vec3(12.9898, 78.233, 45.543))) * 43758.5453)`
+- **Alpha Clipping**: `if (noise < pow(layer_normalized, 1.2)) discard` - creates hair strand pattern
+- **Shadowing**: `shadow = mix(0.25, 1.0, layer_normalized)` - darker near skin root
 
----
+### Multi-Pass Loop
+```javascript
+for (let i = 0; i < totalShells; i++) {
+    // Update shell uniform for layer i
+    // Draw animal mesh per concentric shell
+    passEncoder.drawIndexed(animalIndexCount, 1, 0, 0, 0);
+}
+```
 
-## Deeper docs
+### Fur Noise Formula
+```wgsl
+fn fur_strand_noise(p: vec3<f32>, scale: f32) -> f32 {
+    let q = p * scale;
+    return fract(sin(dot(q, vec3<f32>(12.9898, 78.233, 45.543))) * 43758.5453);
+}
+```
 
-| Doc | What |
-|-----|------|
-| [`docs/mandala/MANDALA_ENGINE_ROADMAP.md`](docs/mandala/MANDALA_ENGINE_ROADMAP.md) | Engine identity, foundations, versioned roadmap |
-| [`docs/mandala/GOVERNED_SYNTHETIC_WORLD_RUNTIME.md`](docs/mandala/GOVERNED_SYNTHETIC_WORLD_RUNTIME.md) | Runtime model |
-| [`docs/mandala/INDEPENDENCE_ROADMAP.md`](docs/mandala/INDEPENDENCE_ROADMAP.md) | Independence plan (aspirational vs proven) |
-| [`character/README.md`](character/README.md) | Character pipeline stages + honest status |
-| [`mandala/engine/README.md`](mandala/engine/README.md) | Engine organs + e2e |
-| [`mrs/README.md`](mrs/README.md) | MRS packages / RT4D / Genblaze |
-| [`AGENTS.md`](AGENTS.md) | Binding rules for AI agents (do not edit without authorization) |
+## 3. Terrain Heightmap Integration
 
----
+### Heightmap Pipeline
+1. Load bitmap via `device.queue.copyExternalImageToTexture()`
+2. Create `r32float` texture: `[width, height, 1]`
+3. Sample in shader: `textureSampleLevel(terrain_heightmap, height_sampler, terrain_uv, 0.0).r`
+4. Scale to elevation: `height_sample * 20.0`
 
-## License
+### UV Mapping
+```wgsl
+// Map world XZ to [0.0, 1.0] UV
+let terrain_uv = (inst.position_xz + 100.0) / 200.0;
+```
 
-MIT — see [LICENSE](LICENSE).
+## 4. TypeScript Runtime Integration
+
+### MandalaEnvironmentPipeline Class
+Handles buffer allocation, texture binding, and multi-pass dispatches.
+
+**Key Methods:**
+- `initGrassSystem(instances, heightmapBitmap)` - Allocates storage buffer + loads heightmap
+- `initShellFurSystem()` - Creates 16-byte shell uniform buffer
+- `recordRenderPass(...)` - Executes grass draw + shell fur multi-pass loop
+
+### GrassInstance Interface
+```typescript
+export interface GrassInstance {
+  position_xz: [number, number];
+  scale: number;
+  rotation: number;
+}
+```
+
+### Render Pass Execution Order
+```
+1. Instanced Grass Pass: draw(5, instanceCount) - procedural blade generation
+2. Animal Shell Fur Loop: for i in 0..totalShells { drawIndexed(); } - normal extrusion + alpha-clipping
+```
+
+## 5. Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Mandala RT4D Engine Loop                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  [ WebGPU Storage Buffer ] ──►  Grass Instancing (passEncoder.draw(5))   │
+│                                  │                                      │
+│  [ Heightmap Texture ] ──────────┼─► Terrain Height Sampling            │
+│                                  │                                      │
+│  [ Shell Uniform Loop ] ─────────┼─► Animal Fur Multi-Pass Extrusion      │
+│                                  │                                      │
+│                                  ▼                                      │
+│                     [ Rigged Deform & DQS Pass ]                        │
+│                                  │                                      │
+│                                  ▼                                      │
+│                     [ SSS & Dual-Lobe PBR Shader ]                      │
+│                                  │                                      │
+│                                  ▼                                      │
+│                     [ SSAO Crease Occlusion Pass ]                      │
+│                                  │                                      │
+│                                  ▼                                      │
+│                     [ TAA & Temporal Motion Vectors ]                   │
+│                                  │                                      │
+│                                  ▼                                      │
+│                     [ Lens Polish (Bokeh & Vignette) ]                  │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+## Design Discipline: `smooth_k = 0.12`
+This constant appears across three subsystems, maintaining consistent behavioral semantics:
+
+1. **opSmoothUnion** in `sdf4d.wgsl` - sharp anatomical creases, continuous manifold
+2. **GpuProfiler.resolutionAlpha** - exponential moving average smoothing factor  
+3. **Skin BRDF micro-detail** - controls perturbation sharpness vs. continuity
+
+The value `0.12` was deliberately chosen to balance sharpness with mathematical continuity across all three subsystems.
+
+## Performance Considerations
+
+### Grass
+- **Instancing**: Single `draw(5, instanceCount)` draws millions of blades
+- **Wind**: Procedural shader computation, no CPU buffer updates
+- **LOD**: Fade to ground texture in distance
+
+### Animal Fur
+- **Shell Count**: Typical `total_shells = 16` gives good density without GPU overload
+- **Alpha Clipping**: Reduces fragment shading cost by cutting non-strand pixels
+- **Normal Extrusion**: Reuses existing DQS skeleton, no additional vertex buffers
+
+### Shared
+- **Profiler**: `GpuProfiler` with `smooth_k = 0.12` EMA tracks all pass timings
+- **TAA**: Required for alpha-clipped foliage stippling
+- **Lens Effects**: Bokeh + vignette post-TAA preserves strand clarity
+
+## Integration Checklist
+
+- [ ] Add `MorphCorrective.wgsl` splice into `RiggedDeform.vert.wgsl` before DQS skinning
+- [ ] Insert `LensEffects.frag.wgsl` as full-screen quad pass after TAA
+- [ ] Integrate `GpuProfiler` into `WebGPURenderer.render()` with begin/end timestamp pairs
+- [ ] Add `uvCoord` to `FrameParams` in shader entry point
+- [ ] Set `activeCount = 2u` (digit/face) / `4u` (body/tissue) in rig vertex shader
+- [ ] Load terrain heightmap bitmap into `r32float` texture
+- [ ] Populate GrassInstance storage buffer per frame
+- [ ] Initialize ShellUniforms per animal mesh render
+- [ ] Wire `recordRenderPass()` into main render loop
