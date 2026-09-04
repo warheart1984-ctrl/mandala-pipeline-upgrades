@@ -56,7 +56,7 @@ export function calibrateCredits(sample, opts = {}) {
 
   let recommendedCredits = null;
   /** @type {typeof DEFAULT_CREDIT_SCHEDULE} */
-  let proposed;
+  let proposed = { ...current };
 
   if (observation.awsCostUsd != null) {
     recommendedCredits = creditsFromCostUsd(

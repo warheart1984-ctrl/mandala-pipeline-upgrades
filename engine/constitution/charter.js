@@ -6,9 +6,8 @@
 
 export const CHARTER = Object.freeze({
   id: "charter.4dce.v1",
-  version: "1.6.0",
-  name: "Sovereign Multimodal Engine — Constitutional Charter",
-  authority: "SME-Core",
+  version: "1.0.0",
+  name: "4D Cinematic Engine — Constitutional Charter",
   purpose: [
     "Governed cognitive runtime for 4D cinematic render and export",
     "Evidence-bound state transitions for significant artifacts",

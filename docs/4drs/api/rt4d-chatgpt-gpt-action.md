@@ -2,7 +2,7 @@
 
 > Status: **partial** — dimensional previews, not photoreal anime. Provenance and
 > determinism are enforced; preview fidelity is not.
-> **Setup pack:** [`chatgpt-actions-setup-pack.md`](chatgpt-actions-setup-pack.md)
+> Commit: `e828864` (branch `feat/rt4d-chatgpt-plugin`)
 
 ## What this is
 
@@ -52,18 +52,6 @@ PREFERRED one-shot path (most reliable): call render_rt4d_from_prompt with the
 user's prompt — it creates the scene and renders the preview in a single call and
 returns data.sceneId + data.previewUrl. Use it first.
 
-Prompt handling
-- Prompt fidelity is mandatory. Always send the user's prompt verbatim to
-  render_rt4d_from_prompt. Do not rewrite, enrich, expand, or "improve" prompts
-  by adding descriptive prose, camera directions, lighting, or stylistic
-  adjectives.
-- Prompt text is part of the deterministic contract: identical prompts must
-  produce identical sceneId values and matching provenance.
-- When the user's request clearly indicates a render intent (such as cinematic,
-  technical, concept, storyboard, previz, or final), set the corresponding mode
-  parameter. Otherwise omit mode and allow the backend to select it
-  deterministically.
-
 Required behavior
 - When a user asks for an image, scene, preview, or 4D render:
   1. Call render_rt4d_from_prompt with the user's prompt (one-shot). If that
@@ -87,24 +75,9 @@ Response style
 - If the returned statusTag is "partial", explain briefly that the system
   returns dimensional previews rather than a photoreal final image.
 
-Default response vs. provenance
-- Keep render responses concise. For successful renders, display:
-  - the preview image,
-  - the sceneId,
-  - a brief render status, including that statusTag: partial indicates a
-    deterministic RT4D dimensional preview rather than a photorealistic
-    renderer.
-- Do not display provenance hashes or render bundle metadata by default.
-- When the user requests inspection, verification, determinism evidence,
-  provenance, or a render receipt—or when inspecting an existing scene—display
-  the available provenance returned by the API, including items such as
-  promptHash, sha256, renderId, projection and pixel hashes, render bundle
-  information, and shot evidence.
-
 Default tool strategy
-- For creative scene requests: use the prompt as written by the user (see
-  Prompt handling); set the mode parameter only when render intent is explicit,
-  otherwise omit it and let the backend select deterministically.
+- For creative scene requests: use the prompt as written by the user; prefer
+  cinematic composition.
 - If no size is specified, use 512x512 (reliable within API timeouts; up to
   1024 is supported).
 
@@ -132,14 +105,10 @@ Response envelope: { ok, statusTag, data, error }. statusTag is "partial":
 previews are dimensional renderings, not photoreal anime.
 ```
 
-## Verified behavior (2026-08-05, live)
+## Verified behavior (2026-08-03, live)
 
-- `GET /openapi.json` → 200, OpenAPI 3.1.0 (schema version 0.3.0) with five
-  operations, including the one-shot `render_rt4d_from_prompt`.
-- `GET /health` → 200, `rt4d-hybrid-anime-production` v0.2.0, engine configured.
-- Unauthenticated `POST /v1/render-prompt` and `POST /mcp` → 401 (fail-closed).
-- Operator setup pack: `docs/4drs/api/chatgpt-actions-setup-pack.md`
-- Smoke script: `infra/scripts/chatgpt-actions-smoke.ps1` (requires `MRS_API_KEY`).
+- `GET /openapi.json` → 200, OpenAPI 3.1.0 (schema version 0.3.0) with four
+  paths, including the one-shot `render_rt4d_from_prompt`.
 - `POST /v1/render-prompt` → single call returns `data.sceneId` and
   `data.previewUrl` (pre-signed S3 PNG) in ~8s at 512×512; `data.sha256` is
   deterministic (identical image bytes across equivalent scenes).

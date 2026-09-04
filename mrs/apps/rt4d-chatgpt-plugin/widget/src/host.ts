@@ -70,11 +70,6 @@ export type ViewerPayload = {
   };
   statusTag?: string;
   visualKind?: string;
-  /** Base64 GLB from export_rt4d_asset (partial fixture hull). */
-  glbBase64?: string | null;
-  glbUrl?: string | null;
-  glbSha256?: string | null;
-  format?: string;
   [key: string]: unknown;
 };
 

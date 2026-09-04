@@ -19,14 +19,7 @@ import { SkinnedMeshIntersector } from "../intersection/SkinnedMeshIntersector.j
 
 /**
  * Read a vertex from a flat or nested array.
- * Supports: [[x,y,z(,w)], ...] (nested, up to 4 components) or a flat
- * stride-3 position buffer [x,y,z, x,y,z, ...] with w=0.
- *
- * Flat buffers MUST use stride 3 to stay consistent with
- * SkinnedMeshIntersector.readVec — the reader the path tracer uses for the
- * same vertex buffer during traversal. Using a different stride here made the
- * cached AABB/centroid disagree with the traced geometry, which broke
- * top-level BVH4D placement (the box culled rays that actually hit the mesh).
+ * Supports: [[x,y,z,w], ...]  or  [x,y,z, x,y,z, ...]  or  [x,y,z, ...] (w=0).
  */
 function readVertex(vertices, index) {
   if (Array.isArray(vertices[index])) {
@@ -65,11 +58,6 @@ export class TriangleMesh4D {
     this.instanceMatrix = options.instanceMatrix ?? null;
     this.inverseInstanceMatrix = options.inverseInstanceMatrix ?? null;
     this.localBvhKey = options.localBvhKey ?? null;
-    this.surfaceId = options.surfaceId ?? "unknown";
-    this.geometryHash = options.geometryHash ?? "";
-    this.geometryEvidenceId = options.geometryEvidenceId ?? "";
-    this.surfaceHash = options.surfaceHash ?? options.geometryHash ?? "";
-    this.identity = options.identity ?? null;
 
     // Build the SkinnedMeshIntersector (handles per-mesh BVH + intersection).
     this._intersector = new SkinnedMeshIntersector(this);

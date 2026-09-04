@@ -8,9 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "smoke:glb": "tsx scripts/glb-load-smoke.mjs",
-    "smoke:fox-fixture": "tsx scripts/fox-fixture-e2e-smoke.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^19.1.1",
@@ -23,11 +21,7 @@
     "@types/three": "^0.179.0",
     "@vitejs/plugin-react": "^4.5.2",
     "typescript": "^5.9.2",
-    "tsx": "^4.19.2",
     "vite": "^7.1.1",
     "vite-plugin-singlefile": "^2.2.0"
-  },
-  "overrides": {
-    "nanoid": "^6.0.1"
   }
 }

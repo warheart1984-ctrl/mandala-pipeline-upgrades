@@ -136,8 +136,6 @@ def route_render_request(
             result["engine3dWorldDocument"] = deep["engine3dWorldDocument"]
         if "cliProvenance" in deep:
             result["mapping"]["cliProvenance"] = deep["cliProvenance"]
-        if "glbValidation" in deep:
-            result["mapping"]["glbValidation"] = deep["glbValidation"]
         if "evidence" in deep:
             result["mapping"]["protonEvidence"] = deep["evidence"]
         return result
@@ -189,10 +187,4 @@ def route_render_request(
         result["mapping"]["statusTag"] = "skeleton"
         return result
 
-    if route == "rt4d-bridge":
-        result["mapping"]["mappedTo"] = (
-            "rt4d-bridge: produce MandalaShotArtifact.json + GLB via sovereign-sculptor bridge",
-        )
-        result["mapping"]["statusTag"] = "partial"
-        return result
     return _refuse(req, "unknown_route", f"unhandled route: {route}")

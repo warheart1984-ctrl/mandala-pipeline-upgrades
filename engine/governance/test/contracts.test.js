@@ -3,66 +3,71 @@ import assert from "node:assert/strict";
 import { CONTRACTS, resolveAuthority } from "../../constitution/contracts.js";
 
 describe("CONTRACTS", () => {
-  it("has 14 registered contracts", () => {
-    assert.equal(CONTRACTS.contracts.length, 14);
+  it("has 3 entries", () => {
+    const keys = Object.keys(CONTRACTS);
+    assert.equal(keys.length, 3);
   });
 
-  it("includes director + replay contracts", () => {
-    const director = CONTRACTS.contracts.find(
-      (c) => c.contractId === "contract.director.v1",
-    );
-    const replay = CONTRACTS.contracts.find(
-      (c) => c.contractId === "contract.replay.v1",
-    );
-    assert.ok(director, "director contract exists");
-    assert.ok(replay, "replay contract exists");
-    assert.equal(director.status, "enforced");
-    assert.equal(director.authority, "coordinate");
-    assert.ok(director.forbiddenActions.includes("execute_specialist_work"));
-    assert.ok(replay.authority, "replay-only");
-    assert.ok(replay.forbidden.includes("escalate_authority"));
+  it("is frozen", () => {
+    assert.ok(Object.isFrozen(CONTRACTS));
   });
 
-  it("module exports a resolveAuthority helper", () => {
-    assert.equal(typeof resolveAuthority, "function");
-    assert.equal(typeof CONTRACTS.resolveAuthority, "function");
+  it("cinematic4d contract has correct invariants", () => {
+    const c4d = CONTRACTS["contract.cinematic4d.v1"];
+    assert.ok(c4d, "cinematic4d contract exists");
+    assert.equal(c4d.invariants.vertexCount, 16);
+    assert.equal(c4d.invariants.edgeCount, 32);
+    assert.equal(c4d.invariants.mustProject, true);
   });
 });
 
 describe("resolveAuthority()", () => {
-  it("sme.txt can generate text", () => {
-    const result = resolveAuthority("sme.txt", "generate_text");
+  it("renderer can start render session", () => {
+    const result = resolveAuthority("4dce.renderer", "render.session.start");
     assert.equal(result.ok, true);
-    assert.equal(result.contractId, "contract.sme-txt.v1");
+    assert.equal(result.contractId, "contract.cinematic4d.v1");
   });
 
-  it("sme.txt cannot write code", () => {
-    const result = resolveAuthority("sme.txt", "write_code");
+  it("renderer cannot play timeline", () => {
+    const result = resolveAuthority("4dce.renderer", "timeline.play");
     assert.equal(result.ok, false);
     assert.ok(
-      result.reason.includes("not in allow-list"),
-      `Expected reason to contain "not in allow-list", got: ${result.reason}`,
+      result.reason.includes("does not authorize"),
+      `Expected reason to contain "does not authorize", got: ${result.reason}`
     );
   });
 
-  it("director cannot execute specialist work", () => {
-    const result = resolveAuthority("4dce.director", "execute_specialist_work");
+  it("export actor can export picture", () => {
+    const result = resolveAuthority("4dce.export", "artifact.picture.export");
+    assert.equal(result.ok, true);
+    assert.equal(result.contractId, "contract.export.v1");
+  });
+
+  it("export actor cannot start render session", () => {
+    const result = resolveAuthority("4dce.export", "render.session.start");
     assert.equal(result.ok, false);
     assert.ok(
-      result.reason.includes("forbidden"),
-      `Expected reason to contain "forbidden", got: ${result.reason}`,
+      result.reason.includes("does not authorize"),
+      `Expected reason to contain "does not authorize", got: ${result.reason}`
     );
   });
 
-  it("director can dispatch", () => {
-    const result = resolveAuthority("4dce.director", "dispatch");
+  it("timeline actor can play", () => {
+    const result = resolveAuthority("4dce.timeline", "timeline.play");
     assert.equal(result.ok, true);
-    assert.equal(result.contractId, "contract.director.v1");
+    assert.equal(result.contractId, "contract.timeline.v1");
   });
 
-  it("replay cannot escalate authority", () => {
-    const result = resolveAuthority("4dce.replay", "escalate_authority");
-    assert.equal(result.ok, false);
+  it("timeline actor can pause", () => {
+    const result = resolveAuthority("4dce.timeline", "timeline.pause");
+    assert.equal(result.ok, true);
+    assert.equal(result.contractId, "contract.timeline.v1");
+  });
+
+  it("timeline actor can seek", () => {
+    const result = resolveAuthority("4dce.timeline", "timeline.seek");
+    assert.equal(result.ok, true);
+    assert.equal(result.contractId, "contract.timeline.v1");
   });
 
   it("unknown actor returns ok=false with 'No contract'", () => {
@@ -70,50 +75,17 @@ describe("resolveAuthority()", () => {
     assert.equal(result.ok, false);
     assert.ok(
       result.reason.includes("No contract"),
-      `Expected reason to contain "No contract", got: ${result.reason}`,
+      `Expected reason to contain "No contract", got: ${result.reason}`
     );
   });
 
-  it("known actor with nonexistent action is denied", () => {
-    const result = resolveAuthority("sme.txt", "nonexistent.action");
+  it("renderer with nonexistent action returns ok=false with 'does not authorize'", () => {
+    const result = resolveAuthority("4dce.renderer", "nonexistent.action");
     assert.equal(result.ok, false);
     assert.ok(
-      result.reason.includes("not in allow-list"),
-      `Expected reason to contain "not in allow-list", got: ${result.reason}`,
+      result.reason.includes("does not authorize"),
+      `Expected reason to contain "does not authorize", got: ${result.reason}`
     );
-  });
-
-  it("prime architect 1002 is sovereign over scoped actions", () => {
-    const pa = CONTRACTS.contracts.find(
-      (c) => c.contractId === "contract.prime-architect.v1",
-    );
-    assert.ok(pa, "prime-architect contract exists");
-    assert.equal(pa.status, "enforced");
-    assert.equal(pa.authority, "sovereign");
-    assert.equal(pa.identity.human.name, "Jon Halstead");
-    assert.equal(pa.identity.human.id, "1002");
-    assert.equal(pa.identity.organization, "UGR");
-    assert.ok(pa.allowedActions.includes("*"));
-    assert.ok(pa.scopeKeys.includes("project-infi"));
-
-    const result = resolveAuthority("ugr.prime-architect:1002", "render.session.start");
-    assert.equal(result.ok, true);
-    assert.equal(result.contractId, "contract.prime-architect.v1");
-    assert.equal(result.authority, "sovereign");
-  });
-
-  it("prime architect bare actor id resolves too", () => {
-    const result = resolveAuthority("ugr.prime-architect", "modify_governance");
-    assert.equal(result.ok, true);
-    assert.equal(result.contractId, "contract.prime-architect.v1");
-  });
-
-  it("unrelated ugr actor is not granted sovereign authority", () => {
-    const result = resolveAuthority("ugr.other", "render.session.start");
-    assert.equal(result.ok, false);
-    assert.ok(
-      result.reason.includes("No contract"),
-      `Expected reason to contain "No contract", got: ${result.reason}`,
-    );
+    assert.equal(result.contractId, "contract.cinematic4d.v1");
   });
 });

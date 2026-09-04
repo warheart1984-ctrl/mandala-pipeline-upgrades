@@ -6,8 +6,9 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "rootDir": "src",
     "types": ["node"],
     "lib": ["ES2022"]
   },
-  "include": ["src/**/*", "../shared/encode-glb.ts"]
+  "include": ["src/**/*"]
 }

@@ -2,8 +2,16 @@ import { PathTracer4D, SampleAccumulator } from "./integrator/PathTracer4D.js";
 import { Projector4D } from "./output/projector.js";
 import { vec4 } from "./math/vec4.js";
 import { RT4DGPURenderer } from "./gpu/RT4DGPURenderer.js";
+import { renderWavefrontFrame } from "./pipeline/WavefrontPipelineAdapter.js";
+import { runLiveSceneEiGate } from "./pipeline/LiveSceneEiGate.js";
 
 export async function renderRT4DFrame(scene4D, camera4D, options = {}) {
+  if (options.engineMode === "wavefront") {
+    return renderRT4DFrameWavefront(scene4D, camera4D, options);
+  }
+
+  const eiGate = runLiveSceneEiGate(scene4D, options);
+
   const width = options.width ?? camera4D.width;
   const height = options.height ?? camera4D.height;
   const samples = options.samples ?? 64;
@@ -36,7 +44,7 @@ export async function renderRT4DFrame(scene4D, camera4D, options = {}) {
   const proj = new Projector4D({ width, height });
   const raster = proj.rasterize(pixels, width, height);
 
-  return { pixels: raster, width, height, samples };
+  return { pixels: raster, width, height, samples, eiGate };
 }
 
 function fracSin(s) {
@@ -47,9 +55,21 @@ function fracSin(s) {
 let _gpuRenderer = null;
 
 export async function renderRT4DFrameGPU(scene4D, camera4D, options = {}) {
+  if (options.engineMode === "wavefront") {
+    return renderRT4DFrameWavefront(scene4D, camera4D, options);
+  }
+
+  const eiGate = runLiveSceneEiGate(scene4D, options);
+
   if (!navigator?.gpu) {
     console.warn("WebGPU not available, falling back to CPU path tracer");
-    return renderRT4DFrame(scene4D, camera4D, options);
+    const cpu = await renderRT4DFrame(scene4D, camera4D, {
+      ...options,
+      // Gate already ran; avoid double-evaluate / double-deny.
+      runEiGate: false,
+      enforceEngineInvariantTopology: false,
+    });
+    return { ...cpu, eiGate: eiGate ?? cpu.eiGate, gpu: false };
   }
 
   const width = options.width ?? camera4D.width;
@@ -74,5 +94,61 @@ export async function renderRT4DFrameGPU(scene4D, camera4D, options = {}) {
   const proj = new Projector4D({ width, height });
   const raster = proj.rasterize(result.pixels, width, height);
 
-  return { pixels: raster, width, height, samples: options.samples ?? 16, gpu: true };
+  return {
+    pixels: raster,
+    width,
+    height,
+    samples: options.samples ?? 16,
+    gpu: true,
+    eiGate,
+  };
+}
+
+/**
+ * Phase B wavefront route — stub-visible frame via RHI (not full path tracing).
+ * Optional live-scene EI gate when `scene4D` is supplied and runEiGate/enforce is set.
+ * @param {object} [scene4D]
+ * @param {object} camera4D
+ * @param {object} options
+ */
+export async function renderRT4DFrameWavefront(scene4D, camera4D, options = {}) {
+  const width = options.width ?? camera4D?.width ?? 8;
+  const height = options.height ?? camera4D?.height ?? 8;
+  const quality =
+    options.quality ??
+    (options.samples >= 8 ? "ultra" : options.samples >= 4 ? "high" : "baseline");
+
+  const result = await renderWavefrontFrame(options.worldId ?? "rt4d-wavefront", {
+    quality,
+    host: options.host ?? "browser",
+    width,
+    height,
+    seed: options.seed ?? 0x4d5253,
+    runConformance: options.runConformance !== false,
+    allowLiveGpu: options.allowLiveGpu,
+    forceStub: options.forceStub,
+    gpuDevice: options.gpuDevice,
+    cssvPath: options.cssvPath,
+    onEvidence: options.onEvidence,
+    scene4D,
+    camera4D: camera4D,
+    runEiGate: options.runEiGate,
+    enforceEngineInvariantTopology: options.enforceEngineInvariantTopology,
+    checkMissImplication: options.checkMissImplication,
+    topologyRays: options.topologyRays,
+  });
+
+  return {
+    pixels: result.pixels,
+    width: result.width,
+    height: result.height,
+    samples: result.config.samplesPerPixel,
+    gpu: result.rhiMode === "live",
+    rhiMode: result.rhiMode,
+    engineMode: "wavefront",
+    evidence: result.evidence,
+    conformance: result.conformance,
+    dispatchLog: result.dispatchLog,
+    eiGate: result.eiGate ?? null,
+  };
 }

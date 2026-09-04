@@ -19,8 +19,6 @@ determine epistemic truth (see `docs/CONTINUITY_LEDGER_SOC.md`). The broader
 | Replay (why/where/when/session) | **enforced** | `TestReplayAcceptance` + `/api/jarvis/memory/retrieve` |
 | Conflict (no silent merge / no truth pick) | **enforced** | `TestConflictAcceptance` + `/api/jarvis/memory/conflicts` |
 | Drift (multi-day fidelity) | **partial** | hash check enforced; protocol in `docs/DRIFT_PROTOCOL.md` |
-| AMUL substrate (`app/amul.py`) | **partial** | append-only field, lineage, verify/drift **enforced** (`tests/test_amul.py`); scale/GC/index **declared** |
-| AMUL RAG (`app/amul_rag.py`) | **partial** | classifier/modes, lexical vector+BM25, evidence gate, replay log **enforced** (`tests/test_amul_rag.py`); neural embeddings **declared**, LLM generation **extractive-v0 / partial** (`JARVIS_RAG_LLM_URL` hook) |
 
 ### Four-layer SoC
 
@@ -87,42 +85,6 @@ cd jarvis-memoryboard; python -m pytest -q
 ```
 
 Default URL: `http://127.0.0.1:8001`
-
-## EMR MCP Tools: Constitutional Memory for AI
-
-This package exposes a governed memory interface for MCP-compatible agents (ChatGPT, Cursor, OpenCode, etc.).
-EMR sits between the agent and the Continuity Ledger, enforcing provenance, abstention, conflict membranes, and STM/LTM separation.
-
-### Available Tools
-
-- `emr_remember` — create a governed durable memory (**draft**; requires `JARVIS_MCP_WRITE_ENABLED=true` + `user_requested=true`)
-- `emr_upsert` — update or supersede an existing memory (lineage preserved; same gates)
-- `emr_recall` — retrieve a governed recall bundle for the current intent
-
-### Architecture
-
-```
-Agent (ChatGPT) → EMR (write) → Continuity Ledger (LTM)
-Continuity Ledger → EMR (read) → STM → Agent (ChatGPT)
-```
-
-The agent never touches the ledger directly; all reads/writes flow through EMR.
-
-See:
-
-- `docs/CONSTITUTIONAL_MEMORY_CONTRACT.md`
-- `docs/EMR_RECALL_PROTOCOL.md`
-- `docs/EMR_WHITEPAPER.md`
-- `docs/MCP_EMR_SETUP.md`
-
-### Developer onboarding (short)
-
-1. Understand layers: EMR (governed activation) · Continuity Ledger (LTM SoT) · STM (view-only) · Agent (proposes via MCP).
-2. Run tests: `cd jarvis-memoryboard && pytest tests/test_emr*.py -q`
-3. Start service: `uvicorn app.main:app --host 127.0.0.1 --port 8001`
-4. Confirm catalog: `GET /api/jarvis/tools` lists all three tools.
-5. For writes locally: `export JARVIS_MCP_WRITE_ENABLED=true` and always pass `user_requested=true`.
-6. Keep public Render recall-only until you intentionally enable MCP writes on a private host.
 
 ## Prove Continuity across chats
 

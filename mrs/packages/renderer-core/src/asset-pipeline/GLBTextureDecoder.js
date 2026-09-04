@@ -217,8 +217,8 @@ export async function decodeGlbTextureImage(gltf, bins, imageIndex) {
   const image = gltf.images?.[imageIndex];
   if (!image) throw new Error(`Missing glTF image at index ${imageIndex}`);
 
-  let byteOffset;
-  let byteLength;
+  let byteOffset = 0;
+  let byteLength = 0;
   let binChunk;
 
   if (image.bufferView != null) {

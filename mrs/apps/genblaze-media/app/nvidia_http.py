@@ -20,11 +20,16 @@ DEFAULT_GEN_BASE_URL = "https://ai.api.nvidia.com/v1"
 
 # Before (app defaults): http=300, nvcf=300, pipeline=420, no NVCF-POLL-SECONDS.
 # After: longer read + explicit poll window so cold starts become 202→poll.
+# Poll default 180 (was 120): live Render E2E still saw empty 504s at ~153–245s
+# with poll=120. NVIDIA documents a maximum of 300; Render uses that maximum.
 DEFAULT_HTTP_TIMEOUT = 600.0
 DEFAULT_NVCF_TIMEOUT = 600.0
 DEFAULT_PIPELINE_TIMEOUT = 720
-DEFAULT_NVCF_POLL_SECONDS = 90
+DEFAULT_NVCF_POLL_SECONDS = 180
 DEFAULT_CONNECT_TIMEOUT = 30.0
+# Opt-in empty-504 delayed retry (see pipeline.generate_image). Default OFF —
+# never silently double-bill. Delay gives NIM time to finish cold-starting.
+DEFAULT_EMPTY_504_RETRY_DELAY = 45.0
 
 
 def _env_float(name: str, default: float) -> float:
@@ -85,15 +90,62 @@ class NvidiaGenaiTimeouts:
         )
 
 
+# Cosmos / NIM video: colder queues and longer diffusion than FLUX stills.
+DEFAULT_VIDEO_HTTP_TIMEOUT = 900.0
+DEFAULT_VIDEO_NVCF_TIMEOUT = 900.0
+DEFAULT_VIDEO_PIPELINE_TIMEOUT = 1200
+DEFAULT_VIDEO_NVCF_POLL_SECONDS = 120
+
+
+@dataclass(frozen=True)
+class NvidiaVideoTimeouts:
+    """Timeouts and NVCF long-poll window for Cosmos text-to-video."""
+
+    http_timeout: float
+    nvcf_timeout: float
+    pipeline_timeout: int
+    nvcf_poll_seconds: int
+    connect_timeout: float
+
+    @classmethod
+    def from_env(cls) -> NvidiaVideoTimeouts:
+        poll = _env_int(
+            "GENBLAZE_VIDEO_NVCF_POLL_SECONDS",
+            DEFAULT_VIDEO_NVCF_POLL_SECONDS,
+            lo=0,
+            hi=300,
+        )
+        http = _env_float("GENBLAZE_VIDEO_HTTP_TIMEOUT", DEFAULT_VIDEO_HTTP_TIMEOUT)
+        min_http = float(poll) + 30.0
+        if http < min_http:
+            http = min_http
+        return cls(
+            http_timeout=http,
+            nvcf_timeout=_env_float(
+                "GENBLAZE_VIDEO_NVCF_TIMEOUT", DEFAULT_VIDEO_NVCF_TIMEOUT
+            ),
+            pipeline_timeout=int(
+                _env_float(
+                    "GENBLAZE_VIDEO_PIPELINE_TIMEOUT",
+                    float(DEFAULT_VIDEO_PIPELINE_TIMEOUT),
+                )
+            ),
+            nvcf_poll_seconds=poll,
+            connect_timeout=_env_float(
+                "GENBLAZE_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT
+            ),
+        )
+
+
 def build_nvidia_genai_client(
     api_key: str,
-    timeouts: NvidiaGenaiTimeouts | None = None,
+    timeouts: NvidiaGenaiTimeouts | NvidiaVideoTimeouts | None = None,
     *,
     gen_base_url: str | None = None,
 ) -> httpx.Client:
-    """Build an httpx client for Genblaze ``NvidiaImageProvider(http_client=…)``.
+    """Build an httpx client for Genblaze NVIDIA image/video providers.
 
-    Sets ``NVCF-POLL-SECONDS`` so queued/cold FLUX returns 202 for polling
+    Sets ``NVCF-POLL-SECONDS`` so queued/cold NIM returns 202 for polling
     instead of holding one sync read until the transport times out.
     """
     cfg = timeouts or NvidiaGenaiTimeouts.from_env()
@@ -112,7 +164,89 @@ def build_nvidia_genai_client(
         "Authorization": f"Bearer {api_key}",
         "Accept": "application/json",
         "Content-Type": "application/json",
-        # Cap sync hold; Genblaze image provider already polls on 202.
+        # Cap sync hold; Genblaze providers already poll on 202.
         "NVCF-POLL-SECONDS": str(cfg.nvcf_poll_seconds),
     }
     return httpx.Client(base_url=base, headers=headers, timeout=timeout)
+
+
+def empty_504_retry_delay_from_env() -> float:
+    """Seconds to wait before an opt-in empty-504 retry (clamped)."""
+    return max(5.0, min(180.0, _env_float(
+        "GENBLAZE_EMPTY_504_RETRY_DELAY", DEFAULT_EMPTY_504_RETRY_DELAY
+    )))
+
+
+def probe_genai_model_liveness(
+    api_key: str,
+    model: str,
+    *,
+    client: httpx.Client | None = None,
+) -> dict[str, object]:
+    """Cheap invalid-payload POST to wake / check a genai slug (no real job).
+
+    Mirrors Genblaze's ``empty_payload_genai_probe``: empty ``{}`` body is
+    rejected as malformed before the model runs — no billed image when NIM
+    behaves as documented. Used for optional startup warmup only.
+    """
+    owns = client is None
+    path = f"/genai/{model.strip('/')}"
+    # Short connect/read for warmup — do not inherit the 600s generate read.
+    warm_timeout = httpx.Timeout(connect=15.0, read=30.0, write=30.0, pool=15.0)
+    http = client
+    if http is None:
+        base = (
+            (os.getenv("NVIDIA_GEN_BASE_URL") or "").strip() or DEFAULT_GEN_BASE_URL
+        ).rstrip("/")
+        http = httpx.Client(
+            base_url=base,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "NVCF-POLL-SECONDS": "0",
+            },
+            timeout=warm_timeout,
+        )
+    try:
+        resp = http.post(path, json={})
+        status = int(resp.status_code)
+        body_len = len(getattr(resp, "content", None) or b"")
+        if status == 404:
+            liveness = "dead"
+        elif status == 400 or 200 <= status < 300:
+            liveness = "live"
+        elif status == 504:
+            liveness = "unavailable"
+        else:
+            liveness = "unknown"
+        note = (
+            "invalid-payload probe (no billed generate when NIM rejects "
+            "empty body as documented)"
+        )
+        if liveness == "unavailable":
+            note = (
+                "warmup got gateway 504 — NIM likely cold, overloaded, or "
+                "unreachable; generate may keep failing until NVIDIA recovers. "
+                "The probe is cheap when NIM rejects `{}`, but gateway timeout "
+                "billing is opaque."
+            )
+        return {
+            "ran": True,
+            "model": model,
+            "http_status": status,
+            "liveness": liveness,
+            "body_bytes": body_len,
+            "note": note,
+        }
+    except Exception as exc:  # noqa: BLE001 — surface in health/startup logs
+        return {
+            "ran": True,
+            "model": model,
+            "liveness": "unknown",
+            "error": f"{type(exc).__name__}: {exc}",
+            "note": "warmup probe transport/error — generate may still work",
+        }
+    finally:
+        if owns and http is not None:
+            http.close()

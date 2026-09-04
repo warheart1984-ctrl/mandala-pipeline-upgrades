@@ -14,7 +14,7 @@ dependencies = [
 dev = ["pytest==9.1.1", "httpx==0.28.1"]
 
 [tool.setuptools.packages.find]
-include = ["app*", "mcp_server*"]
+include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

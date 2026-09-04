@@ -49,11 +49,8 @@ def _discover_print_script() -> Path | None:
             script = child / "run_print.py"
             contract = child / "governance" / "surface_contract.json"
             printer_pkg = child / "printer" / "pipeline.py"
-            try:
-                if script.is_file() and contract.is_file() and printer_pkg.is_file():
-                    return script
-            except PermissionError:
-                continue
+            if script.is_file() and contract.is_file() and printer_pkg.is_file():
+                return script
     return None
 
 

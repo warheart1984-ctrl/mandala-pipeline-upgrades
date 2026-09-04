@@ -33,16 +33,10 @@ npm run build
 
 Produces single-file `assets/rt4d-viewer.html` (served by the MCP server). Local preview without MCP:
 
-```bash
-cd mrs/apps/rt4d-chatgpt-plugin/widget
-npm install
-npm run build    # → ../assets/rt4d-viewer.html
-npm run dev      # http://localhost:5173 energy + GLB views
-# or: npm run preview
-npm run smoke:glb
+```powershell
+npm run preview
+# or: npm run dev
 ```
-
-In the viewer: **GLB view** / **Load GLB**. Local demo uses a tetrahedron fixture. Host MCP uses `export_rt4d_asset` `glbBase64` for the bound `sceneId`. Hull ≠ anatomical fox.
 
 ### 2. Install + start MCP
 
@@ -112,46 +106,15 @@ Also: `npm test` in `server/`.
 | Tool | Status |
 | --- | --- |
 | `create_rt4d_scene` | **partial** + opens viewer meta |
-| `create_4d_scene` | **partial** — 4D energy wire mesh (tesseract + 4-plane filaments) |
-| `bind_character_rig` | **partial** — Sovereign Sculptor `character-rig/1.0` fixture (anthro/fox/human), not a production sculpt |
-| `render_stage` | **partial_with_gaps** — PNG for `energy` \| `clay_rig` \| `beauty` (Lemonade polish if up; else lit clay). Photoreal fur/leather **not guaranteed** |
 | `render_rt4d_preview` | **partial** (placeholder without `RT4D_ENGINE_URL`) |
 | `inspect_rt4d_provenance` | **partial** |
 | `update_rt4d_scene` | **partial** (rotations / projection / optional `rePreview`) |
-| `export_rt4d_asset` | **partial** for `glb`/`json`/`png` (fixture hull + `glbBase64`); **declared** for Unity/Unreal packs |
+| `export_rt4d_asset` | **skeleton** |
 | Governance tools | **declared** stubs |
 
 ### 7. First test prompt
 
-> Using the RT4D MCP tools: `create_4d_scene` for an anthro fox warrior energy field, then `bind_character_rig` species `anthro`, then `render_stage` energy, clay_rig, and beauty. Keep the same sceneId. Report meshSha256 and rigSha256. Do not claim production sculpt, photoreal fur, or AnimeStylizer.
-
-Legacy dimensional-only prompt:
-
 > Using the RT4D MCP tools: create a golden 4D dragon with XW and YW plane rotations, mode `add_rt4d_powers`, continuityState characterState name `golden-dragon`. Then `render_rt4d_preview`, then use the viewer (or `update_rt4d_scene`) to adjust ZW and projection distance. Inspect provenance. Do not claim persistent RT3D or AnimeStylizer — dimensional preview only.
-
-
-## Linux local stack (this machine)
-
-Public OpenAI-schema bridge is **partial** at `http://127.0.0.1:13305` via `tools/sd-bridge/start_all.sh`:
-
-| Port | Process | Status |
-| --- | --- | --- |
-| 13305 | sd-bridge | **partial** |
-| 13306 | sd-server Vulkan SD-Turbo (512²) | **partial** (1024 OOMs RX 580) |
-| 13307 | lemond chat/TTS | **partial** |
-| 13312 | whisper-server CPU GGML tiny Q8_0 | **partial** (not GGUF, not Vulkan STT) |
-
-Beauty polish in `render_stage` uses Lemonade/bridge when up; otherwise lit clay. Photoreal fur/leather remains **declared**. ChatGPT directory listing remains **declared**.
-
-### Character pipeline (energy → clay+rig → beauty)
-
-ChatGPT should drive **one sceneId** through three stages:
-
-1. **Energy / 4D wire mesh** — `create_4d_scene` then `render_stage stage=energy`
-2. **Clay + fixture rig** — `bind_character_rig` (`anthro` for biped fox/warrior, `fox` for quadruped fixture) then `render_stage stage=clay_rig`
-3. **Beauty** — `render_stage stage=beauty` returns a **partial_with_gaps** PNG. Local Lemonade SD-Turbo (`http://127.0.0.1:13305/api/v1`) is used when reachable; otherwise a lit clay raster. Photoreal fur/leather is **not guaranteed**. Diffusion must not replace anatomy. Set `RT4D_BEAUTY_POLISH=0` to force clay raster.
-
-Hashes (`meshSha256`, `rigSha256`, `characterModelHash`) are the continuity contract across stages.
 
 ### 8. Genblaze Actions vs this MCP plugin
 
@@ -171,11 +134,8 @@ Hashes (`meshSha256`, `rigSha256`, `characterModelHash`) are the continuity cont
 | `RT4D_ENGINE_URL` | Genblaze (or compatible) base — **preferred when set** |
 | `RT4D_API_KEY` | Optional bearer |
 | `RT4D_ENGINE_TIMEOUT_MS` | Default `120000` |
-| `RT4D_BEAUTY_POLISH` | `0` disables Lemonade beauty; default tries local Lemonade |
-| `LEMONADE_API_BASE` | Default `http://127.0.0.1:13305/api/v1` |
-| `LEMONADE_API_KEY` | Optional |
 
-```bash
+```powershell
 # server
 npm test
 npm run typecheck
@@ -184,7 +144,6 @@ npm run typecheck
 cd ../widget
 npm run build
 npm run typecheck
-npm run smoke:glb
 ```
 
 ---
@@ -199,11 +158,7 @@ npm run smoke:glb
 
 ### Phase 3 export gaps (honest)
 
-- `export_rt4d_asset` **partial** GLB is a projected 4D wire hull (convex/adjacency), **not** an anatomical fox or production sculpt
-- Unity / Unreal / game packs remain **declared**
-- Widget GLB view + pose tracks + `body` fur preset are **partial** (single mesh region; no skinned deformation)
-- Blender helper `scripts/import_rt4d_glb.py` is **declared** here (not live-smoke-tested in this pass); upgrade to live when `blender` is on PATH
-- Photoreal is **not** claimed
+- `export_rt4d_asset` still NotImplemented (Unity / Unreal / game packs)
 - No durable scene store across process restarts
 - No verified continuity compare / replay / canonical approval
 - No AnimeStylizer / photoreal character persistence

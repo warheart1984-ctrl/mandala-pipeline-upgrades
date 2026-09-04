@@ -28,18 +28,6 @@ import {
   handleCreateRt4dScene,
 } from "./tools/create-rt4d-scene.js";
 import {
-  create4dSceneInputShape,
-  handleCreate4dScene,
-} from "./tools/create-4d-scene.js";
-import {
-  bindCharacterRigInputShape,
-  handleBindCharacterRig,
-} from "./tools/bind-character-rig.js";
-import {
-  renderStageInputShape,
-  handleRenderStage,
-} from "./tools/render-stage.js";
-import {
   renderRt4dPreviewInputShape,
   handleRenderRt4dPreview,
 } from "./tools/render-rt4d-preview.js";
@@ -90,56 +78,6 @@ function toolStatusMeta(invoking: string, invoked: string) {
   } as const;
 }
 
-function mcpImageContent(pngBase64: string) {
-  return {
-    type: "image" as const,
-    data: pngBase64,
-    mimeType: "image/png" as const,
-  };
-}
-
-function slimForChat(result: Record<string, unknown>): Record<string, unknown> {
-  const copy = { ...result };
-  delete copy.pngBase64;
-  if (copy.wireMesh && typeof copy.wireMesh === "object") {
-    const mesh = copy.wireMesh as {
-      vertexCount?: number;
-      edgeCount?: number;
-      meshSha256?: string;
-      includesRigPolylines?: boolean;
-    };
-    copy.wireMesh = {
-      vertexCount: mesh.vertexCount,
-      edgeCount: mesh.edgeCount,
-      meshSha256: mesh.meshSha256,
-      includesRigPolylines: mesh.includesRigPolylines,
-    };
-  }
-  if (copy.clay && typeof copy.clay === "object") {
-    const clay = copy.clay as { vertices3d?: unknown[]; bones?: unknown[] };
-    copy.clay = {
-      ...clay,
-      vertices3d: undefined,
-      vertexCount: Array.isArray(clay.vertices3d) ? clay.vertices3d.length : 0,
-      boneCount: Array.isArray(clay.bones) ? clay.bones.length : 0,
-    };
-  }
-  return copy;
-}
-
-function pngToolResult(
-  result: Record<string, unknown> & { text: string; pngBase64?: string | null }
-) {
-  const slim = slimForChat(result as Record<string, unknown>);
-  const content: Array<
-    | { type: "text"; text: string }
-    | { type: "image"; data: string; mimeType: "image/png" }
-  > = [{ type: "text", text: result.text }];
-  if (result.pngBase64) content.push(mcpImageContent(result.pngBase64));
-  content.push({ type: "text", text: JSON.stringify(slim, null, 2) });
-  return { content, structuredContent: slim };
-}
-
 function widgetMeta(invoking: string, invoked: string) {
   return {
     ui: {
@@ -161,7 +99,7 @@ function createRt4dPluginServer(): McpServer {
     },
     {
       instructions:
-        "RT4D Anime Lane product plugin (partial_with_gaps). Always return native PNG images from create_4d_scene, bind_character_rig, and render_stage. Pipeline: create_4d_scene → bind_character_rig → render_stage energy|clay_rig|beauty. Display attached images. Beauty is Lemonade polish when available, else lit clay raster — not photoreal. Do not claim directory listing, production sculpts, or diffusion-as-anatomy.",
+        "RT4D Anime Lane product plugin (partial). Prefer create_rt4d_scene → render_rt4d_preview → inspect_rt4d_provenance. Interactive viewer (ui://rt4d/viewer-v1) can call update_rt4d_scene for XW/YW/ZW + projection (partial dimensional preview — not AnimeStylizer). Modes map to product lanes. Do not claim diffusion-as-anime, ChatGPT directory listing, persistent RT3D, 5s film, or Unity/Unreal export as enforced. Genblaze Actions are a companion onboarding tool. No claim without evidence. Architecture SoT: docs/anime-lane/RT4D_ANIME_LANE_DEFENSIBLE_ARCHITECTURE.v1.md",
     }
   );
 
@@ -225,64 +163,6 @@ function createRt4dPluginServer(): McpServer {
         ],
         structuredContent,
       };
-    }
-  );
-
-  registerAppTool(
-    server,
-    "create_4d_scene",
-    {
-      title: "Create 4D Energy / Wire-Mesh Scene",
-      description:
-        "Create a 4D energy wire-mesh scene and return a PNG (orange/cyan dimensional field). Default species=anthro. topology='moebius' generates hexagonal lattice on torus with twist parity (Flower of Life). Next: bind_character_rig.",
-      inputSchema: create4dSceneInputShape,
-      _meta: widgetMeta("Creating 4D wire-mesh scene…", "Energy mesh ready"),
-    },
-    async (args) => {
-      const result = handleCreate4dScene(args);
-      return pngToolResult(result);
-    }
-  );
-
-  registerAppTool(
-    server,
-    "bind_character_rig",
-    {
-      title: "Bind Character Rig",
-      description:
-        "Bind a Sovereign Sculptor character-rig/1.0 fixture and return a clay+armature PNG. anthro=biped fox/warrior, fox=quadruped. Fixture rig — not a production sculpt.",
-      inputSchema: bindCharacterRigInputShape,
-      _meta: widgetMeta("Binding fixture rig…", "Rig bound"),
-    },
-    async (args) => {
-      try {
-        const result = handleBindCharacterRig(args);
-        return pngToolResult(result);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return {
-          content: [{ type: "text", text: message }],
-          structuredContent: { error: message, statusTag: "partial" },
-          isError: true,
-        };
-      }
-    }
-  );
-
-  registerAppTool(
-    server,
-    "render_stage",
-    {
-      title: "Render Character Stage",
-      description:
-        "Return a PNG for energy (4D wire field), clay_rig (clay+bones), or beauty (partial_with_gaps: Lemonade SD-Turbo if up, else lit clay). Display the image. Same sceneId lineage.",
-      inputSchema: renderStageInputShape,
-      _meta: widgetMeta("Rendering character stage…", "Stage ready"),
-    },
-    async (args) => {
-      const result = await handleRenderStage(args);
-      const isError = "error" in result && Boolean(result.error);
-      return { ...pngToolResult(result), isError };
     }
   );
 
@@ -375,20 +255,17 @@ function createRt4dPluginServer(): McpServer {
     "export_rt4d_asset",
     {
       title: "Export RT4D Asset",
-      description: "Export RT4D scene as GLB (via 4D→3D projection + sovereign-sculptor). Partial — real 4D math and convex hull, production body sculpts not yet.",
+      description: "Skeleton — Unity/Unreal export declared, not implemented.",
       inputSchema: exportRt4dAssetInputShape,
-      _meta: toolStatusMeta("GLB export from 4D projection", "partial"),
+      _meta: toolStatusMeta("Export not implemented…", "Declared stub"),
     },
-    async (args) => {
-      const result = handleExportRt4dAsset(args);
-      return {
-        content: [
-          { type: "text", text: JSON.stringify(result) },
-        ],
-        structuredContent: result,
-        isError: false,
-      };
-    }
+    async (args) => ({
+      content: [
+        { type: "text", text: JSON.stringify(handleExportRt4dAsset(args)) },
+      ],
+      structuredContent: handleExportRt4dAsset(args),
+      isError: true,
+    })
   );
 
   function declaredGovernanceResult(handler: (args: unknown) => unknown) {
@@ -490,8 +367,6 @@ async function main(): Promise<void> {
           version: "0.2.0",
           status: {
             mcp_bridge: "partial",
-            character_pipeline: "partial",
-            beauty: "partial_with_gaps",
             widget: widgetBuilt ? "partial" : "skeleton",
             phase: 2,
             public_directory_submission: "declared",

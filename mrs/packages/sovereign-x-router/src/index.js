@@ -22,8 +22,6 @@ export {
   listForbiddenPrintCapabilityIds,
 } from "./dispatch.js";
 
-export { callGateway, routedRequest } from "./gatewayRouter.js";
-
 export {
   MODALITIES,
   VENDOR_PREFERENCES,
