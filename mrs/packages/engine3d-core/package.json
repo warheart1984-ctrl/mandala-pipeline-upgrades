@@ -1,7 +1,7 @@
 {
   "name": "@mrs/engine3d-core",
-  "version": "1.5.0",
-  "description": "Deterministic Engine3D host loop: gather \u2192 bridge \u2192 forces \u2192 physics \u2192 substrate \u2192 render \u2192 replay",
+  "version": "1.0.0",
+  "description": "Deterministic Engine3D host loop: gather → bridge → forces → physics → substrate → render → replay",
   "type": "module",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
@@ -19,14 +19,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:engine3d": "npm run build && node --test dist/test/engine/host-order.test.js dist/test/world/world-body.test.js dist/test/world/world-mesh.test.js dist/test/physics/physics-step.test.js dist/test/bridge/bridge-evaluate.test.js dist/test/substrate/substrate-update.test.js dist/test/renderer/renderer-basic.test.js dist/test/invariants/invariants-enforced.test.js dist/test/governance/ciems-overlay.test.js dist/test/governance/dsl/default-rules.test.js dist/test/mandala/mandala-mapping.test.js dist/test/constitutional/constitutional.test.js",
+    "test:engine3d": "npm run build && node --test dist/test/engine/host-order.test.js dist/test/world/world-body.test.js dist/test/world/world-mesh.test.js dist/test/physics/physics-step.test.js dist/test/bridge/bridge-evaluate.test.js dist/test/substrate/substrate-update.test.js dist/test/renderer/renderer-basic.test.js dist/test/invariants/invariants-enforced.test.js dist/test/governance/ciems-overlay.test.js dist/test/mandala/mandala-mapping.test.js",
     "demo:engine3d": "npm run build && node dist/demo/demo-engine3d.js"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
-    "@types/node": "^22.13.10",
     "typescript": "^5.9.2"
   },
   "license": "MIT"

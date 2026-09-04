@@ -26,3 +26,29 @@ services:
       retries: 3
       start_period: 10s
     restart: unless-stopped
+
+  # Engine3D core — headless null renderer demo (lean; no GPU/X11)
+  engine3d:
+    build:
+      context: ./mrs/packages/engine3d-core
+      dockerfile: Dockerfile
+    container_name: engine3d-core
+    environment:
+      NODE_ENV: production
+    profiles:
+      - engine3d
+
+  # Optional: Separate Genblaze media service (if needed for hackathon)
+  # genblaze-media:
+  #   build:
+  #     context: ./mrs/apps/genblaze-media
+  #     dockerfile: Dockerfile
+  #   container_name: genblaze-media
+  #   ports:
+  #     - "8787:8787"
+  #   environment:
+  #     NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+  #     GENBLAZE_IMAGE_MODEL: ${GENBLAZE_IMAGE_MODEL:-black-forest-labs/flux.1-schnell}
+  #     GENBLAZE_STORAGE_PREFIX: ${GENBLAZE_STORAGE_PREFIX:-genblaze-media}
+  #   depends_on:
+  #     - app

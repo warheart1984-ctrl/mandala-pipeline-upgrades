@@ -10,10 +10,7 @@ import type { RendererCore } from "../renderer/RendererCore.js";
 import type { LiftedState4D } from "../substrate/LiftedState.js";
 import type { VisualMod } from "../substrate/VisualMod.js";
 import type { ReplayTimeline } from "../replay/ReplayTimeline.js";
-import type { ReplayRecordDraft } from "../replay/ReplayRecord.js";
-import type { GovernanceSignal } from "../governance/CIEMSOverlay.js";
-import type { GPUContract } from "../governance/GPUContract.js";
-import { validateGPUContract } from "../governance/GPUContract.js";
+import type { ReplayRecord } from "../replay/ReplayRecord.js";
 import {
   createStructuralInvariants,
   TickInvariantState,
@@ -23,17 +20,6 @@ import {
 export interface EngineHost {
   engineTick(): void;
 }
-
-/** Ordered tick phases for constitutional / host-order instrumentation. */
-export type EngineTickPhase =
-  | "gather"
-  | "bridge"
-  | "applyForces"
-  | "clearForces"
-  | "physics"
-  | "substrate"
-  | "render"
-  | "replay";
 
 export interface DefaultEngineHostOptions {
   clock: Clock;
@@ -46,8 +32,6 @@ export interface DefaultEngineHostOptions {
   replay: ReplayTimeline;
   gatherer?: InputGatherer;
   invariants?: Engine3DInvariant[];
-  /** Optional phase trace — append-only; does not affect determinism of physics/render. */
-  phaseTrace?: EngineTickPhase[];
 }
 
 /**
@@ -71,31 +55,11 @@ export class DefaultEngineHost implements EngineHost {
     return this.tickIndex;
   }
 
-  /**
-   * Validate GPU allocation against the configured GPUContract.
-   * Throws when no contract is provided or the contract is invalid.
-   */
-  allocateGPU(contract?: GPUContract | null): void {
-    const c = contract ?? this.opts.gpuContract ?? null;
-    const err = validateGPUContract(c);
-    if (err) throw new Error(err);
-  }
-
   engineTick(): void {
     this.enforceInvariantsAtTickStart();
     this.tickState.reset();
 
-    // 0. Governance gate — reject render when signals are required but empty
-    if (this.opts.governanceSignals !== undefined) {
-      if (this.opts.governanceSignals.length === 0) {
-        throw new Error(
-          "Renderer governance signals required but none provided",
-        );
-      }
-    }
-
     // 1. Gather
-    this.notePhase("gather");
     const inputs = this.gatherer.gather(
       this.opts.clock,
       this.opts.registry,
@@ -104,40 +68,33 @@ export class DefaultEngineHost implements EngineHost {
     this.lastDt = inputs.dt;
 
     // 2. bridge.evaluate(inputs) — v1 only
-    this.notePhase("bridge");
     const forces = this.opts.bridge.evaluate(inputs);
 
     // 3. apply forces; clear map
-    this.notePhase("applyForces");
     for (const [id, force] of forces.entries()) {
       const body = this.opts.registry.resolve(id);
       if (!body) continue;
       body.applyForce(force.x, force.y, force.z);
     }
-    this.notePhase("clearForces");
     forces.clear();
     this.tickState.forcesMapEmptyBeforePhysics = forces.size === 0;
     this.tickState.assertForcesClearedBeforePhysics();
 
     // 4. physics.step(dt)
-    this.notePhase("physics");
     this.opts.physics.step(inputs.dt, inputs.bodies);
 
     // 5. substrate.update(lifted4D)
-    this.notePhase("substrate");
     const lifted = this.liftTo4D(inputs.bodies);
     const visualMod = this.opts.substrate.update(lifted);
     this.tickState.visualModProduced = true;
     this.lastVisualMod = visualMod;
 
     // 6. renderer.render(world, visualMod)
-    this.notePhase("render");
     this.tickState.renderCalled = true;
     this.tickState.assertVisualModBeforeRender();
     this.opts.renderer.render(this.opts.world, visualMod);
 
     // 7. constitutional replay record
-    this.notePhase("replay");
     const record: ReplayRecord = {
       tickIndex: this.tickIndex,
       time: inputs.time,
@@ -147,10 +104,6 @@ export class DefaultEngineHost implements EngineHost {
     };
     this.opts.replay.append(record);
     this.tickIndex += 1;
-  }
-
-  private notePhase(phase: EngineTickPhase): void {
-    this.opts.phaseTrace?.push(phase);
   }
 
   private enforceInvariantsAtTickStart(): void {
