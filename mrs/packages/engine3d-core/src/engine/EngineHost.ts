@@ -48,13 +48,6 @@ export interface DefaultEngineHostOptions {
   invariants?: Engine3DInvariant[];
   /** Optional phase trace — append-only; does not affect determinism of physics/render. */
   phaseTrace?: EngineTickPhase[];
-  /** Optional GPU contract gate. When set, <code>allocateGPU</code> validates against it. */
-  gpuContract?: GPUContract | null;
-  /**
-   * Optional governance signals. When set, the tick verifies signals are
-   * present before render. Pass an empty array to test the rejection path.
-   */
-  governanceSignals?: GovernanceSignal[];
 }
 
 /**
@@ -145,7 +138,7 @@ export class DefaultEngineHost implements EngineHost {
 
     // 7. constitutional replay record
     this.notePhase("replay");
-    const record: ReplayRecordDraft = {
+    const record: ReplayRecord = {
       tickIndex: this.tickIndex,
       time: inputs.time,
       dt: inputs.dt,
