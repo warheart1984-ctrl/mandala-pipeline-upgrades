@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mandala Renderer — 4D Constitutional Rendering</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+/* ===========================
+   1. Design tokens (Mandala constitutional palette)
+   =========================== */
+:root {
+  /* Core neutrals */
+  --color-bg: #05070a;
+  --color-surface: #10141b;
+  --color-surface-alt: #151b24;
+  --color-border-soft: #2a3444;
+  --color-border-strong: #3b4a60;
+
+  /* Mandala accent spectrum */
+  --color-accent-render: #22e0c4;
+  --color-accent-render-soft: #0fa89a;
+  --color-accent-evidence: #f5b45b;
+  --color-accent-evidence-soft: #c98533;
+  --color-accent-governance: #4b7cff;
+  --color-accent-governance-soft: #3054c4;
+
+  /* Semantic states */
+  --color-success: #3dd68c;
+  --color-warning: #f5b45b;
+  --color-error: #ff5c7a;
+  --color-info: #4b7cff;
+
+  /* Text */
+  --color-text-primary: #f5f7fb;
+  --color-text-secondary: #a7b3c8;
+  --color-text-muted: #6b7485;
+  --color-text-invert: #05070a;
+
+  /* Motion & timing */
+  --motion-fast: 120ms;
+  --motion-medium: 180ms;
+  --motion-slow: 260ms;
+  --motion-curve-soft: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --motion-curve-emphatic: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Radii & elevation */
+  --radius-soft: 6px;
+  --radius-medium: 10px;
+  --shadow-soft: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.55);
+
+  /* Button sizing */
+  --btn-padding-y: 8px;
+  --btn-padding-x: 14px;
+  --btn-font-size: 13px;
+  --btn-letter-spacing: 0.03em;
+
+  /* Layout tokens (mapped from tokens above) */
+  --bg-deep: var(--color-bg);
+  --bg-surface: var(--color-surface);
+  --bg-elevated: var(--color-surface-alt);
+  --bg-hover: #1a2230;
+  --border-subtle: var(--color-border-soft);
+  --border-focus: var(--color-accent-render);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  --accent-primary: var(--color-accent-render);
+  --accent-primary-dim: rgba(34, 224, 196, 0.25);
+  --accent-secondary: var(--color-accent-governance);
+  --accent-warm: var(--color-accent-evidence);
+  --accent-danger: var(--color-error);
+  --glow-primary: 0 0 24px rgba(34, 224, 196, 0.35);
+  --glow-secondary: 0 0 24px rgba(75, 124, 255, 0.35);
+  --shadow-sm: var(--shadow-soft);
+  --shadow-md: var(--shadow-strong);
+  --shadow-lg: 0 16px 48px rgba(0,0,0,0.5);
+  --radius-sm: var(--radius-soft);
+  --radius-md: var(--radius-medium);
+  --radius-lg: 16px;
+  --transition-fast: var(--motion-fast);
+  --transition-normal: var(--motion-medium);
+  --transition-slow: var(--motion-slow);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: var(--glow-primary); }
+  50% { box-shadow: 0 0 32px rgba(34, 224, 196, 0.5); }
+}
+
+/* Button breathe animation */
+@keyframes mrs-button-breathe {
+  0% { box-shadow: var(--shadow-soft); border-color: var(--color-border-soft); }
+  50% { box-shadow: 0 4px 12px rgba(34, 224, 196, 0.35); border-color: rgba(34, 224, 196, 0.65); }
+  100% { box-shadow: var(--shadow-soft); border-color: var(--color-border-soft); }
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  display: flex;
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34, 224, 196, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(75, 124, 255, 0.06), transparent),
+    radial-gradient(ellipse 40% 30% at 0% 0%, rgba(245, 180, 91, 0.04), transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Layout */
+.app-shell { display: flex; width: 100%; height: 100vh; }
+
+.sidebar {
+  width: 320px;
+  background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-deep) 100%);
+  border-right: 1px solid var(--border-subtle);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  animation: fadeInUp 0.6s ease;
+}
+
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  gap: 20px;
+  overflow-y: auto;
+  animation: fadeInUp 0.6s ease 0.1s both;
+}
+
+/* Typography */
+.section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::before {
+  content: '';
+  width: 24px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-primary), transparent);
+  border-radius: 1px;
+}
+
+.panel-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.panel-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+/* Cards / Panels */
+.panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal), transform var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.panel:hover {
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-md), var(--glow-primary);
+  transform: translateY(-2px);
+}
+
+.panel:hover::before { opacity: 1; }
+
+.panel:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--accent-primary-dim);
+}
+
+/* ===========================
+   MRS Button System (Constitutional)
+   =========================== */
+.mrs-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  border-radius: var(--radius-soft);
+  border: 1px solid var(--color-border-soft);
+  background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+  color: var(--color-text-primary);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: var(--btn-font-size);
+  letter-spacing: var(--btn-letter-spacing);
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: var(--shadow-soft);
+  transition: 
+    background-color var(--motion-medium) var(--motion-curve-soft),
+    color var(--motion-medium) var(--motion-curve-soft),
+    box-shadow var(--motion-medium) var(--motion-curve-soft),
+    transform var(--motion-medium) var(--motion-curve-soft),
+    border-color var(--motion-medium) var(--motion-curve-soft);
+}
+
+.mrs-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.mrs-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-strong);
+  border-color: var(--color-border-strong);
+}
+
+.mrs-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Ripple feedback */
+.mrs-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.18), transparent 60%);
+  transition: opacity var(--motion-fast) var(--motion-curve-emphatic);
+}
+
+.mrs-btn--ripple-active::after { opacity: 1; }
+
+/* Semantic modes */
+.mrs-btn--render {
+  background: radial-gradient(circle at 20% 0%, rgba(34,224,196,0.25), rgba(5,7,10,1));
+  border-color: rgba(34,224,196,0.45);
+}
+
+.mrs-btn--render:hover:not(:disabled) {
+  background: radial-gradient(circle at 20% 0%, rgba(34,224,196,0.35), rgba(5,7,10,1));
+}
+
+.mrs-btn--evidence {
+  background: radial-gradient(circle at 0% 100%, rgba(245,180,91,0.22), rgba(5,7,10,1));
+  border-color: rgba(245,180,91,0.55);
+}
+
+.mrs-btn--evidence:hover:not(:disabled) {
+  background: radial-gradient(circle at 0% 100%, rgba(245,180,91,0.32), rgba(5,7,10,1));
+}
+
+.mrs-btn--governance {
+  background: radial-gradient(circle at 100% 0%, rgba(75,124,255,0.26), rgba(5,7,10,1));
+  border-color: rgba(75,124,255,0.55);
+}
+
+.mrs-btn--governance:hover:not(:disabled) {
+  background: radial-gradient(circle at 100% 0%, rgba(75,124,255,0.36), rgba(5,7,10,1));
+}
+
+/* Hierarchy */
+.mrs-btn--primary { font-weight: 600; }
+.mrs-btn--secondary {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border-soft);
+  color: var(--color-text-secondary);
+}
+.mrs-btn--secondary:hover:not(:disabled) { background: #1a2230; }
+
+/* Breathing ready state */
+.mrs-btn--ready {
+  animation: mrs-button-breathe 3.4s var(--motion-curve-soft) infinite;
+}
+
+/* Sizes */
+.mrs-btn--sm { padding: 6px 10px; font-size: 11px; }
+.mrs-btn--lg { padding: 12px 20px; font-size: 14px; }
+
+/* Spinner */
+.mrs-btn__spinner {
+  width: 16px; height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: none;
+}
+.mrs-btn.loading .mrs-btn__label { opacity: 0; }
+.mrs-btn.loading .mrs-btn__spinner { display: block; }
+
+/* Icon + label */
+.mrs-btn__icon { display: inline-flex; font-size: 14px; }
+.mrs-btn__label { white-space: nowrap; }
+
+/* Button groups */
+.mrs-btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* Inputs */
+.form-group { margin-bottom: 16px; }
+
+.form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  padding: 12px 14px;
+  transition: all var(--transition-fast);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-primary-dim);
+}
+
+.form-input::placeholder { color: var(--text-muted); }
+.form-textarea { min-height: 100px; resize: vertical; font-family: 'JetBrains Mono', monospace; }
+
+.form-row { display: flex; gap: 12px; }
+.form-row > * { flex: 1; }
+
+/* Status badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+.status-badge.ok { background: var(--accent-primary-dim); color: var(--accent-primary); }
+.status-badge.ok::before { background: var(--accent-primary); box-shadow: 0 0 8px var(--accent-primary); animation: pulse 2s infinite; }
+.status-badge.warn { background: rgba(245,180,91,0.15); color: var(--accent-warm); }
+.status-badge.warn::before { background: var(--accent-warm); }
+.status-badge.error { background: rgba(255,92,122,0.15); color: var(--accent-danger); }
+.status-badge.error::before { background: var(--accent-danger); }
+
+/* Log Panel */
+.log-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.log-line { display: flex; gap: 8px; padding: 2px 0; border-bottom: 1px solid var(--border-subtle); animation: fadeInUp 0.3s ease; }
+.log-line:last-child { border-bottom: none; }
+.log-time { color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.log-line.info { color: var(--accent-primary); }
+.log-line.warn { color: var(--accent-warm); }
+.log-line.error { color: var(--accent-danger); }
+.log-line.success { color: var(--color-success); }
+
+/* Progress Bar */
+.progress-bar { height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; margin: 12px 0; display: none; }
+.progress-bar.visible { display: block; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); border-radius: 3px; width: 0%; transition: width 0.4s ease; background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+
+/* Render Preview */
+.render-preview { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); min-height: 320px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.render-preview::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 30%, rgba(34,224,196,0.05), transparent 50%), radial-gradient(circle at 70% 70%, rgba(75,124,255,0.05), transparent 50%); }
+.render-preview img { max-width: 100%; max-height: 480px; border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); animation: fadeInUp 0.5s ease; }
+.render-placeholder { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--text-muted); text-align: center; padding: 40px; z-index: 1; }
+.render-placeholder svg { width: 64px; height: 64px; opacity: 0.4; animation: pulse 3s ease-in-out infinite; }
+
+/* Grid & Layout Helpers */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.flex-row { display: flex; gap: 12px; align-items: center; }
+.flex-col { display: flex; flex-direction: column; gap: 12px; }
+
+/* Tabs */
+.tab-bar { display: flex; gap: 4px; background: var(--bg-surface); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); margin-bottom: 16px; }
+.tab-btn { flex: 1; background: transparent; border: none; color: var(--text-secondary); font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: all var(--transition-fast); }
+.tab-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+.tab-btn.active { background: var(--accent-primary); color: var(--bg-deep); box-shadow: var(--glow-primary); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: fadeInUp 0.3s ease; }
+
+/* Empty State */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4; }
+.empty-state p { font-size: 13px; }
+
+/* Toast Notifications */
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.toast { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 18px; display: flex; align-items: center; gap: 12px; min-width: 280px; max-width: 400px; box-shadow: var(--shadow-lg); animation: fadeInUp 0.4s ease; pointer-events: auto; }
+.toast.success { border-left: 3px solid var(--color-success); }
+.toast.error { border-left: 3px solid var(--color-error); }
+.toast.info { border-left: 3px solid var(--color-info); }
+.toast.warning { border-left: 3px solid var(--color-warning); }
+.toast-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.toast-message { flex: 1; font-size: 13px; }
+.toast-close { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; }
+
+/* Model Tags */
+.model-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.model-tag { background: var(--accent-primary-dim); color: var(--accent-primary); font-size: 10px; font-weight: 500; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--accent-primary); transition: all var(--transition-fast); }
+.model-tag:hover { background: var(--accent-primary); color: var(--bg-deep); }
+
+/* Provider Cards */
+.provider-grid { display: flex; flex-direction: column; gap: 10px; }
+.provider-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: all var(--transition-fast); }
+.provider-card:hover { border-color: var(--border-focus); }
+.provider-card.connected { border-color: var(--accent-primary); background: var(--accent-primary-dim); }
+.provider-info { display: flex; flex-direction: column; gap: 4px; }
+.provider-name { font-weight: 600; color: var(--text-primary); font-size: 13px; }
+.provider-models { font-size: 11px; color: var(--text-muted); }
+.provider-status { font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+
+/* Footer */
+.footer { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
+.footer-links { display: flex; gap: 16px; }
+.footer-link { color: var(--text-muted); text-decoration: none; transition: color var(--transition-fast); }
+.footer-link:hover { color: var(--accent-primary); }
+
+/* Collapsible Sections */
+.collapsible-section { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-elevated); }
+.collapsible-header { width: 100%; background: transparent; border: none; padding: 14px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; transition: background var(--transition-fast); }
+.collapsible-header:hover { background: var(--bg-hover); }
+.collapsible-icon { width: 18px; height: 18px; color: var(--accent-primary); flex-shrink: 0; }
+.collapsible-title { flex: 1; text-align: left; }
+.collapsible-chevron { width: 16px; height: 16px; color: var(--text-muted); transition: transform var(--transition-fast); flex-shrink: 0; }
+.collapsible-section.open .collapsible-chevron { transform: rotate(180deg); }
+.collapsible-content { max-height: 0; overflow: hidden; transition: max-height var(--motion-medium) var(--motion-curve-soft), padding var(--motion-medium) var(--motion-curve-soft); }
+.collapsible-section.open .collapsible-content { max-height: 2000px; padding: 0 16px 16px; }
+
+/* Ingest Tube */
+.ingest-tube { display: none; padding: 12px; background: var(--accent-primary-dim); border: 2px dashed var(--accent-primary); border-radius: var(--radius-md); margin-bottom: 12px; position: relative; }
+.drag-over .ingest-tube { border-color: var(--accent-secondary); background: rgba(75,124,255,0.15); }
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+  </style>
+</head>
+<body>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="app-shell">
+    <!-- Collapsible Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <!-- Guided Workflows -->
+      <section class="collapsible-section open" id="section-workflows">
+        <button class="collapsible-header" data-target="workflows">
+          <svg class="collapsible-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/><path d="M15 18l6-6-6-6"/></svg>
+          <span class="collapsible-title">Workflows</span>
+          <svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="collapsible-content" id="workflows-content">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="mrs-btn mrs-btn--render mrs-btn--primary" id="wfRender" style="text-align: left; justify-content: flex-start; padding: 14px 16px;">
+              <span style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-weight: 600; font-size: 13px;">🎬 Render a 4D Scene</span>
+                <span style="font-size: 11px; color: var(--text-secondary); font-weight: 400;">Tesseract, Hopf, Gyroid, Clifford Torus...</span>
+              </span>
+            </button>
+            <button class="mrs-btn mrs-btn--render mrs-btn--primary" id="wfPipeline" style="text-align: left; justify-content: flex-start; padding: 14px 16px;">
+              <span style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-weight: 600; font-size: 13px;">🔧 Plan a Render Pipeline</span>
+                <span style="font-size: 11px; color: var(--text-secondary); font-weight: 400;">Multi-step: render → enhance → animate → export</span>
+              </span>
+            </button>
+            <button class="mrs-btn mrs-btn--governance mrs-btn--primary" id="wfOptimize" style="text-align: left; justify-content: flex-start; padding: 14px 16px;">
+              <span style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-weight: 600; font-size: 13px;">⚡ Optimize for My Hardware</span>
+                <span style="font-size: 11px; color: var(--text-secondary); font-weight: 400;">Auto-detect GPU, pick models, configure SME</span>
+              </span>
+            </button>
+            <button class="mrs-btn mrs-btn--evidence mrs-btn--primary" id="wfEvidence" style="text-align: left; justify-content: flex-start; padding: 14px 16px;">
+              <span style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-weight: 600; font-size: 13px;">📋 Show Evidence & Audit Trail</span>
+                <span style="font-size: 11px; color: var(--text-secondary); font-weight: 400;">Conformance, provenance, replay records</span>
+              </span>
+            </button>
+            <button class="mrs-btn mrs-btn--secondary" id="wfProviders" style="text-align: left; justify-content: flex-start; padding: 14px 16px;">
+              <span style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-weight: 600; font-size: 13px;">☁️ Connect Cloud Providers</span>
+                <span style="font-size: 11px; color: var(--text-secondary); font-weight: 400;">OpenRouter, HuggingFace, NVIDIA, Fal.ai...</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick Render (kept for power users) -->
+      <section class="collapsible-section" id="section-quick-render">
+        <button class="collapsible-header" data-target="quick-render">
+          <svg class="collapsible-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span class="collapsible-title">Advanced: Quick Render</span>
+          <svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="collapsible-content" id="quick-render-content">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Surface</label>
+              <select class="form-select" id="surfaceSelect">
+                <option value="tesseract">Tesseract (4D Cube)</option>
+                <option value="clifford-torus">Clifford Torus</option>
+                <option value="hopf">Hopf Fibration</option>
+                <option value="gyroid">Gyroid</option>
+                <option value="trefoil-4d">Trefoil Knot 4D</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mode</label>
+              <select class="form-select" id="modeSelect">
+                <option value="wireframe">Wireframe</option>
+                <option value="solid">Solid</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Width</label>
+              <input type="number" class="form-input" id="renderWidth" value="512" min="128" max="2048" step="64">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Height</label>
+              <input type="number" class="form-input" id="renderHeight" value="512" min="128" max="2048" step="64">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Frames</label>
+            <input type="number" class="form-input" id="renderFrames" value="1" min="1" max="60">
+          </div>
+          <div class="mrs-btn-group">
+            <button class="mrs-btn mrs-btn--render mrs-btn--primary mrs-btn--lg" id="btnQuickRender" style="flex: 1;">
+              <span class="mrs-btn__label">🎬 Render 4D Scene</span>
+              <svg class="mrs-btn__spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="3"/></svg>
+            </button>
+            <button class="mrs-btn mrs-btn--secondary" id="btnOpenOutput" style="flex: 1;">
+              <span class="mrs-btn__label">📁 Open Output</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>Mandala Renderer v0.1.0</span>
+        <div class="footer-links">
+          <a href="#" class="footer-link" id="linkDocs">Docs</a>
+          <a href="#" class="footer-link" id="linkGitHub">GitHub</a>
+          <a href="#" class="footer-link" id="linkLicense">MIT License</a>
+        </div>
+      </footer>
+    </aside>
+                <svg class="mrs-btn__spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="3"/></svg>
+              </button>
+              <button class="mrs-btn mrs-btn--secondary" id="btnSMEExecute" style="flex: 1;">
+                <span class="mrs-btn__label">🚀 Execute</span>
+              </button>
+            </div>
+            <div class="progress-bar" id="smeProgress"><div class="progress-fill" id="smeProgressFill"></div></div>
+            <div class="log-panel" id="smePlanLog" style="max-height: 180px;"></div>
+          </div>
+
+          <div class="tab-panel" id="tab-sme-modules">
+            <div class="mrs-btn-group" style="margin-bottom: 16px;">
+              <button class="mrs-btn mrs-btn--secondary" id="btnHealthCheck" style="height: 100%;">
+                <span class="mrs-btn__label">🏥 Health Check</span>
+              </button>
+              <button class="mrs-btn mrs-btn--secondary" id="btnClearLogs" style="height: 100%;">
+                <span class="mrs-btn__label">🗑️ Clear Logs</span>
+              </button>
+            </div>
+            <div class="log-panel" id="smeCoreLog" style="max-height: 220px;"></div>
+          </div>
+
+          <div class="tab-panel" id="tab-sme-hardware">
+            <div class="form-group">
+              <label class="form-label">Profile</label>
+              <select class="form-select" id="smeHardwareProfile"></select>
+            </div>
+            <button class="mrs-btn mrs-btn--primary" id="btnRefreshHardware" style="width: 100%;">
+              <span class="mrs-btn__label">🔄 Refresh</span>
+              <svg class="mrs-btn__spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="3"/></svg>
+            </button>
+            <div class="log-panel" id="smeHardwareLog" style="max-height: 220px;"></div>
+          </div>
+
+          <div class="tab-panel" id="tab-sme-evidence">
+            <div class="mrs-btn-group" style="margin-bottom: 12px;">
+              <button class="mrs-btn mrs-btn--evidence mrs-btn--primary" id="btnLoadAudit" style="flex: 1;">
+                <span class="mrs-btn__label">📋 Audit Log</span>
+              </button>
+              <button class="mrs-btn mrs-btn--evidence mrs-btn--secondary" id="btnLoadEvidence" style="flex: 1;">
+                <span class="mrs-btn__label">🔍 Evidence</span>
+              </button>
+            </div>
+            <div class="log-panel" id="smeAuditLog" style="max-height: 220px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cloud Providers Section -->
+      <section class="collapsible-section" id="section-providers">
+        <button class="collapsible-header" data-target="providers">
+          <svg class="collapsible-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span class="collapsible-title">Cloud Providers</span>
+          <svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="collapsible-content" id="providers-content">
+          <div class="provider-grid" id="providerList"></div>
+          <div class="token-input" id="tokenPanel" style="display: none; margin-top: 12px;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Provider</label>
+              <select class="form-select" id="tokenProvider">
+                <option value="openrouter">OpenRouter</option>
+                <option value="huggingface">Hugging Face</option>
+                <option value="github">GitHub Models</option>
+                <option value="nvidia">NVIDIA API</option>
+                <option value="replicate">Replicate</option>
+                <option value="fal">Fal.ai</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label">API Token</label>
+                <input type="password" class="form-input" id="tokenInput" placeholder="sk-...">
+              </div>
+              <div style="display: flex; flex-direction: column; justify-content: flex-end; gap: 8px;">
+                <button class="mrs-btn mrs-btn--primary mrs-btn--sm" id="btnSaveToken" style="width: 100%;">Save</button>
+                <button class="mrs-btn mrs-btn--secondary mrs-btn--sm" id="btnCancelToken" style="width: 100%;">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>Mandala Renderer v0.1.0</span>
+        <div class="footer-links">
+          <a href="#" class="footer-link" id="linkDocs">Docs</a>
+          <a href="#" class="footer-link" id="linkGitHub">GitHub</a>
+          <a href="#" class="footer-link" id="linkLicense">MIT License</a>
+        </div>
+      </footer>
+    </aside>
+
+    <!-- Main Area: Chat Primary + Render Preview Below -->
+    <main class="main-area" id="mainArea">
+      <!-- Chat Panel - Primary Experience -->
+      <section class="panel chat-panel" id="chatPanel" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
+        <div class="flex-row" style="justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div class="section-title" style="margin: 0;">💬 Chat</div>
+          <div class="status" style="margin: 0;">
+            <div class="status-dot ok" id="chatStatusDot"></div>
+            <span id="chatStatusText" style="font-size: 11px;">Llama-3.2-1B Ready</span>
+          </div>
+        </div>
+        
+        <!-- Ingest Tube -->
+        <div class="ingest-tube" id="ingestTube" style="display: none;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span style="font-weight: 500; color: var(--accent-primary);">Ingest Tube Active</span>
+              <span id="ingestCount" style="font-size: 11px; color: var(--text-secondary);">0 files</span>
+            </div>
+            <button class="mrs-btn mrs-btn--secondary mrs-btn--sm" id="btnClearIngest">
+              <span class="mrs-btn__label">Clear All</span>
+            </button>
+          </div>
+          <div id="ingestPreview" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;"></div>
+        </div>
+
+        <!-- Chat Log -->
+        <div class="chat-log" id="chatLog" style="flex: 1; min-height: 0; overflow-y: auto; font-family: 'Inter', sans-serif; font-size: 13px; padding: 16px; display: flex; flex-direction: column; gap: 12px;"></div>
+
+        <!-- Input Area -->
+        <div class="flex-row" style="gap: 10px; align-items: flex-end;">
+          <div style="flex: 1; position: relative;">
+            <textarea class="form-textarea" id="chatInput" rows="2" placeholder="Ask about 4D geometry, request a render prompt, or just chat... Type /img to generate an image" style="min-height: 60px; margin: 0; padding-right: 50px;"></textarea>
+            <div id="chatInputHint" style="position: absolute; bottom: 6px; right: 10px; font-size: 10px; color: var(--text-muted); pointer-events: none;">Enter to send • Shift+Enter for new line • /img for image</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button class="mrs-btn mrs-btn--secondary mrs-btn--sm" id="btnAttachFile" title="Attach files (PDF, DOC, images)" style="padding: 8px 10px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </button>
+            <button class="mrs-btn mrs-btn--render mrs-btn--primary mrs-btn--sm" id="btnGenImageChat" title="Generate image from text" style="padding: 8px 10px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="flex-row" style="justify-content: flex-end; gap: 8px; margin-top: 8px;">
+          <button class="mrs-btn mrs-btn--secondary mrs-btn--sm" id="btnClearChat">
+            <span class="mrs-btn__label">Clear</span>
+          </button>
+          <button class="mrs-btn mrs-btn--primary mrs-btn--sm" id="btnSendChat">
+            <span class="mrs-btn__label">Send</span>
+            <svg class="mrs-btn__spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="3"/></svg>
+          </button>
+        </div>
+        <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.webp,.gif" style="display: none;">
+      </section>
+
+      <!-- Render Preview - Directly Below Chat -->
+      <section class="panel render-panel" id="renderPanel" style="flex: 0 0 360px; display: flex; flex-direction: column; min-height: 0;">
+        <div class="flex-row" style="justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div class="section-title" style="margin: 0;">🖼️ Render Preview</div>
+          <div style="display: flex; gap: 8px;">
+            <button class="mrs-btn mrs-btn--secondary mrs-btn--sm" id="btnEnhancePreview" title="Enhance with Cloud AI">
+              <span class="mrs-btn__label">✨ Enhance</span>
+            </button>
+            <button class="mrs-btn mrs-btn--secondary mrs-btn--sm" id="btnOpenOutputSmall" title="Open Output Folder">
+              <span class="mrs-btn__label">📁 Open</span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="render-preview" id="renderPreview" style="flex: 1; min-height: 0;">
+          <div class="render-placeholder" id="renderPlaceholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 64px; height: 64px; opacity: 0.4; animation: pulse 3s ease-in-out infinite;">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+            <p>No render yet — click <strong>Render 4D Scene</strong> in sidebar or ask in chat</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // ============================================
+    // STATE & UTILITIES
+    // ============================================
+    const state = {
+      chatHistory: [],
+      lastRenderPath: null,
+      providerModels: {},
+      currentProvider: null,
+      isProcessing: false,
+      ingestFiles: [],
+      workflowOpen: null
+    };
+
+    const $ = (sel, ctx = document) => ctx.querySelector(sel);
+    const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
+
+    function showToast(message, type = 'info', duration = 4000) {
+      const container = $('#toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `
+        <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          ${type === 'success' ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' : 
+           type === 'error' ? '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>' :
+           type === 'warning' ? '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' :
+           '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'}
+        </svg>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" aria-label="Dismiss"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      `;
+      container.appendChild(toast);
+      toast.querySelector('.toast-close').onclick = () => toast.remove();
+      setTimeout(() => toast.remove(), duration);
+    }
+
+    function setButtonLoading(btn, loading) {
+      btn.classList.toggle('loading', loading);
+      btn.disabled = loading;
+    }
+
+    function setProgress(barId, fillId, percent) {
+      const bar = $(`#${barId}`);
+      const fill = $(`#${fillId}`);
+      if (bar && fill) {
+        bar.classList.add('visible');
+        fill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+        if (percent >= 100) {
+          setTimeout(() => bar.classList.remove('visible'), 800);
+        }
+      }
+    }
+
+    function log(panelId, message, type = 'info') {
+      const panel = $(`#${panelId}`);
+      if (!panel) return;
+      const line = document.createElement('div');
+      line.className = `log-line ${type}`;
+      const time = new Date().toLocaleTimeString();
+      line.innerHTML = `<span class="log-time">[${time}]</span><span>${message}</span>`;
+      panel.appendChild(line);
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    function clearLog(panelId) {
+      const panel = $(`#${panelId}`);
+      if (panel) panel.innerHTML = '';
+    }
+
+    function addChatMessage(role, content, attachments = []) {
+      const log = $('#chatLog');
+      const msg = document.createElement('div');
+      msg.className = `msg ${role}`;
+      msg.style.cssText = 'animation: fadeInUp 0.3s ease; padding: 12px 16px; border-radius: 12px; max-width: 85%; display: flex; flex-direction: column; gap: 8px;';
+      
+      if (role === 'user') {
+        msg.style.background = 'rgba(0, 212, 170, 0.15)';
+        msg.style.color = '#00ffcc';
+        msg.style.alignSelf = 'flex-end';
+        msg.style.borderBottomRightRadius = '4px';
+      } else if (role === 'assistant') {
+        msg.style.background = 'rgba(255, 184, 77, 0.15)';
+        msg.style.color = '#ffd700';
+        msg.style.alignSelf = 'flex-start';
+        msg.style.borderBottomLeftRadius = '4px';
+      } else {
+        msg.style.color = 'var(--text-muted)';
+        msg.style.fontSize = '11px';
+        msg.style.alignSelf = 'center';
+      }
+
+      if (typeof content === 'string') {
+        const textDiv = document.createElement('div');
+        textDiv.style.whiteSpace = 'pre-wrap';
+        textDiv.textContent = content;
+        msg.appendChild(textDiv);
+      } else if (content instanceof HTMLElement) {
+        msg.appendChild(content);
+      }
+
+      if (attachments.length > 0) {
+        const attachDiv = document.createElement('div');
+        attachDiv.style.display = 'flex';
+        attachDiv.style.flexWrap = 'wrap';
+        attachDiv.style.gap = '8px';
+        attachDiv.style.marginTop = '4px';
+        
+        attachments.forEach(att => {
+          if (att.type === 'image' && att.data) {
+            const img = document.createElement('img');
+            img.src = att.data.startsWith('data:') ? att.data : `data:image/png;base64,${att.data}`;
+            img.style.maxWidth = '200px';
+            img.style.maxHeight = '200px';
+            img.style.borderRadius = '8px';
+            img.style.cursor = 'pointer';
+            img.onclick = () => window.open(img.src, '_blank');
+            attachDiv.appendChild(img);
+          } else if (att.type === 'file') {
+            const fileEl = document.createElement('div');
+            fileEl.style.cssText = 'padding: 8px 12px; background: rgba(0,0,0,0.2); border-radius: 6px; font-size: 12px; display: flex; align-items: center; gap: 8px;';
+            fileEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${att.name} (${att.size} bytes)`;
+            attachDiv.appendChild(fileEl);
+          }
+        });
+        msg.appendChild(attachDiv);
+      }
+
+      log.appendChild(msg);
+      log.scrollTop = log.scrollHeight;
+      return msg;
+    }
+
+    function showRender(imageSrc) {
+      const placeholder = $('#renderPlaceholder');
+      const preview = $('#renderPreview');
+      placeholder.style.display = 'none';
+      preview.innerHTML = `<img src="${imageSrc}" alt="Render output">`;
+    }
+
+    // ============================================
+    // API WRAPPERS
+    // ============================================
+    async function apiCall(fn, ...args) {
+      try {
+        const result = await fn(...args);
+        if (!result.ok) throw new Error(result.error || 'Unknown error');
+        return result;
+      } catch (e) {
+        console.error('API Error:', e);
+        throw e;
+      }
+    }
+
+    // ============================================
+    // INGEST TUBE
+    // ============================================
+    function handleFiles(files) {
+      const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'text/plain', 'text/markdown'];
+      const maxSize = 20 * 1024 * 1024;
+      
+      for (const file of files) {
+        if (!validTypes.includes(file.type)) {
+          showToast(`Unsupported file type: ${file.type}`, 'warning');
+          continue;
+        }
+        if (file.size > maxSize) {
+          showToast(`File too large: ${file.name} (max 20MB)`, 'warning');
+          continue;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = e => {
+          state.ingestFiles.push({
+            name: file.name,
+            type: file.type.startsWith('image/') ? 'image' : 'file',
+            size: file.size,
+            data: e.target.result,
+            mimeType: file.type
+          });
+          updateIngestTube();
+        };
+        if (file.type.startsWith('image/')) reader.readAsDataURL(file);
+        else reader.readAsArrayBuffer(file);
+      }
+      $('#fileInput').value = '';
+    }
+
+    function updateIngestTube() {
+      const tube = $('#ingestTube');
+      const preview = $('#ingestPreview');
+      const count = $('#ingestCount');
+      
+      if (state.ingestFiles.length === 0) {
+        tube.style.display = 'none';
+        return;
+      }
+      
+      tube.style.display = 'block';
+      count.textContent = `${state.ingestFiles.length} file${state.ingestFiles.length !== 1 ? 's' : ''}`;
+      preview.innerHTML = '';
+      
+      state.ingestFiles.forEach((file, idx) => {
+        const el = document.createElement('div');
+        el.style.cssText = 'position: relative; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; background: var(--bg-surface); border: 1px solid var(--border-subtle);';
+        
+        if (file.type === 'image') {
+          el.innerHTML = `<img src="${file.data}" style="width:100%;height:100%;object-fit:cover;">`;
+        } else {
+          el.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;padding:4px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span style="font-size:8px;text-align:center;color:var(--text-secondary);">${file.name.substring(0,10)}</span>
+          </div>`;
+        }
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        removeBtn.style.cssText = 'position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:var(--accent-danger);cursor:pointer;display:flex;align-items:center;justify-content:center;';
+        removeBtn.onclick = e => { e.stopPropagation(); state.ingestFiles.splice(idx, 1); updateIngestTube(); };
+        el.appendChild(removeBtn);
+        preview.appendChild(el);
+      });
+    }
+
+    // ============================================
+    // COLLAPSIBLE SECTIONS
+    // ============================================
+    function setupCollapsible() {
+      $$('.collapsible-header').forEach(header => {
+        header.onclick = () => {
+          const section = header.closest('.collapsible-section');
+          const isOpen = section.classList.toggle('open');
+          state.workflowOpen = isOpen ? header.dataset.target : null;
+        };
+      });
+      // Open workflows by default
+      $('#section-workflows').classList.add('open');
+    }
+
+    // ============================================
+    // WORKFLOW HANDLERS
+    // ============================================
+    function setupWorkflowHandlers() {
+      $('#wfRender').onclick = () => openWorkflow('render');
+      $('#wfPipeline').onclick = () => openWorkflow('pipeline');
+      $('#wfOptimize').onclick = () => openWorkflow('optimize');
+      $('#wfEvidence').onclick = () => openWorkflow('evidence');
+      $('#wfProviders').onclick = () => openWorkflow('providers');
+    }
+
+    function openWorkflow(type) {
+      const prompts = {
+        render: "I want to render a 4D scene. What surface should I use? Options: tesseract, clifford-torus, hopf, gyroid, trefoil-4d. What resolution and mode (wireframe/solid)?",
+        pipeline: "Help me plan a multi-step render pipeline: render a 4D scene, enhance with AI, optionally animate, then export.",
+        optimize: "Analyze my hardware and optimize SME configuration for local inference. Detect GPU, recommend models, set constraints.",
+        evidence: "Show me the audit trail and evidence chain for recent renders. Include conformance results and provenance.",
+        providers: "What cloud providers are available? Help me configure tokens for OpenRouter, HuggingFace, NVIDIA, Fal.ai, etc."
+      };
+      
+      $('#chatInput').value = prompts[type];
+      $('#chatInput').focus();
+      showToast(`Workflow: ${type} — press Enter to send`, 'info');
+    }
+
+    // ============================================
+    // CHAT
+    // ============================================
+    async function sendChat() {
+      const input = $('#chatInput');
+      const text = input.value.trim();
+      if (!text && state.ingestFiles.length === 0) return;
+      
+      input.value = '';
+      
+      if (text.startsWith('/img ')) {
+        const prompt = text.substring(5).trim();
+        await generateImageInChat(prompt);
+        return;
+      }
+      
+      const attachments = [...state.ingestFiles];
+      state.ingestFiles = [];
+      updateIngestTube();
+      
+      addChatMessage('user', text, attachments);
+      
+      let historyContent = text;
+      if (attachments.length > 0) {
+        const fileInfo = attachments.map(f => `[${f.type}: ${f.name}]`).join(', ');
+        historyContent += ` (attachments: ${fileInfo})`;
+      }
+      state.chatHistory.push({ role: 'user', content: historyContent });
+
+      const thinkingMsg = addChatMessage('system', 'Thinking...');
+      setButtonLoading($('#btnSendChat'), true);
+      
+      try {
+        const hasImages = attachments.some(a => a.type === 'image');
+        let res;
+        
+        if (hasImages && state.currentProvider) {
+          const imageData = attachments.filter(a => a.type === 'image').map(a => a.data.split(',')[1]);
+          const visionPrompt = text || 'Describe this image in detail';
+          res = await apiCall(api.cloud.vision, state.currentProvider, $('#visionModel').value, visionPrompt, imageData[0], {});
+          
+          $('#chatLog').lastChild?.remove();
+          
+          if (res.ok && res.content) {
+            addChatMessage('assistant', res.content);
+            state.chatHistory.push({ role: 'assistant', content: res.content });
+          } else {
+            addChatMessage('system', `Vision error: ${res.error || 'Unknown error'}`);
+          }
+        } else {
+          res = await apiCall(api.lemonade.chat, 'Llama-3.2-1B-Instruct-GGUF', state.chatHistory, 512);
+          
+          $('#chatLog').lastChild?.remove();
+          
+          if (res.ok) {
+            addChatMessage('assistant', res.content);
+            state.chatHistory.push({ role: 'assistant', content: res.content });
+
+            try {
+              const tts = await apiCall(api.lemonade.tts, 'kokoro-v1', res.content, 'shimmer');
+              if (tts.ok) {
+                const audio = $('#ttsAudio');
+                audio.src = `data:audio/mp3;base64,${tts.audioBase64}`;
+                audio.style.display = 'block';
+                audio.play().catch(() => {});
+              }
+            } catch (e) {
+              console.warn('TTS failed:', e);
+            }
+          } else {
+            addChatMessage('system', `Error: ${res.error}`);
+          }
+        }
+      } catch (e) {
+        $('#chatLog').lastChild?.remove();
+        addChatMessage('system', `Error: ${e.message}`);
+        showToast(`Chat error: ${e.message}`, 'error');
+      } finally {
+        setButtonLoading($('#btnSendChat'), false);
+      }
+    }
+
+    async function generateImageInChat(prompt) {
+      const btn = $('#btnGenImageChat');
+      setButtonLoading(btn, true);
+      
+      try {
+        const provider = $('#enhanceProvider').value || 'openrouter';
+        const model = $('#imageModel').value;
+        
+        addChatMessage('user', `🎨 Generating: "${prompt}"`, []);
+        state.chatHistory.push({ role: 'user', content: `Generate image: ${prompt}` });
+        
+        const thinkingMsg = addChatMessage('system', '🎨 Generating image...');
+        
+        const res = await apiCall(api.cloud.generateImage, provider, model, prompt, { width: 1024, height: 1024 });
+        
+        $('#chatLog').lastChild?.remove();
+        
+        if (res.ok && res.imageBase64) {
+          addChatMessage('assistant', `Here's your generated image:`, [
+            { type: 'image', data: res.imageBase64 }
+          ]);
+          state.chatHistory.push({ role: 'assistant', content: 'Image generated successfully' });
+          showToast('Image generated!', 'success');
+        } else {
+          addChatMessage('system', `Generation failed: ${res.error || 'Unknown error'}`);
+        }
+      } catch (e) {
+        $('#chatLog').lastChild?.remove();
+        addChatMessage('system', `Error: ${e.message}`);
+        showToast(`Generation failed: ${e.message}`, 'error');
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    // ============================================
+    // SERVER & PROVIDERS
+    // ============================================
+    async function checkServer() {
+      try {
+        const res = await apiCall(api.lemonade.models);
+        $('#serverDot').className = 'status-dot ok';
+        $('#serverText').textContent = 'Lemonade Connected';
+        $('#serverDetail').textContent = `${res.models.filter(m => m.downloaded).length} models downloaded`;
+        
+        const tags = res.models.filter(m => m.downloaded).map(m => 
+          `<span class="model-tag">${m.id} <span style="opacity:0.6">(${m.recipe})</span></span>`
+        ).join('');
+        $('#modelTags').innerHTML = tags || '<span style="color:var(--text-muted);font-size:11px;">No models downloaded</span>';
+        
+        $('#chatStatusDot').className = 'status-dot ok';
+        $('#chatStatusText').textContent = 'Llama-3.2-1B Ready';
+      } catch (e) {
+        $('#serverDot').className = 'status-dot warn';
+        $('#serverText').textContent = 'Lemonade Offline';
+        $('#serverDetail').textContent = 'Start lemonade server to enable local AI';
+        $('#modelTags').innerHTML = '<span style="color:var(--text-muted);font-size:11px;">Server unreachable</span>';
+        $('#chatStatusDot').className = 'status-dot warn';
+        $('#chatStatusText').textContent = 'Offline';
+      }
+    }
+
+    async function loadCloudProviders() {
+      try {
+        const res = await apiCall(api.cloud.providers);
+        if (res.providers.length === 0) {
+          $('#providerList').innerHTML = `
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <p>No cloud providers configured</p>
+            </div>`;
+          return;
+        }
+
+        $('#providerList').innerHTML = res.providers.map(p => `
+          <div class="provider-card ${p.connected ? 'connected' : ''}">
+            <div class="provider-info">
+              <span class="provider-name">${p.name}</span>
+              <span class="provider-models">${p.models.join(', ') || 'No models'}</span>
+            </div>
+            <span class="provider-status ${p.connected ? 'ok' : 'warn'}">
+              ${p.connected ? 'Connected' : 'Needs Token'}
+            </span>
+          </div>
+        `).join('');
+
+        const firstProvider = res.providers[0]?.id || 'openrouter';
+        $('#enhanceProvider').innerHTML = res.providers.map(p => 
+          `<option value="${p.id}">${p.name}</option>`
+        ).join('');
+        
+        for (const p of res.providers) {
+          state.providerModels[p.id] = p.models;
+        }
+        state.currentProvider = firstProvider;
+        updateModelDropdowns(firstProvider);
+      } catch (e) {
+        $('#providerList').innerHTML = `<div class="empty-state"><p>Error loading providers: ${e.message}</p></div>`;
+      }
+    }
+
+    function updateModelDropdowns(providerId) {
+      const models = state.providerModels[providerId] || [];
+      const visionModels = models.filter(m => /vl|vision|llava|qwen-vl/i.test(m));
+      const textModels = models.filter(m => !/vision|vl|llava|img|flux|dalle|sdxl/i.test(m));
+      const imageModels = models.filter(m => /flux|dalle|sdxl|img/i.test(m));
+      
+      const safe = (arr, fallback) => arr.length ? arr : fallback;
+      
+      $('#visionModel').innerHTML = safe(visionModels, models.slice(0,3)).map(m => `<option value="${m}">${m}</option>`).join('');
+      $('#textModel').innerHTML = safe(textModels, models.slice(0,3)).map(m => `<option value="${m}">${m}</option>`).join('');
+      $('#imageModel').innerHTML = safe(imageModels, models.filter(m => !/vision|vl/i.test(m)).slice(0,3)).map(m => `<option value="${m}">${m}</option>`).join('');
+    }
+
+    async function saveToken() {
+      const provider = $('#tokenProvider').value;
+      const token = $('#tokenInput').value.trim();
+      if (!token) return showToast('Enter a token first', 'warning');
+      
+      setButtonLoading($('#btnSaveToken'), true);
+      try {
+        await apiCall(api.cloud.setToken, provider, token);
+        $('#tokenInput').value = '';
+        $('#tokenPanel').style.display = 'none';
+        showToast(`Token saved for ${provider}`, 'success');
+        await loadCloudProviders();
+      } catch (e) {
+        showToast(`Failed: ${e.message}`, 'error');
+      } finally {
+        setButtonLoading($('#btnSaveToken'), false);
+      }
+    }
+
+    // ============================================
+    // QUICK RENDER
+    // ============================================
+    async function doQuickRender() {
+      const btn = $('#btnQuickRender');
+      setButtonLoading(btn, true);
+      setProgress('depProgress', 'depProgressFill', 0);
+      
+      const args = {
+        surface: $('#surfaceSelect').value,
+        mode: $('#modeSelect').value,
+        width: parseInt($('#renderWidth').value),
+        height: parseInt($('#renderHeight').value),
+        frames: parseInt($('#renderFrames').value)
+      };
+
+      log('depLog', `Starting render: ${args.surface} (${args.width}x${args.height})`, 'info');
+      
+      try {
+        setProgress('depProgress', 'depProgressFill', 30);
+        log('depLog', 'Submitting to MRS renderer...', 'info');
+        
+        const res = await apiCall(api.mrs.render, args);
+        
+        setProgress('depProgress', 'depProgressFill', 90);
+        state.lastRenderPath = res.output;
+        showRender(`file://${res.output}`);
+        log('depLog', `✅ Render complete: ${res.output}`, 'success');
+        showToast('Render complete!', 'success');
+        
+        setProgress('depProgress', 'depProgressFill', 100);
+      } catch (e) {
+        log('depLog', `❌ Failed: ${e.message}`, 'error');
+        showToast(`Render failed: ${e.message}`, 'error');
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    async function init() {
+      setupCollapsible();
+      setupWorkflowHandlers();
+      setupEventListeners();
+      await checkServer();
+      await loadCloudProviders();
+      await loadDepTemplates();
+      await loadSceneLibrary();
+      await refreshHardwareProfile();
+      
+      setInterval(checkServer, 30000);
+      setInterval(loadCloudProviders, 60000);
+      setInterval(refreshHardwareProfile, 60000);
+    }
+
+    function setupEventListeners() {
+      // Quick Render
+      $('#btnQuickRender').onclick = doQuickRender;
+      $('#btnOpenOutput').onclick = () => apiCall(api.app.openOutput);
+      $('#btnOpenOutputSmall').onclick = () => apiCall(api.app.openOutput);
+
+      // Chat
+      $('#btnSendChat').onclick = sendChat;
+      $('#btnClearChat').onclick = () => {
+        state.chatHistory = [];
+        $('#chatLog').innerHTML = '';
+        state.ingestFiles = [];
+        updateIngestTube();
+      };
+      $('#chatInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendChat();
+        }
+      });
+
+      // File Attach
+      $('#btnAttachFile').onclick = () => $('#fileInput').click();
+      $('#fileInput').addEventListener('change', e => handleFiles(e.target.files));
+      $('#btnGenImageChat').onclick = () => {
+        const prompt = $('#chatInput').value.trim() || 'A beautiful 4D mandala, geometric, sacred geometry, volumetric lighting, photorealistic';
+        generateImageInChat(prompt);
+      };
+      $('#btnClearIngest').onclick = () => {
+        state.ingestFiles = [];
+        updateIngestTube();
+      };
+
+      // Drag & Drop
+      const chatSection = $('#chatPanel');
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        chatSection.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
+      });
+      ['dragenter', 'dragover'].forEach(evt => {
+        chatSection.addEventListener(evt, () => chatSection.classList.add('drag-over'));
+      });
+      ['dragleave', 'drop'].forEach(evt => {
+        chatSection.addEventListener(evt, () => chatSection.classList.remove('drag-over'));
+      });
+      chatSection.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+
+      // Paste images
+      document.addEventListener('paste', async e => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of items) {
+          if (item.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            if (file) handleFiles([file]);
+            break;
+          }
+        }
+      });
+
+      // Provider token panel
+      $('#btnAddProvider').onclick = () => $('#tokenPanel').style.display = 'block';
+      $('#btnCancelToken').onclick = () => {
+        $('#tokenPanel').style.display = 'none';
+        $('#tokenInput').value = '';
+      };
+      $('#btnSaveToken').onclick = saveToken;
+
+      // Enhancement
+      $('#btnEnhance').onclick = enhanceRender;
+      $('#btnGenImage').onclick = generateImageOnly;
+      $('#btnEnhancePreview').onclick = enhanceRender;
+      $('#enhanceProvider').addEventListener('change', e => {
+        state.currentProvider = e.target.value;
+        updateModelDropdowns(e.target.value);
+      });
+
+      // DEP
+      $('#btnRunDEP').onclick = runDEP;
+      $('#btnCompileDEP').onclick = compileDEP;
+
+      // SME
+      $('#btnSMEPlan').onclick = runSMEPlan;
+      $('#btnSMEExecute').onclick = executeSMEPlan;
+      $('#btnHealthCheck').onclick = checkSMEHealth;
+      $('#btnClearLogs').onclick = () => {
+        clearLog('smePlanLog');
+        clearLog('smeCoreLog');
+        clearLog('smeHardwareLog');
+        clearLog('smeAuditLog');
+        clearLog('depLog');
+      };
+      $('#btnRefreshHardware').onclick = refreshHardwareProfile;
+      $('#btnLoadAudit').onclick = loadAuditLog;
+      $('#btnLoadEvidence').onclick = loadEvidenceList;
+
+      // Tabs
+      $$('.tab-btn').forEach(btn => {
+        btn.onclick = () => {
+          $$('.tab-btn').forEach(b => b.classList.remove('active'));
+          $$('.tab-panel').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          $(`#tab-${btn.dataset.tab}`).classList.add('active');
+        };
+      });
+
+      // Footer links
+      $$('.footer-link').forEach(link => link.onclick = e => {
+        e.preventDefault();
+        showToast(`${link.textContent} link - not implemented yet`, 'info');
+      });
+    }
+
+    // ============================================
+    // DEP WORKFLOW
+    // ============================================
+    async function loadDepTemplates() {
+      try {
+        const res = await apiCall(api.dep.templates);
+        $('#depTemplate').innerHTML = res.templates.map(t => `<option value="${t}">${t}</option>`).join('');
+      } catch (e) {
+        log('depLog', `Failed to load templates: ${e.message}`, 'error');
+      }
+    }
+
+    async function compileDEP() {
+      const intent = $('#depIntent').value.trim();
+      if (!intent) return showToast('Enter an intent first', 'warning');
+      
+      const btn = $('#btnCompileDEP');
+      setButtonLoading(btn, true);
+      setProgress('depProgress', 'depProgressFill', 0);
+      clearLog('depLog');
+      
+      const template = $('#depTemplate').value || 'mrs-4d-scene';
+      const minScore = parseInt($('#depMinScore').value);
+      
+      log('depLog', `Compiling DEP: "${intent}"`, 'info');
+      setProgress('depProgress', 'depProgressFill', 30);
+      
+      try {
+        const res = await apiCall(api.dep.compile, intent, { template, minScore });
+        setProgress('depProgress', 'depProgressFill', 90);
+        log('depLog', `✅ DEP compiled: ${res.dep.workflowId}`, 'success');
+        log('depLog', `Agents: ${res.dep.agents.map(a => a.agentId).join(', ')}`, 'info');
+        log('depLog', `Nodes: ${res.dep.executionGraph.nodes.length}`, 'info');
+        setProgress('depProgress', 'depProgressFill', 100);
+      } catch (e) {
+        log('depLog', `❌ Failed: ${e.message}`, 'error');
+        showToast(`Compile failed: ${e.message}`, 'error');
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    async function runDEP() {
+      const intent = $('#depIntent').value.trim();
+      if (!intent) return showToast('Enter an intent first', 'warning');
+      
+      const btn = $('#btnRunDEP');
+      setButtonLoading(btn, true);
+      setProgress('depProgress', 'depProgressFill', 0);
+      clearLog('depLog');
+      
+      const template = $('#depTemplate').value || 'mrs-4d-scene';
+      const minScore = parseInt($('#depMinScore').value);
+      
+      log('depLog', `🚀 Starting DEP: "${intent}"`, 'info');
+      setProgress('depProgress', 'depProgressFill', 10);
+      
+      try {
+        const res = await apiCall(api.dep.compileAndExecute, intent, { template, minScore });
+        
+        setProgress('depProgress', 'depProgressFill', 100);
+        log('depLog', `✅ DEP completed in ${res.duration}ms`, 'success');
+        log('depLog', `Score: ${res.completion?.checks?.minScore ? 'PASS' : 'FAIL'}`, res.completion?.checks?.minScore ? 'success' : 'warn');
+        log('depLog', `Nodes: ${res.result?.completed?.join(', ')}`, 'info');
+        
+        if (res.result?.finalImage || res.result?.enhancedImage) {
+          const img = res.result.finalImage || res.result.enhancedImage;
+          state.lastRenderPath = img;
+          showRender(`file://${img}`);
+        }
+        
+        showToast('DEP workflow complete!', 'success');
+      } catch (e) {
+        log('depLog', `❌ Failed: ${e.message}`, 'error');
+        showToast(`DEP failed: ${e.message}`, 'error');
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    async function loadSceneLibrary() {
+      try {
+        const res = await apiCall(api.director.listScenes);
+        if (res.scenes.length === 0) {
+          $('#sceneLibrary').innerHTML = '<div class="empty-state"><p>No saved scenes yet</p></div>';
+          return;
+        }
+        $('#sceneLibrary').innerHTML = res.scenes.slice(0, 10).map(s => `
+          <div class="log-line" style="cursor:pointer; padding:8px; border-radius:6px;" onclick="loadScene('${s.file}')">
+            <span class="log-time">${new Date(s.createdAt).toLocaleDateString()}</span>
+            <span style="color:var(--accent-primary);font-weight:500;">${s.intent.substring(0,50)}...</span>
+            <span style="margin-left:auto;color:var(--text-muted);font-size:10px;">Score: ${s.score} | ${s.iterations} iters</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        log('depLog', `Failed to load scenes: ${e.message}`, 'error');
+      }
+    }
+
+    window.loadScene = async function(filename) {
+      try {
+        log('depLog', `Loading scene: ${filename}`, 'info');
+        const res = await apiCall(api.director.replicate, `scenes/${filename}`, {});
+        if (res.finalImage) {
+          state.lastRenderPath = res.finalImage;
+          showRender(`file://${res.finalImage}`);
+          showToast('Scene loaded!', 'success');
+        }
+      } catch (e) {
+        showToast(`Load failed: ${e.message}`, 'error');
+      }
+    };
+
+    // ============================================
+    // SME ENGINE
+    // ============================================
+    async function runSMEPlan() {
+      const intent = $('#smeIntent').value.trim();
+      if (!intent) return showToast('Enter an intent first', 'warning');
+      
+      const btn = $('#btnSMEPlan');
+      setButtonLoading(btn, true);
+      setProgress('smeProgress', 'smeProgressFill', 0);
+      clearLog('smePlanLog');
+      
+      const constraints = $('#smeConstraints').value ? JSON.parse($('#smeConstraints').value) : {};
+      const privacyLevel = $('#smePrivacy').value;
+      
+      log('smePlanLog', `Planning: "${intent}"`, 'info');
+      setProgress('smeProgress', 'smeProgressFill', 30);
+      
+      try {
+        const userRequest = { intent, media: {}, constraints, privacyLevel, timestamp: Date.now() };
+        const res = await apiCall(api.sme.capabilityPlan, userRequest);
+        
+        setProgress('smeProgress', 'smeProgressFill', 90);
+        log('smePlanLog', `✅ Plan: ${res.plan.planId}`, 'success');
+        log('smePlanLog', `Mode: ${res.plan.executionMode} | Modalities: ${res.plan.requiredModalities.join(', ')}`, 'info');
+        log('smePlanLog', `FLOPs: ${(res.plan.estimatedFLOPs.total/1e9).toFixed(2)} GFLOPs | RAM: ${res.plan.estimatedRAM.peakGB.toFixed(1)} GB | Latency: ${res.plan.estimatedLatency.totalMs.toFixed(0)}ms`, 'info');
+        log('smePlanLog', `Substrates: ${res.plan.substrateHints.map(h => `${h.primitive}→${h.preferredSubstrate}`).join(', ')}`, 'info');
+        setProgress('smeProgress', 'smeProgressFill', 100);
+      } catch (e) {
+        log('smePlanLog', `❌ Failed: ${e.message}`, 'error');
+        showToast(`Plan failed: ${e.message}`, 'error');
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    async function executeSMEPlan() {
+      const intent = $('#smeIntent').value.trim();
+      if (!intent) return showToast('Generate a plan first', 'warning');
+      
+      log('smePlanLog', `Executing SME Core...`, 'info');
+      setProgress('smeProgress', 'smeProgressFill', 30);
+      
+      try {
+        const input = { rawMedia: { text: intent }, authorityContext: { userId: 'user', role: 'user', permissions: [] } };
+        const res = await apiCall(api.sme.execute, input);
+        
+        setProgress('smeProgress', 'smeProgressFill', 90);
+        log('smePlanLog', `✅ SME Core: ${res.chainId}`, 'success');
+        log('smePlanLog', `Evidence: ${res.evidenceBundle?.bundleId}`, 'info');
+        if (res.response?.text) log('smePlanLog', `Response: ${res.response.text.substring(0,100)}...`, 'info');
+        setProgress('smeProgress', 'smeProgressFill', 100);
+      } catch (e) {
+        log('smePlanLog', `❌ Failed: ${e.message}`, 'error');
+        showToast(`Execution failed: ${e.message}`, 'error');
+      }
+    }
+
+    async function checkSMEHealth() {
+      log('smeCoreLog', 'Running health check...', 'info');
+      try {
+        const res = await apiCall(api.sme.health);
+        log('smeCoreLog', `Core: ${res.core.healthy ? '✅ Healthy' : '❌ Unhealthy'}`, res.core.healthy ? 'success' : 'error');
+        for (const [name, health] of Object.entries(res.modules)) {
+          log('smeCoreLog', `${name}: ${health.healthy ? '✅' : '❌'} ${health.modelVersion || ''}`, health.healthy ? 'success' : 'warn');
+        }
+      } catch (e) {
+        log('smeCoreLog', `Health check failed: ${e.message}`, 'error');
+        showToast(`Health check failed: ${e.message}`, 'error');
+      }
+    }
+
+    async function refreshHardwareProfile() {
+      const btn = $('#btnRefreshHardware');
+      setButtonLoading(btn, true);
+      log('smeHardwareLog', 'Detecting hardware...', 'info');
+      
+      try {
+        const res = await apiCall(api.sme.hardwareProfile);
+        const p = res.profile;
+        log('smeHardwareLog', `Profile: ${p.profileId}`, 'success');
+        log('smeHardwareLog', `CPU: ${p.cpu.cores}C, ${p.cpu.isa}, ${p.cpu.estimatedGFLOPs} GFLOPs`, 'info');
+        log('smeHardwareLog', `GPU: ${p.gpu.count}×${p.gpu.vramGB}GB, ${p.gpu.api}, ${p.gpu.estimatedGFLOPs} GFLOPs`, 'info');
+        log('smeHardwareLog', `RAM: ${p.memory.ramGB}GB (${p.memory.availableGB}GB avail), ${p.memory.bandwidthGBps} GB/s`, 'info');
+        log('smeHardwareLog', `Storage: ${p.storage.type}, ${p.storage.ioBandwidthMBps} MB/s`, 'info');
+        
+        const profilesRes = await apiCall(api.sme.hardwareProfiles);
+        $('#smeHardwareProfile').innerHTML = profilesRes.profiles.map(p => 
+          `<option value="${p.profileId}" ${p.profileId === res.profile.profileId ? 'selected' : ''}>${p.profileId}</option>`
+        ).join('');
+      } catch (e) {
+        log('smeHardwareLog', `Error: ${e.message}`, 'error');
+        showToast(`Hardware detection failed: ${e.message}`, 'error');
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    async function loadAuditLog() {
+      log('smeAuditLog', 'Loading audit log...', 'info');
+      try {
+        const res = await apiCall(api.sme.audit, { limit: 20 });
+        log('smeAuditLog', `Found ${res.results.length} entries`, 'success');
+        for (const entry of res.results.slice(0, 10)) {
+          log('smeAuditLog', `${entry.chainId}: ${entry.modalities.join(',')} | ${entry.success ? '✅' : '❌'} | ${entry.executionTimeMs}ms | ${entry.evidenceCount} evidence`, entry.success ? 'info' : 'warn');
+        }
+      } catch (e) {
+        log('smeAuditLog', `Error: ${e.message}`, 'error');
+        showToast(`Audit load failed: ${e.message}`, 'error');
+      }
+    }
+
+    async function loadEvidenceList() {
+      log('smeAuditLog', 'Browsing evidence...', 'info');
+      try {
+        const res = await apiCall(api.sme.audit, { limit: 50 });
+        log('smeAuditLog', `Evidence entries: ${res.results.length}`, 'success');
+      } catch (e) {
+        log('smeAuditLog', `Error: ${e.message}`, 'error');
+        showToast(`Evidence browse failed: ${e.message}`, 'error');
+      }
+    }
+
+    // ============================================
+    // CLOUD ENHANCEMENT
+    // ============================================
+    async function enhanceRender() {
+      if (!state.lastRenderPath) return showToast('Render a 4D image first!', 'warning');
+      
+      const btn = $('#btnEnhance');
+      setButtonLoading(btn, true);
+      setProgress('enhanceProgress', 'enhanceProgressFill', 0);
+      clearLog('enhanceLog');
+      
+      const options = {
+        visionModel: $('#visionModel').value,
+        textModel: $('#textModel').value,
+        imageModel: $('#imageModel').value,
+        prompt: $('#enhancePrompt').value,
+      };
+
+      log('enhanceLog', `Enhancing via ${$('#enhanceProvider').value}...`, 'info');
+      setProgress('enhanceProgress', 'enhanceProgressFill', 20);
+      
+      try {
+        setProgress('enhanceProgress', 'enhanceProgressFill', 50);
+        log('enhanceLog', 'Analyzing with vision model...', 'info');
+        
+        setProgress('enhanceProgress', 'enhanceProgressFill', 70);
+        log('enhanceLog', 'Generating enhanced image...', 'info');
+        
+        const res = await apiCall(api.cloud.enhanceRender, state.lastRenderPath, options);
+        
+        setProgress('enhanceProgress', 'enhanceProgressFill', 90);
+        log('enhanceLog', '✅ Enhancement complete!', 'success');
+        log('enhanceLog', `Analysis: ${res.analysis?.substring(0,100)}...`, 'info');
+        log('enhanceLog', `Prompt: ${res.enhancedPrompt?.substring(0,100)}...`, 'info');
+        
+        showRender(`data:image/png;base64,${res.enhancedImageBase64}`);
+        showToast('Enhanced!', 'success');
+        setProgress('enhanceProgress', 'enhanceProgressFill', 100);
+      } catch (e) {
+        log('enhanceLog', `❌ ${e.message}`, 'error');
+        showToast(`Enhancement failed: ${e.message}`, 'error');
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    async function generateImageOnly() {
+      const btn = $('#btnGenImage');
+      setButtonLoading(btn, true);
+      setProgress('enhanceProgress', 'enhanceProgressFill', 0);
+      clearLog('enhanceLog');
+      
+      const prompt = $('#enhancePrompt').value || 'A beautiful 4D tesseract, cyberpunk, volumetric lighting';
+      const provider = $('#enhanceProvider').value;
+      
+      log('enhanceLog', `Generating via ${provider}...`, 'info');
+      setProgress('enhanceProgress', 'enhanceProgressFill', 30);
+      
+      try {
+        const res = await apiCall(api.cloud.generateImage, provider, $('#imageModel').value, prompt, { width: 1024, height: 1024 });
+        setProgress('enhanceProgress', 'enhanceProgressFill', 90);
+        
+        showRender(`data:image/png;base64,${res.imageBase64}`);
+        log('enhanceLog', '✅ Image generated!', 'success');
+        showToast('Generated!', 'success');
+        setProgress('enhanceProgress', 'enhanceProgressFill', 100);
+      } catch (e) {
+        log('enhanceLog', `❌ ${e.message}`, 'error');
+        showToast(`Generation failed: ${e.message}`, 'error');
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    // Start
+    init();
+  </script>
+</body>
+</html>

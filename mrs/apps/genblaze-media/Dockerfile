@@ -1,5 +1,10 @@
 # Render: set Root Directory / Docker context to mrs/apps/genblaze-media
 # Dockerfile Path (from repo root): mrs/apps/genblaze-media/Dockerfile
+#
+# NVIDIA FLUX stills only. This context cannot reach
+# mrs/packages/renderer-core, so the RT4D backend reports
+# rt4d.available=false here. Build the repo-root Dockerfile (repo-root context)
+# for a deploy that bundles Node + renderer-core.
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -12,14 +17,20 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     GENBLAZE_HTTP_TIMEOUT=600 \
     GENBLAZE_NVCF_TIMEOUT=600 \
     GENBLAZE_PIPELINE_TIMEOUT=720 \
-    GENBLAZE_NVCF_POLL_SECONDS=90 \
+    GENBLAZE_NVCF_POLL_SECONDS=300 \
     GENBLAZE_CONNECT_TIMEOUT=30
 
 # System deps kept minimal; genblaze/boto3 are pure wheels on slim
-# legacy-resolver: genblaze-core 0.3.7 declares pillow<12; we pin Pillow==12.3.0 for CVE fixes
+# genblaze-core 0.3.8 still declares pillow<12; overlay Pillow 12.3.0 for CVE fixes
+# Optional GMI SDK — non-fatal if package missing (keys never in image).
+# Prefer repo-root Dockerfile for Render (RT4D + Engine3D); this context is NVIDIA-only.
 COPY requirements-docker.txt .
+COPY requirements-gmi.txt .
 RUN pip install --upgrade pip \
- && pip install --use-deprecated=legacy-resolver -r requirements-docker.txt
+ && pip install -r requirements-docker.txt \
+ && pip install --no-deps Pillow==12.3.0 \
+ && (pip install -r requirements-gmi.txt \
+     || echo "WARN: genblaze-gmicloud optional install failed; GMI path unavailable until package installs.")
 
 COPY app ./app
 

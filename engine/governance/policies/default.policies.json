@@ -2,60 +2,125 @@
   {
     "id": "policy-no-execution-without-intent",
     "scope": "runtime",
-    "condition": "intent != null",
-    "rule": "deny_if_false",
     "severity": "critical",
-    "message": "No execution without intent."
+    "action": "deny_if_false",
+    "condition": "intent != null",
+    "description": "Every execution must have a declared UserIntent with intentId"
   },
   {
     "id": "policy-no-state-change-without-evidence",
     "scope": "state",
-    "condition": "require_evidence_for_mutation",
-    "rule": "deny_if_false",
     "severity": "high",
-    "message": "No state change without evidence."
+    "action": "deny_if_false",
+    "condition": "evidence != null",
+    "description": "Every state mutation must produce an EvidenceRecord"
   },
   {
     "id": "policy-no-render-without-provenance",
     "scope": "render",
-    "condition": "play_timeline_or_render_4d",
-    "rule": "attach_provenance",
     "severity": "high",
-    "message": "No render without provenance."
+    "action": "attach_provenance",
+    "condition": "always",
+    "description": "Every render/generation must carry provenance metadata"
   },
   {
     "id": "policy-no-authority-without-contract",
     "scope": "authority",
-    "condition": "actor_has_contract",
-    "rule": "deny_if_false",
     "severity": "critical",
-    "message": "No authority without contract."
+    "action": "deny_if_false",
+    "condition": "actor.contract != null",
+    "description": "Actors must have a registered authority contract"
   },
   {
     "id": "policy-play-timeline-requires-world",
     "scope": "timeline",
-    "condition": "play_timeline_requires_world",
-    "rule": "deny_if_missing_world",
     "severity": "critical",
-    "message": "play_timeline requires a world id on the intent."
+    "action": "deny_if_missing_world",
+    "condition": "play_timeline",
+    "description": "play_timeline requires a valid worldId"
   },
   {
     "id": "policy-ascension-drift-throttle",
     "scope": "render",
-    "condition": "intent.timeline == 'mythar_ascension' && drift_score > 0.7",
-    "rule": "modify_param",
+    "severity": "medium",
+    "action": "modify_param",
+    "condition": "drift > 0.7",
     "param": "speed",
     "modifier": "speed * 0.5",
-    "severity": "medium",
-    "message": "Throttle ascension speed when drift is high."
+    "message": "Throttle ascension speed when drift is high.",
+    "description": "Throttle generation speed when ascension drift exceeds threshold"
   },
   {
     "id": "policy-ascension-evidence",
     "scope": "runtime",
-    "condition": "intent.timeline == 'mythar_ascension'",
-    "rule": "deny_if_false",
-    "require": ["ev-ascension-001", "ev-ascension-002"],
     "severity": "critical",
-    "message": "Mythar Ascension requires dual evidence."
+    "action": "deny_if_false",
+    "condition": "dual_evidence",
+    "require": ["ev-ascension-001", "ev-ascension-002"],
+    "description": "Mythar Ascension requires dual evidence (intent + provenance)"
+  },
+  {
+    "id": "policy-director-contract-required",
+    "scope": "authority",
+    "severity": "critical",
+    "action": "deny_if_false",
+    "condition": "director.contract != null",
+    "description": "Director agent must have a valid constitutional contract"
+  },
+  {
+    "id": "policy-director-no-execution",
+    "scope": "execution",
+    "severity": "critical",
+    "action": "deny_if_false",
+    "condition": "director.action in forbidden",
+    "description": "Director cannot perform forbidden actions (write_code, generate_artifacts, etc.)"
+  },
+  {
+    "id": "policy-director-mcp-provenance",
+    "scope": "render",
+    "severity": "high",
+    "action": "attach_provenance",
+    "condition": "director.mcp_invocation",
+    "description": "All Director MCP tool invocations must carry provenance"
+  },
+  {
+    "id": "policy-replay-contract-required",
+    "scope": "authority",
+    "severity": "critical",
+    "action": "deny_if_false",
+    "condition": "replay.contract != null",
+    "description": "Replay cannot initiate unless contract.replay.v1 is enforced."
+  },
+  {
+    "id": "policy-replay-no-execution",
+    "scope": "execution",
+    "severity": "critical",
+    "action": "deny_if_false",
+    "condition": "replay.action in forbidden",
+    "description": "Replay authority cannot execute specialist work or generate artifacts."
+  },
+  {
+    "id": "policy-replay-evidence-integrity",
+    "scope": "replay",
+    "severity": "high",
+    "action": "deny_if_false",
+    "condition": "replay.evidence_complete",
+    "description": "Replay must validate evidence completeness before reconstruction."
+  },
+  {
+    "id": "policy-replay-provenance-integrity",
+    "scope": "replay",
+    "severity": "high",
+    "action": "deny_if_false",
+    "condition": "replay.provenance_complete",
+    "description": "Replay must validate MCP provenance completeness before reconstruction."
+  },
+  {
+    "id": "policy-replay-authority-boundary",
+    "scope": "authority",
+    "severity": "critical",
+    "action": "deny_if_false",
+    "condition": "replay.authority == replay-only",
+    "description": "Replay cannot escalate authority beyond replay-only."
   }
 ]

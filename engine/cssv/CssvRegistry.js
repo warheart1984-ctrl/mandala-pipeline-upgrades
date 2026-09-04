@@ -3,12 +3,15 @@
  * Canonical constitutional ledger API (JS).
  */
 
-import {
-  appendNdjson,
-  ledgerPaths,
-  loadArtifacts,
-  saveArtifacts,
-} from "./ledger.js";
+import { ledgerPaths } from "./ledgerPaths.js";
+
+/** @type {Promise<typeof import("./ledgerNode.js")> | null} */
+let _ledgerNode = null;
+
+function ledgerNode() {
+  if (!_ledgerNode) _ledgerNode = import("./ledgerNode.js");
+  return _ledgerNode;
+}
 
 export class BrowserCssvHost {
   constructor() {
@@ -68,7 +71,11 @@ export class CssvRegistry {
     };
     this._stateId = record.to;
     this.transitions.push(record);
-    if (this.persist) appendNdjson(this.paths.transitions, record);
+    if (this.persist) {
+      ledgerNode()
+        .then((m) => m.appendNdjson(this.paths.transitions, record))
+        .catch(() => {});
+    }
     return record;
   }
 
@@ -84,7 +91,11 @@ export class CssvRegistry {
       frameIndex: this._frameIndex++,
     };
     this.frames.push(record);
-    if (this.persist) appendNdjson(this.paths.frames, record);
+    if (this.persist) {
+      ledgerNode()
+        .then((m) => m.appendNdjson(this.paths.frames, record))
+        .catch(() => {});
+    }
     return record;
   }
 
@@ -146,12 +157,13 @@ export class CssvRegistry {
     }
   }
 
-  _persistArtifact(record) {
-    const existing = loadArtifacts(this.paths.artifacts);
+  async _persistArtifact(record) {
+    const node = await ledgerNode();
+    const existing = await node.loadArtifacts(this.paths.artifacts);
     const idx = existing.findIndex((a) => a.id === record.id);
     if (idx >= 0) existing[idx] = record;
     else existing.push(record);
-    saveArtifacts(this.paths.artifacts, existing);
+    await node.saveArtifacts(this.paths.artifacts, existing);
   }
 }
 

@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "MRS ChatGPT App MCP server (SSE + skybridge widget resource)",
+  "description": "MRS 4D Renderer MCP server — deterministic procedural RT4D PNGs for ChatGPT",
   "scripts": {
     "start": "tsx src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test --test-concurrency=1 src/tools/schema-openai.test.mjs src/tools/jarvis-memory.test.mjs src/tools/render-smoke.test.mjs src/tools/pipeline-contract.test.mjs src/mcp-contract.test.mjs",
+    "test:schema": "tsx --test src/tools/schema-openai.test.mjs",
+    "test:render": "tsx --test src/tools/render-smoke.test.mjs",
+    "test:pipeline": "tsx --test src/tools/pipeline-contract.test.mjs",
+    "test:mcp": "tsx --test src/mcp-contract.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.0.1",
@@ -24,6 +29,7 @@
     "@types/node": "^24.3.0",
     "@types/ws": "^8.18.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "zod-to-json-schema": "3.25.2"
   }
 }

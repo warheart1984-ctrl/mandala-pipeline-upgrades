@@ -1,5 +1,7 @@
 /**
- * Package entry — browser-safe exports (no node-canvas / FFmpeg).
+ * Package entry — mixed browser + Node surface (historical).
+ * Modules that require node:fs / child_process / native preview are also
+ * exported from `@mrs/renderer-core/node` — prefer that path for Node hosts.
  * CLI movie pipeline stays in src/cli.js + src/pipeline/movie-pipeline.js.
  */
 export { vec4, add, sub, scale, dot, length, normalize, lerp } from "./math/vec4.js";
@@ -39,7 +41,19 @@ export { Timeline, Keyframe, Interpolator, Track, TimelinePlayer, TimelineSerial
 export { CameraPathGenerator, KeyframeBaker, AudioKeyframes, Rotation4DChoreo, Scrubber } from "./timeline/utils/index.js";
 export { AudioAnalyzer, AudioMapper, AudioVisualizer, createAudioAnalyzer, createAudioMapper, createAudioVisualizer } from "./audio/AudioVisualizer.js";
 export { OcclusionCuller, BVHOcclusionCuller, DistanceOcclusionCuller, createOcclusionCuller, createBVHOcclusionCuller, createDistanceOcclusionCuller } from "./render/OcclusionCulling.js";
-export { discoverBrowserRenderAdapters, routeSovereignXRenderer, createGovernedRenderer, createSovereignXNativeDispatch } from "./gpu/SovereignXRenderAdapter.js";
+export {
+  discoverBrowserRenderAdapters,
+  routeSovereignXRenderer,
+  createGovernedRenderer,
+  createSovereignXNativeDispatch,
+  SOVEREIGNX_PHYSICAL_INVARIANT_CAPABILITY,
+  PHYSICAL_INVARIANT_EVIDENCE_REF_PREFIX,
+  listRegisteredPhysicalInvariants,
+  getSovereignXPhysicalInvariantRegistration,
+  physicalInvariantEvidenceRefs,
+  attachPhysicalInvariantEvidence,
+  evaluatePhysicalInvariantEvidence,
+} from "./gpu/SovereignXRenderAdapter.js";
 export { SHARED_FRAME_MAGIC, SHARED_FRAME_HEADER_BYTES, parseSharedFrame, SharedFramePreview } from "./gpu/SharedFramePreview.js";
 
 export { TemporalAA, createTemporalAA } from "./render/taa.js";
@@ -65,6 +79,8 @@ export { GPUVideoEncoder, NVENCEncoder } from "./encode/index.js";
 export { RigidBody4D } from "./physics/RigidBody4D.js";
 export { Collider4D, HyperplaneCollider, HypersphereCollider, AABBCollider4D, detectCollision } from "./physics/Collider4D.js";
 export { PhysicsWorld4D } from "./physics/PhysicsWorld4D.js";
+export * as Math3D from "./math3d/index.js";
+export * as Engine3D from "./engine3d/index.js";
 
 export { MorphTargetExporter } from "./asset-pipeline/MorphTargetExporter.js";
 export { SequentialGLBExporter } from "./asset-pipeline/SequentialGLBExporter.js";
@@ -97,7 +113,7 @@ export { LiveLinkServer } from "./live-link/LiveLinkServer.js";
 export { MeshStreamer } from "./live-link/MeshStreamer.js";
 export { UnityClientProtocol } from "./live-link/UnityClientProtocol.js";
 
-/** PLP v1 stub — skeleton; see docs/4d-engine/v1/plp/PLP_V1.md */
+/** PLP v1 — status live|partial from projectWorld (Drive-G-1); see docs/4d-engine/v1/plp/PLP_V1.md */
 export { projectWorld } from "./plp/projectWorld.js";
 
 export * as RT4D from "./render/rt4d/index.js";

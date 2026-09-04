@@ -14,7 +14,8 @@ src/
   render/      canvas-renderer, wireframe, solid
   pipeline/    scene, movie-pipeline (Node + optional FFmpeg)
   cli.js       4d-render CLI
-  index.js     browser-safe exports (no node-canvas)
+  index.js     package root (mixed historical surface; prefer @mrs/renderer-core/node for Node-only APIs)
+  node.js      Node-oriented exports (GPUPreviewClient, LiveLink, shared-memory helpers)
 ```
 
 ## Showcase demo (Canvas)
@@ -86,6 +87,9 @@ Unity, Unreal, or a remote GPU; native backends are handed to a caller-provided 
 Delay and drop decisions remain authoritative and are surfaced as typed renderer errors.
 `createSovereignXNativeDispatch` converts Vulkan/OpenCL/native decisions into versioned worker jobs and
 returns the verified execution receipt to the renderer runtime.
+Physical invariants (`PI-GEO-LENGTH`, `PI-CALC-ENERGY`, `PI-TRIG-RADIAL`) are **registered** on route
+results via `SovereignXPhysicalInvariants.js` (status **tested**); opt-in evidence refs / measurement
+evaluation route through `decision.evidenceRefs` and are not a render deny gate.
 
 ## What is not claimed
 

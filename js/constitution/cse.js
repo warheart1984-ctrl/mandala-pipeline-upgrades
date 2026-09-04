@@ -8,17 +8,7 @@
 
 import { CHARTER } from "./charter.js";
 import { resolveAuthority } from "./contracts.js";
-
-let seq = 0;
-
-function id(prefix) {
-  seq += 1;
-  return `${prefix}-${Date.now().toString(36)}-${seq.toString(36)}`;
-}
-
-function nowIso() {
-  return new Date().toISOString();
-}
+import { makeId, nowIso } from "../../engine/runtime/types.js";
 
 export class ConstitutionalStateEngine {
   constructor(options = {}) {
@@ -33,7 +23,7 @@ export class ConstitutionalStateEngine {
       throw new Error("Intent requires kind and goal");
     }
     const intent = {
-      id: id("intent"),
+      id: makeId("intent"),
       kind,
       goal,
       constraints,
@@ -91,8 +81,14 @@ export class ConstitutionalStateEngine {
 
   /**
    * Governed execute: Intent → Evidence → Authority → Execution → CSR
+   *
+   * When `decision` is provided (from GovernanceKernel.evaluateIntent), its
+   * governance trace (paramAdjust, attachProvenance, policiesApplied,
+   * precedentCount, decisionId) is embedded in the CSR.  This closes the
+   * CKL→CSE integration gap: policy evaluations from ConstitutionalKnowledgeLayer
+   * flow into the execution record without a second independent path.
    */
-  async execute({ intent, evidence, action, run }) {
+  async execute({ intent, evidence, action, run, decision = null }) {
     if (!intent?.id) {
       throw new Error("No execution without intent");
     }
@@ -120,7 +116,7 @@ export class ConstitutionalStateEngine {
     this._append({
       phase: "planning",
       intentId: intent.id,
-      payload: { action, contractId: auth.contractId },
+      payload: { action, contractId: auth.contractId, decision },
     });
 
     let result;
@@ -137,13 +133,23 @@ export class ConstitutionalStateEngine {
     }
 
     const csr = {
-      id: id("csr"),
+      id: makeId("csr"),
       intentId: intent.id,
       action,
       contractId: auth.contractId,
       charterId: this.charterId,
       evidence,
       result,
+      governanceTrace: decision
+        ? {
+            decisionId: decision.decisionId,
+            verdict: decision.verdict,
+            policiesApplied: decision.policiesApplied,
+            precedentCount: decision.precedentCount,
+            paramAdjust: decision.paramAdjust,
+            attachProvenance: Boolean(decision.attachProvenance),
+          }
+        : null,
       createdAt: nowIso(),
     };
 
@@ -187,7 +193,7 @@ export class ConstitutionalStateEngine {
 
   _append(entry) {
     const row = {
-      id: id("log"),
+      id: makeId("log"),
       at: nowIso(),
       ...entry,
     };
