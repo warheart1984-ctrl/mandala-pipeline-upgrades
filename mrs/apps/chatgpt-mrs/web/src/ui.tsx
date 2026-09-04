@@ -41,10 +41,7 @@ export function Button({
   color = "secondary",
   variant = "outline",
   ...rest
-}: Omit<SdkButtonProps, "children" | "color"> & {
-  children: ReactNode;
-  color?: SdkButtonProps["color"];
-}) {
+}: SdkButtonProps) {
   return (
     <SdkButton color={color} variant={variant} size="sm" pill={false} {...rest}>
       {children}

@@ -41,28 +41,12 @@ namespace SovereignX.CIEMS.Engine.LiveLink
             _recvTask = Task.Run(() => ConnectAndReceiveAsync(_cts.Token));
         }
 
-        /// <summary>
-        /// Idempotent: safe to call when already disconnected. Cancels CTS, aborts socket,
-        /// and clears the background receive task reference so publish-toggle OFF can stop work.
-        /// </summary>
         public void Disconnect()
         {
-            var cts = _cts;
-            var ws = _ws;
-            var recv = _recvTask;
-            _cts = null;
+            try { _cts?.Cancel(); } catch { /* ignore */ }
+            try { _ws?.Abort(); } catch { /* ignore */ }
             _ws = null;
-            _recvTask = null;
-
-            try { cts?.Cancel(); } catch { /* ignore */ }
-            try { ws?.Abort(); } catch { /* ignore */ }
-            try
-            {
-                if (recv != null && !recv.IsCompleted)
-                    recv.Wait(TimeSpan.FromMilliseconds(250));
-            }
-            catch { /* ignore cancel/abort races */ }
-            try { cts?.Dispose(); } catch { /* ignore */ }
+            _cts = null;
         }
 
         public void Dispose() => Disconnect();
@@ -71,15 +55,6 @@ namespace SovereignX.CIEMS.Engine.LiveLink
 
         public void RequestFrame(int frame) =>
             SendJson($"{{\"type\":\"request_frame\",\"frame\":{frame}}}");
-
-        /// <summary>Send arbitrary LiveLink JSON text (inspection channels, ping helpers).</summary>
-        public void SendJson(string json)
-        {
-            if (!IsConnected || string.IsNullOrEmpty(json)) return;
-            var bytes = Encoding.UTF8.GetBytes(json);
-            _ = _ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true,
-                CancellationToken.None);
-        }
 
         /// <summary>Drain callbacks onto the Unity main thread (call from Update).</summary>
         public void PumpMainThread()
@@ -152,6 +127,14 @@ namespace SovereignX.CIEMS.Engine.LiveLink
             {
                 Debug.LogWarning($"[MRS live-link] parse: {e.Message}");
             }
+        }
+
+        void SendJson(string json)
+        {
+            if (!IsConnected) return;
+            var bytes = Encoding.UTF8.GetBytes(json);
+            _ = _ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true,
+                CancellationToken.None);
         }
 
         void Enqueue(Action a) => _mainThread.Enqueue(a);

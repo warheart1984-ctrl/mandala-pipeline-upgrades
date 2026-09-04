@@ -1,8 +1,5 @@
-import { MeshPicker4D, BVH_FACE_THRESHOLD } from "../picking/MeshPicker4D.js";
+import { MeshPicker4D } from "../picking/MeshPicker4D.js";
 import { Ray4D } from "../picking/Ray4D.js";
-import { BVH4D } from "../render/rt4d/accel/BVH4D.js";
-import { HyperBox } from "../render/rt4d/accel/HyperBox.js";
-import { packBVH4D, traverseBVH4DPacked } from "../render/rt4d/accel/gpu/bvh4dPacked.js";
 import {
   emptyInspectorResult,
   vec4,
@@ -12,10 +9,8 @@ import {
   orthonormalTangentBasis,
   jacobianFromEdges,
   principalCurvatureStub,
-  principalCurvatureReal,
   signedHyperplaneDistance,
   sub,
-  computeMeshCurvature,
 } from "./differential.js";
 import { resultToWire, buildInspectorEvidenceBundle } from "./serialize.js";
 import {
@@ -27,9 +22,9 @@ import {
 } from "./sceneBind.js";
 
 /**
- * MRSInspector4D — mesh inspect (MRS-IC).
- * Status: tested — discrete CPU curvature when topology allows; BVH pick for ≥32 faces.
- * Not GPU curvature. Scene bind wires local session mesh (not multi-user sync).
+ * MRSInspector4D — skeleton inspector (MRS-IC v1.1).
+ * Status: skeleton — curvature second forms not computed; BVH path optional.
+ * Scene bind: wires Unity-pushed mesh/camera for picking (not multi-user sync).
  */
 export class MRSInspector4D {
   constructor(options = {}) {
@@ -42,14 +37,6 @@ export class MRSInspector4D {
     this.rotationPlanes = options.rotationPlanes ?? defaults.rotationPlanes;
     this.epsilon = options.epsilon ?? 1e-4;
     this.meshesRoot = options.meshesRoot ?? undefined;
-    this.bvhThreshold = options.bvhThreshold ?? BVH_FACE_THRESHOLD;
-    /** @type {{ nodeVisits: number, faceCount: number, usedBVH: boolean } | null} */
-    this.lastPickStats = null;
-    this._curvatureCache = null;
-    this._spatialPacked = null;
-    this._spatialPrims = null;
-    this._rebuildSpatialAccel();
-    this._rebuildCurvature();
     /** @type {import("./sceneBind.js").SceneBindingStatus} */
     this.sceneStatus =
       options.sceneStatus ??
@@ -65,11 +52,6 @@ export class MRSInspector4D {
             boundAt: Date.now(),
           }
         : defaults.status);
-  }
-
-  /** True when MeshPicker4D or spatial fallback holds a packed BVH. */
-  hasBVH() {
-    return Boolean(this.picker?.hasBVH?.() || this._spatialPacked?.length);
   }
 
   /** Current bind label for UI / logs (`scene: default_test_mesh` | `scene: unity_bound`). */
@@ -88,9 +70,7 @@ export class MRSInspector4D {
   applySceneBinding(binding) {
     if (!binding?.mesh) return false;
     this.mesh = binding.mesh;
-    this.picker = new MeshPicker4D(this.mesh, { bvhThreshold: this.bvhThreshold });
-    this._rebuildSpatialAccel();
-    this._rebuildCurvature();
+    this.picker = new MeshPicker4D(this.mesh);
     if (binding.camera) this.camera = { ...binding.camera };
     if (binding.projectionMatrix) {
       this.projectionMatrix = binding.projectionMatrix.map((row) => [...row]);
@@ -138,8 +118,6 @@ export class MRSInspector4D {
       return miss;
     }
     let hit = this.picker?.pick(ray) ?? null;
-    if (hit?.pickStats) this.lastPickStats = hit.pickStats;
-    else if (this.picker?.lastPickStats) this.lastPickStats = this.picker.lastPickStats;
     if (!hit) hit = this._pickMeshSpatial(ray);
     if (!hit) {
       const miss = emptyInspectorResult();
@@ -168,7 +146,7 @@ export class MRSInspector4D {
       v0.z * w + v1.z * u + v2.z * v,
       v0.w * w + v1.w * u + v2.w * v,
     );
-    return this._fromTriangle(p, v0, v1, v2, primitiveId, [], { u, v, w });
+    return this._fromTriangle(p, v0, v1, v2, primitiveId, []);
   }
 
   handleWireMessage(msg) {
@@ -212,62 +190,15 @@ export class MRSInspector4D {
     return buildInspectorEvidenceBundle(result, meta);
   }
 
-  _rebuildCurvature() {
-    this._curvatureCache = null;
-    if (this.mesh?.vertices?.length && this.mesh?.faces?.length) {
-      this._curvatureCache = computeMeshCurvature(this.mesh);
-    }
-  }
-
-  _rebuildSpatialAccel() {
-    this._spatialPacked = null;
-    this._spatialPrims = null;
-    const faces = this.mesh?.faces;
-    if (!faces || faces.length < this.bvhThreshold) return;
-
-    const prims = [];
-    for (let i = 0; i < faces.length; i++) {
-      const face = faces[i];
-      const v0 = this._vertex(face[0]);
-      const v1 = this._vertex(face[1]);
-      const v2 = this._vertex(face[2]);
-      prims.push({
-        faceIndex: i,
-        face,
-        v0,
-        v1,
-        v2,
-        getCenter() {
-          return [
-            (v0.x + v1.x + v2.x) / 3,
-            (v0.y + v1.y + v2.y) / 3,
-            (v0.z + v1.z + v2.z) / 3,
-            (v0.w + v1.w + v2.w) / 3,
-          ];
-        },
-        getBounds() {
-          const box = new HyperBox();
-          box.expand(v0);
-          box.expand(v1);
-          box.expand(v2);
-          return box;
-        },
-      });
-    }
-    this._spatialPrims = prims;
-    this._spatialPacked = packBVH4D(new BVH4D(prims));
-  }
-
   _fromMeshHit(hit, ray) {
     const face = hit.face;
     const v0 = this._vertex(face[0]);
     const v1 = this._vertex(face[1]);
     const v2 = this._vertex(face[2]);
-    const bvhPath = hit.pickStats?.usedBVH ? ["bvh"] : [];
-    return this._fromTriangle(hit.point, v0, v1, v2, hit.faceIndex, bvhPath, hit.barycentric);
+    return this._fromTriangle(hit.point, v0, v1, v2, hit.faceIndex, []);
   }
 
-  _fromTriangle(p, v0, v1, v2, faceIndex, bvhPath, bary = { u: 1 / 3, v: 1 / 3, w: 1 / 3 }) {
+  _fromTriangle(p, v0, v1, v2, faceIndex, bvhPath) {
     const e1 = sub(v1, v0);
     const e2 = sub(v2, v0);
     const n = normalFromEdges(e1, e2);
@@ -277,14 +208,7 @@ export class MRSInspector4D {
     out.position = { ...p };
     out.normal4D = n;
     out.tangentBasis = tangents;
-
-    const discrete = this._curvatureCache?.sampleAtFace?.(faceIndex, bary);
-    if (discrete && Number.isFinite(discrete.k1) && Number.isFinite(discrete.k2)) {
-      out.curvature = principalCurvatureReal(tangents.t1, tangents.t2, discrete);
-    } else {
-      out.curvature = principalCurvatureStub(tangents.t1, tangents.t2);
-    }
-
+    out.curvature = principalCurvatureStub(tangents.t1, tangents.t2);
     out.jacobian = jacobianFromEdges(e1, e2);
     out.projectionMatrix = this.projectionMatrix.map((row) => [...row]);
     out.rotationPlanes = this.rotationPlanes.map((r) => ({ ...r, axisA: { ...r.axisA }, axisB: { ...r.axisB } }));
@@ -302,7 +226,6 @@ export class MRSInspector4D {
       primitiveId: faceIndex,
       faceIndex,
       bvhPath: [...bvhPath],
-      pickStats: this.lastPickStats ? { ...this.lastPickStats } : null,
     };
     return out;
   }
@@ -334,17 +257,10 @@ export class MRSInspector4D {
     return vec4(v.x ?? v[0], v.y ?? v[1], v.z ?? v[2], v.w ?? v[3] ?? 0);
   }
 
-  /**
-   * Möller–Trumbore on XYZ; interpolate w.
-   * ≥32 faces: packed BVH4D + traverseBVH4DPacked; else brute-force.
-   */
+  /** Möller–Trumbore on XYZ; interpolate w. Used when MeshPicker4D 4D-cross misses planar faces. */
   _pickMeshSpatial(ray) {
-    const faces = this.mesh.faces;
-    const faceCount = faces.length;
-    if (this._spatialPacked?.length) {
-      return this._pickBVH(ray, faceCount);
-    }
     let best = null;
+    const faces = this.mesh.faces;
     for (let i = 0; i < faces.length; i++) {
       const face = faces[i];
       const v0 = this._vertex(face[0]);
@@ -355,29 +271,7 @@ export class MRSInspector4D {
         best = { ...hit, faceIndex: i, face };
       }
     }
-    this.lastPickStats = { nodeVisits: faceCount, faceCount, usedBVH: false };
-    if (best) best.pickStats = { ...this.lastPickStats };
     return best;
-  }
-
-  _pickBVH(ray, faceCount) {
-    const stats = { nodeVisits: 0, faceCount, usedBVH: true };
-    const prims = this._spatialPrims;
-    const hit = traverseBVH4DPacked(
-      this._spatialPacked,
-      ray,
-      (primId) => {
-        const prim = prims[primId];
-        if (!prim) return null;
-        const tri = this._mollerTrumboreXYZ(ray, prim.v0, prim.v1, prim.v2);
-        if (!tri) return null;
-        return { ...tri, faceIndex: prim.faceIndex, face: prim.face };
-      },
-      { stats },
-    );
-    this.lastPickStats = stats;
-    if (!hit) return null;
-    return { ...hit, pickStats: { ...stats } };
   }
 
   _mollerTrumboreXYZ(ray, v0, v1, v2) {
@@ -435,16 +329,3 @@ export {
   sceneBoundWire,
   sceneStatusWire,
 } from "./sceneBind.js";
-export {
-  buildEdgeAdjacency,
-  gaussianCurvature,
-  meanCurvatureVector,
-  meanCurvatureScalar,
-  principalFromKH,
-  computeMeshCurvature,
-} from "./discreteGeometry.js";
-export {
-  principalCurvatureStub,
-  principalCurvatureReal,
-} from "./differential.js";
-export { BVH_FACE_THRESHOLD } from "../picking/MeshPicker4D.js";

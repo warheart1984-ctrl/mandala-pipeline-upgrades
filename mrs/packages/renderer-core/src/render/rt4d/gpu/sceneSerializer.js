@@ -5,40 +5,12 @@
 import { packBVH4D, flattenBVH4DNodes } from "../accel/gpu/bvh4dPacked.js";
 import { BVH4D } from "../accel/BVH4D.js";
 import { vec4 } from "../math/vec4.js";
-import {
-  resolveCharacterMaterialName,
-  serializeCharacterMaterial,
-  packCharacterMaterialFloats,
-} from "../material/CharacterMaterialRegistry.js";
 
 export const PRIM_TYPE_SPHERE = 0;
 export const PRIM_TYPE_PLANE = 1;
 export const PRIM_TYPE_MESH_TRI = 2;
 
-/**
- * GPU mesh-buffer cache key.
- * Static meshes use stable asset/local keys. Skinned/deformed meshes must key
- * on pose/deformation content — never a bare primitive id alone (that freezes
- * the first uploaded pose for the rest of an animation).
- * @returns {string|null} null → skip cache (dynamic mesh without content hash)
- */
-export function meshGpuBufferCacheKey(p) {
-  if (p.localBvhKey) return p.localBvhKey;
-  const evidence = p.evidence ?? {};
-  if (evidence.meshAssetHash) return evidence.meshAssetHash;
-  if (evidence.bakedGeometryHash) return evidence.bakedGeometryHash;
-  const poseHash =
-    evidence.meshDeformationHash
-    ?? evidence.morphHash
-    ?? evidence.boneHash
-    ?? null;
-  if (poseHash) return `${p.meshId ?? p.id ?? "mesh"}:${poseHash}`;
-  // Skinned without a pose hash: do not cache under a stable id.
-  if (p.kind === "skinned-mesh") return null;
-  return p.meshId ?? p.id ?? null;
-}
-
-export function serializeScene(scene, device, camera, options = {}) {
+export function serializeScene(scene, device, camera) {
   const primitives = scene.primitives ?? [];
   const lights = scene.lights ?? [];
 
@@ -51,15 +23,6 @@ export function serializeScene(scene, device, camera, options = {}) {
   for (let i = 0; i < primitives.length; i++) {
     const p = primitives[i];
     const matId = materialIndex(scene, p.materialId);
-    if (options.meshBufferCache && (p.kind === "poly" || p.kind === "skinned-mesh") && p.vertices && p.indices) {
-      const key = meshGpuBufferCacheKey(p);
-      if (key != null) {
-        p.gpuMeshBuffer = options.meshBufferCache.getOrCreate(key, {
-          vertices: p.localVertices ?? p.vertices,
-          indices: p.localIndices ?? p.indices,
-        });
-      }
-    }
 
     if (p.center && p.radius != null && !p.normal) {
       spheres.push(packSphere(p, matId));
@@ -69,7 +32,7 @@ export function serializeScene(scene, device, camera, options = {}) {
       planes.push(packPlane(p, matId));
       primTypes.push(PRIM_TYPE_PLANE);
       primOffsets.push(planes.length - 1);
-    } else if (p.faces || p.v0 != null || ((p.kind === "poly" || p.kind === "skinned-mesh") && p.vertices && p.indices)) {
+    } else if (p.faces || p.v0 != null) {
       const tris = packMeshTris(p, matId);
       for (const tri of tris) {
         meshTris.push(tri);
@@ -136,9 +99,6 @@ function packPlane(p, matId) {
 }
 
 function packMeshTris(p, matId) {
-  if ((p.kind === "poly" || p.kind === "skinned-mesh") && p.vertices && p.indices) {
-    return packIndexedMeshTris(p, matId);
-  }
   const tris = [];
   const faces = p.faces ?? [];
   const verts = p.vertices ?? [];
@@ -162,54 +122,6 @@ function packMeshTris(p, matId) {
       v2: [v2.x, v2.y, v2.z, v2.w],
       n0: n, n1: n, n2: n,
       materialId: matId,
-    });
-  }
-  return tris;
-}
-
-function readTypedVec3(values, index) {
-  if (Array.isArray(values[index])) {
-    const v = values[index];
-    return { x: v[0] ?? 0, y: v[1] ?? 0, z: v[2] ?? 0, w: v[3] ?? 0 };
-  }
-  const o = index * 3;
-  return { x: values[o] ?? 0, y: values[o + 1] ?? 0, z: values[o + 2] ?? 0, w: 0 };
-}
-
-function packIndexedMeshTris(p, matId) {
-  const tris = [];
-  const vertices = p.vertices ?? [];
-  const normals = p.normals ?? null;
-  const indices = p.indices ?? [];
-  for (let i = 0; i + 2 < indices.length; i += 3) {
-    const i0 = indices[i], i1 = indices[i + 1], i2 = indices[i + 2];
-    const v0 = readTypedVec3(vertices, i0);
-    const v1 = readTypedVec3(vertices, i1);
-    const v2 = readTypedVec3(vertices, i2);
-    let n0, n1, n2;
-    if (normals) {
-      n0 = readTypedVec3(normals, i0);
-      n1 = readTypedVec3(normals, i1);
-      n2 = readTypedVec3(normals, i2);
-    } else {
-      const e1x = v1.x - v0.x, e1y = v1.y - v0.y, e1z = v1.z - v0.z;
-      const e2x = v2.x - v0.x, e2y = v2.y - v0.y, e2z = v2.z - v0.z;
-      const n = normalize4(e1y * e2z - e1z * e2y, e1z * e2x - e1x * e2z, e1x * e2y - e1y * e2x, 0);
-      n0 = { x: n[0], y: n[1], z: n[2], w: n[3] };
-      n1 = n0;
-      n2 = n0;
-    }
-    tris.push({
-      v0: [v0.x, v0.y, v0.z, v0.w],
-      v1: [v1.x, v1.y, v1.z, v1.w],
-      v2: [v2.x, v2.y, v2.z, v2.w],
-      n0: [n0.x, n0.y, n0.z, n0.w],
-      n1: [n1.x, n1.y, n1.z, n1.w],
-      n2: [n2.x, n2.y, n2.z, n2.w],
-      materialId: matId,
-      meshId: p.meshId,
-      instanceId: p.id,
-      instanceHash: p.evidence?.instanceHash,
     });
   }
   return tris;
@@ -291,32 +203,21 @@ function packMaterials(scene) {
   const ids = scene.materials?.listIds?.() ?? [];
   const arr = new Float32Array(Math.max(1, ids.length) * 16);
   for (let i = 0; i < ids.length; i++) {
-    const id = ids[i];
-    const m = scene.materials.get(id);
+    const m = scene.materials.get(ids[i]);
     const o = i * 16;
-    
-    // Character materials: id may be "skin" or "skin-char-001"
-    const charName = resolveCharacterMaterialName(id);
-    if (charName) {
-      const serialized = serializeCharacterMaterial(charName, m?.params || {});
-      const packed = packCharacterMaterialFloats(serialized);
-      arr.set(packed, o);
-    } else {
-      // Legacy material serialization
-      const albedo = m.params?.albedo ?? vec4(0.8, 0.8, 0.8, 1);
-      arr[o + 0] = albedo.x; arr[o + 1] = albedo.y; arr[o + 2] = albedo.z; arr[o + 3] = albedo.w;
-      const em = m.emission ?? vec4(0, 0, 0, 0);
-      arr[o + 4] = em.x; arr[o + 5] = em.y; arr[o + 6] = em.z; arr[o + 7] = em.w;
-      const typeCode = m.type === "ggx" ? 1 : m.type === "light" ? 2 : m.type === "volume" ? 3 : 0;
-      arr[o + 8] = typeCode;
-      arr[o + 9] = m.params?.roughness ?? 0;
-      arr[o + 10] = m.params?.f0?.x ?? 1.5;
-      arr[o + 11] = m.sigmaT ?? 0;
-      arr[o + 12] = m.sigmaS ?? 0;
-      arr[o + 13] = m.params?.asymmetry ?? 0;
-      arr[o + 14] = m.isLight ? 1 : 0;
-      arr[o + 15] = m.isVolume ? 1 : 0;
-    }
+    const albedo = m.params?.albedo ?? vec4(0.8, 0.8, 0.8, 1);
+    arr[o + 0] = albedo.x; arr[o + 1] = albedo.y; arr[o + 2] = albedo.z; arr[o + 3] = albedo.w;
+    const em = m.emission ?? vec4(0, 0, 0, 0);
+    arr[o + 4] = em.x; arr[o + 5] = em.y; arr[o + 6] = em.z; arr[o + 7] = em.w;
+    const typeCode = m.type === "ggx" ? 1 : m.type === "light" ? 2 : m.type === "volume" ? 3 : 0;
+    arr[o + 8] = typeCode;
+    arr[o + 9] = m.params?.roughness ?? 0;
+    arr[o + 10] = m.params?.f0?.x ?? 1.5;
+    arr[o + 11] = m.sigmaT ?? 0;
+    arr[o + 12] = m.sigmaS ?? 0;
+    arr[o + 13] = m.params?.asymmetry ?? 0;
+    arr[o + 14] = m.isLight ? 1 : 0;
+    arr[o + 15] = m.isVolume ? 1 : 0;
   }
   return arr;
 }

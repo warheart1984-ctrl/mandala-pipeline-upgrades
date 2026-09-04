@@ -153,8 +153,8 @@ export function resolveSceneBindMessage(msg, options = {}) {
   }
 
   const meshesRoot = options.meshesRoot ?? defaultMeshesRoot();
-  let mesh;
-  let source;
+  let mesh = null;
+  let source = "unknown";
   let meshAssetId = typeof msg.meshAssetId === "string" ? msg.meshAssetId : null;
 
   const inline = normalizeWireMesh(msg.mesh);

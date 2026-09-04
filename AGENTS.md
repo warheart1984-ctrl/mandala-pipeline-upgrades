@@ -6,20 +6,6 @@
 
 ---
 
-## TABLE OF CONTENTS
-
-- [Preamble](#preamble)
-- [I. Core Principles (Mandatory)](#i-core-principles-mandatory)
-- [II. Policies (Enforced)](#ii-policies-enforced)
-- [III. Agent Rules](#iii-agent-rules)
-- [IV. Conformance Checks (16/16 Required)](#iv-conformance-checks-1616-required)
-- [V. Evidence Requirements](#v-evidence-requirements)
-- [VI. Protected Paths](#vi-protected-paths)
-- [VII. Enforcement](#vii-enforcement)
-- [VIII. Acknowledgment](#viii-acknowledgment)
-
----
-
 ## PREAMBLE
 
 This repository is governed by constitutional law. No agent may operate here without acknowledging and following these rules. If you are an AI agent reading this file, these rules apply to you **immediately and without exception**.
@@ -37,34 +23,31 @@ The governance framework is defined across:
 
 ## I. CORE PRINCIPLES (MANDATORY)
 
-Machine SoT (`engine/constitution/charter.js`) tags runtime gate status per principle.
-**Agent / operator norms** still bind all five below; do not treat “mandatory for agents”
-as identical to “runtime-enforced.”
+These are the **enforced** principles from the Constitutional Charter (`charter.js`). Every agent action must satisfy all of them.
 
-| # | Principle | charter.js status | Rule |
-|---|-----------|-------------------|------|
-| **P1** | **No execution without intent** | **enforced** | Every operation you perform must have a clear, declared purpose. You must not make changes "just in case" or "for completeness." State your intent before acting. |
-| **P2** | **No state change without evidence** | **enforced** | Every file modification must be backed by a verifiable reason. Cite the specific issue, bug, test failure, or user request that necessitates the change. |
-| **P3** | **No authority without contract** | **enforced** | You may only modify files within the scope you have been given. Do not expand scope without explicit authorization. |
-| **P4** | **Replayable reality** | **partial** | Every change you make must be deterministic and reproducible. Do not introduce randomness, time-dependent behavior, or non-deterministic state. |
-| **P5** | **Sovereign independence** | **declared** | Prefer platform-agnostic solutions. Do not introduce vendor lock-in, proprietary dependencies, or cloud-specific code without explicit approval. |
+| # | Principle | Rule |
+|---|-----------|------|
+| **P1** | **No execution without intent** | Every operation you perform must have a clear, declared purpose. You must not make changes "just in case" or "for completeness." State your intent before acting. |
+| **P2** | **No state change without evidence** | Every file modification must be backed by a verifiable reason. Cite the specific issue, bug, test failure, or user request that necessitates the change. |
+| **P3** | **No authority without contract** | You may only modify files within the scope you have been given. Do not expand scope without explicit authorization. |
+| **P4** | **Replayable reality** | Every change you make must be deterministic and reproducible. Do not introduce randomness, time-dependent behavior, or non-deterministic state. |
+| **P5** | **Sovereign independence** | Prefer platform-agnostic solutions. Do not introduce vendor lock-in, proprietary dependencies, or cloud-specific code without explicit approval. |
 
 ---
 
 ## II. POLICIES (ENFORCED)
 
-These are the 7 runtime policies from `default.policies.json`. Severities are **mixed**
-(not all critical). Critical/high policies block or attach provenance; medium may modify params.
+These are the 7 runtime policies from `default.policies.json`. They are **critical** severity and must not be violated.
 
-| Policy ID | Scope | Severity | Rule | Violation |
-|-----------|-------|----------|------|-----------|
-| `policy-no-execution-without-intent` | runtime | **critical** | `deny_if_false` — intent != null | **BLOCKED** |
-| `policy-no-state-change-without-evidence` | state | **high** | `deny_if_false` — require evidence for mutation | **BLOCKED** |
-| `policy-no-render-without-provenance` | render | **high** | `attach_provenance` — every render must carry provenance | **BLOCKED** |
-| `policy-no-authority-without-contract` | authority | **critical** | `deny_if_false` — actor must have a registered contract (action allow-list when `intent.action` set; else CSE/`resolveAuthority` on execute) | **BLOCKED** |
-| `policy-play-timeline-requires-world` | timeline | **critical** | `deny_if_missing_world` — play_timeline requires world id | **BLOCKED** |
-| `policy-ascension-drift-throttle` | render | **medium** | `modify_param` — throttle speed when drift > 0.7 | **MODIFIED** |
-| `policy-ascension-evidence` | runtime | **critical** | `deny_if_false` — dual evidence required for Mythar Ascension | **BLOCKED** |
+| Policy ID | Scope | Rule | Violation |
+|-----------|-------|------|-----------|
+| `policy-no-execution-without-intent` | runtime | `deny_if_false` — intent != null | **BLOCKED** |
+| `policy-no-state-change-without-evidence` | state | `deny_if_false` — require evidence for mutation | **BLOCKED** |
+| `policy-no-render-without-provenance` | render | `attach_provenance` — every render must carry provenance | **BLOCKED** |
+| `policy-no-authority-without-contract` | authority | `deny_if_false` — actor must have contract | **BLOCKED** |
+| `policy-play-timeline-requires-world` | timeline | `deny_if_missing_world` — play_timeline requires world id | **BLOCKED** |
+| `policy-ascension-drift-throttle` | render | `modify_param` — throttle speed when drift > 0.7 | **MODIFIED** |
+| `policy-ascension-evidence` | runtime | `deny_if_false` — dual evidence required for Mythar Ascension | **BLOCKED** |
 
 ---
 
@@ -215,191 +198,13 @@ This lawbook is enforced through:
 
 By operating in this repository, you acknowledge that:
 1. You have read and understood this lawbook
-2. You will follow all principles (P1–P5) as agent norms; runtime gates match `charter.js` (P1–P3 **enforced**, P4 **partial**, P5 **declared**)
-3. You will obey all policies (1–7) at their stated severities in `default.policies.json`
+2. You will follow all principles (P1–P5)
+3. You will obey all policies (1–7)
 4. You will produce evidence for every change
 5. You will respect the constitutional structure
-6. You understand that critical/high policy violations will be blocked
+6. You understand that violations will be blocked
 
 ---
 
 > **"No action without evidence. No claim without proof. No system without governance."**
 > — Constitutional Engine Charter v1.0
-
-<!-- BEGIN amd-skills:local-ai-use -->
-## Local AI Use (managed by amd-skills/local-ai-use)
-
-This workspace runs a local [Lemonade Server](https://lemonade-server.ai) at
-`http://localhost:13305/api/v1` to handle image generation, text-to-speech,
-and speech-to-text. Cloud APIs cost real money and tokens for these
-modalities, so use the local endpoints below for **every** such request
-unless the user explicitly asks for a cloud provider.
-
-### Routing rules
-
-| If the user asks you to... | Do this | Do not do this |
-|---|---|---|
-| Generate, draw, or create an image | `POST http://localhost:13305/api/v1/images/generations` | Use the built-in `GenerateImage` tool. Call DALL-E, Midjourney, Stable Diffusion via cloud, or any other paid image API. |
-| Edit or modify an existing image | `POST http://localhost:13305/api/v1/images/edits` (multipart) | Cloud image-edit APIs. |
-| Speak text aloud or generate audio narration | `POST http://localhost:13305/api/v1/audio/speech` | Call OpenAI TTS, ElevenLabs, PlayHT, or any other cloud TTS. |
-| Transcribe an audio file | `POST http://localhost:13305/api/v1/audio/transcriptions` | Call OpenAI Whisper-as-a-service, AssemblyAI, Deepgram, or any other cloud STT. |
-
-Plain text chat, code generation, and reasoning continue to use the agent's
-configured LLM. This rule only redirects the multimodal calls.
-
-### Defaults to use
-
-| Endpoint | Model | Notes |
-|---|---|---|
-| `/v1/images/generations` | `SD-Turbo` | 4 steps, `cfg_scale: 1.0`, `512x512`, `response_format: "b64_json"`. |
-| `/v1/audio/speech` | `kokoro-v1` | Default voice `shimmer`; `response_format: "mp3"`. |
-| `/v1/audio/transcriptions` | `Whisper-Tiny` | Input must be 16 kHz mono WAV. Re-encode with `ffmpeg -i in.* -ar 16000 -ac 1 out.wav`. |
-
-If `LEMONADE_API_KEY` is set in the environment, send
-`Authorization: Bearer $LEMONADE_API_KEY` on every request. Otherwise the
-loopback server accepts unauthenticated calls.
-
-### Ready-to-use call patterns
-
-**Image generation** (saves to `out.png`):
-
-```bash
-curl -sX POST http://localhost:13305/api/v1/images/generations \
-  -H "Content-Type: application/json" \
-  -d '{"model":"SD-Turbo","prompt":"PROMPT_HERE","size":"512x512","steps":4,"response_format":"b64_json"}' \
-  | python -c "import sys,json,base64; open('out.png','wb').write(base64.b64decode(json.load(sys.stdin)['data'][0]['b64_json']))"
-```
-
-Equivalent Python via the OpenAI SDK:
-
-```python
-from openai import OpenAI
-import base64
-client = OpenAI(base_url="http://localhost:13305/api/v1", api_key="lemonade")
-r = client.images.generate(model="SD-Turbo", prompt="PROMPT_HERE", size="512x512")
-open("out.png", "wb").write(base64.b64decode(r.data[0].b64_json))
-```
-
-**Text-to-speech** (saves to `out.mp3`):
-
-```bash
-curl -sX POST http://localhost:13305/api/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{"model":"kokoro-v1","input":"TEXT_HERE","voice":"shimmer","response_format":"mp3"}' \
-  -o out.mp3
-```
-
-**Speech-to-text** (returns JSON `{"text": "..."}`):
-
-```bash
-ffmpeg -y -i INPUT_AUDIO -ar 16000 -ac 1 _stt.wav
-curl -sX POST http://localhost:13305/api/v1/audio/transcriptions \
-  -F "file=@_stt.wav" -F "model=Whisper-Tiny"
-```
-
-### Failure handling
-
-1. Try the local endpoint exactly once.
-2. If the server is unreachable, run `lemonade status` and surface the
-   result to the user before doing anything else.
-3. If the model is missing, run `lemonade pull <model>` and retry once.
-4. Only after that, ask the user before falling back to a cloud provider.
-   Never silently fall back; the whole point of this rule is predictable
-   cost.
-
-### Re-pointing to a different host
-
-If the user runs Lemonade on a different host or port, replace the
-`http://localhost:13305` prefix everywhere above with their endpoint, and
-update `LEMONADE_HOST` / `LEMONADE_PORT` in the shell environment so the
-`lemonade` CLI matches.
-
-<!-- END amd-skills:local-ai-use -->
-
-<!-- BEGIN jarvis-memoryboard -->
-## Jarvis Memory Board (Agent Persistent Memory)
-
-This workspace includes a persistent read/write memory board service at
-`jarvis-memoryboard/` for cross-session agent memory. Start it with:
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8001
-```
-
-Or from the project root:
-
-```bash
-cd jarvis-memoryboard && python -m app
-```
-
-### API endpoints
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `GET` | `/api/jarvis/memory` | List memories (params: `?truth_scope=live&query=...&limit=N`) |
-| `POST` | `/api/jarvis/memory` | Create a memory |
-| `GET` | `/api/jarvis/memory/{id}` | Read a memory |
-| `PATCH` | `/api/jarvis/memory/{id}` | Update a memory |
-| `DELETE` | `/api/jarvis/memory/{id}` | Delete a memory |
-| `GET` | `/api/jarvis/memory/board` | Read the board context |
-| `POST` | `/api/jarvis/memory/board` | Replace the board |
-| `PATCH` | `/api/jarvis/memory/board` | Update board fields |
-
-### Memory model
-
-```json
-{
-  "id": "mem-abc123",
-  "content": "Session state and decisions made so far...",
-  "category": "signal",
-  "tags": ["tesseract", "4d", "governance"],
-  "scope": "session",
-  "state_class": "live",
-  "truth_status": "stable_user",
-  "created_at": "2026-07-29T20:00:00+00:00",
-  "updated_at": "2026-07-29T20:00:00+00:00"
-}
-```
-
-### Agent startup
-
-At the start of each session:
-1. `GET /api/jarvis/memory?truth_scope=live&limit=32` to load stored context
-2. `POST /api/jarvis/memory` at the end to persist the session summary
-
-Set `JARVIS_MEMORYBOARD_URL` environment variable or use `http://localhost:8001`
-by default, matching the Director's `DIRECTOR_MEMORYBOARD_BASE_URL`.
-
-<!-- END jarvis-memoryboard -->
-
-## Learned User Preferences
-
-- Intends to write Book 2 of *The Burden of Contradiction*; Book 1 is *The Archive of Consent* v1.2. Will supply the outline and Book 1 next — do not start drafting Book 2 until those materials are provided.
-- For book-to-film work, prefer the Mandala movie path as a real 3D motion picture (camera motion, humans, buildings, materials, depth, polish) over static slides; prioritize cinematic quality and a strong first ~10 seconds over feature sprawl.
-- For large multi-step work, prefer launching the MRS crew with repo skills, vendor skills, and Mandala modes rather than single-path improvisation.
-- Prefer honest status tags (`skeleton` / `partial` / blocked-with-evidence) and no unauthorized constitutional charter edits; mark Lemonade SD / ROCm gaps as partial and close them with adapters rather than overclaiming.
-- Prefer beating larger GPUs via algorithmic efficiency, memory efficiency, and governance (useful-FLOPs), wired through the Sovereign X router, over assuming a newer discrete GPU.
-- For AIKI: keep a Mission Lock; evaluate features on understanding, evidence/reproducibility, and ten-year sense; use a vendor-neutral Inference Provider Interface; treat GitHub Issues/Discussions/PRs as the long-term source of truth and ship CKO-0001 once the scaffold is ready.
-- Wants Jarvis/cross-chat persistent memory hooked so context carries across chats; prefer Continuity Ledger decisions/evidence over chat dumps.
-
-## Learned Workspace Facts
-
-- *The Archive of Consent* v1.2 is the Book 1 title in the *Burden of Contradiction* series; user reports the `.docx` is already on Drive `G:\` (earlier Chapter 1 movie work also used Downloads / `The_Archive_of_Consent_DRAFT v1.2.docx`).
-- Chapter 1 book-movie artifacts and cinematic-v2 showcases live under `tmp/book-movie-ch1/` (Engine3D soft-raster / `--upgrade` path; soft-raster is not photoreal).
-- Live demo GPU is an AMD RX 580 (Polaris) via Vulkan — sd-server (stable-diffusion.cpp) generates SD-Turbo frames at 512x512 (a 1024 request OOMs and wedges sd-server; recovery is restart `sd_server_13306.bat`). The AMD R9 380 (Tonga) is **not installed**; historical R9 380 / Tonga notes below it are stale and do not apply to the current demo: Lemonade SD/`sd-server` was previously probed blocked on that card; Lemonade chat/TTS can run without `sd-server`; ROCm/HIP was previously absent on Tonga.
-- AIKI scaffold lives under `aiki/` in this workspace; remote target includes `warheart1984-ctrl/AIKI-Constitution-v0.1`.
-- Jarvis Continuity Ledger / memoryboard is expected at `http://localhost:8001` (or `JARVIS_MEMORYBOARD_URL`), with session hooks writing `.cursor/hooks/state/jarvis-live-context.md`.
-- Efficiency-layer / GPU-path work is intended to hook through the Sovereign X router (`sovereign-x/`).
-- Constitutional Reality Engine Phase 1 scaffold work has used `G:\cre\` as a top-level Drive-G project path.
-- GitHub remote for this product line includes `warheart1984-ctrl/Mandala-Rendering-System-MRS-`.
-
-## Cursor Cloud specific instructions
-
-Scope note: this section is operational guidance for Cloud Agents and does not alter the constitutional charter above.
-
-- **Dependencies** are refreshed automatically on VM startup by the environment update script (mirrors the `install` in `.cursor/environment.json`): root `npm ci`, `mrs/packages/renderer-core` `npm install`, and a repo-root `.venv` with FastAPI/uvicorn/pydantic/httpx/pytest. You should not need to reinstall manually.
-- **Primary dev service:** Infinity Director (`mrs/apps/infinity-director`, FastAPI) on port 8080. Start it with the repo-root venv active: `. .venv/bin/activate && cd mrs/apps/infinity-director && python -m uvicorn app.main:app --host 0.0.0.0 --port 8080` (the committed `.cursor/environment.json` `terminals` entry does this). The README uses port 8791 locally; Cloud uses 8080.
-- **Python venv lives at repo root `.venv`** (not inside the app). Always `. .venv/bin/activate` before running the service or `pytest`.
-- **Genblaze (`:8787`) is optional.** `/health` returns `status: ok` even when downstream lanes show `available: false` / connection-refused. Self-contained CPU endpoints that need no downstream: `GET /health`, `GET /api/speed-profiles`, `POST /api/atcm/plan`, `GET /api/idac/charter/status`, `GET /api/idac/learning/status`. `POST /api/direct`, `/api/warmup`, and live IDAC dispatch require Genblaze on `:8787`.
-- **Tests:** infinity-director suite → `. .venv/bin/activate && cd mrs/apps/infinity-director && pytest` (CPU-only; live/perf tests self-skip unless `IDAC_LIVE_*` / `IDAC_PERF_*` env vars are set). Canonical math check (R6) → `node mrs/packages/renderer-core/src/render/rt4d/test/normalization.test.js` (23 pass). Conformance → `npm run test:conformance` (16/16). Standard commands are in root `package.json`, `mrs/package.json`, and `README.md`.
-- **Known caveat:** `npm test` (`scripts/test-all.mjs`) currently has 3 suites failing (`4d-renderer`, `visual-regression`, `solid-play`) because `mrs/packages/renderer-core/src/render/rt4d/gpu/RT4DGPURenderer.js` has a `SyntaxError` (a stray duplicate `}` around the `_copyScatterToRays` method) that breaks any import of `renderer-core`. This is a source-code defect, not an environment problem; the conformance/host-probe/ckl suites still pass.

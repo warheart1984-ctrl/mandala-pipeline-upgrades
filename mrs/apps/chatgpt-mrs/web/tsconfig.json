@@ -4,10 +4,6 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
-    "paths": {
-      "@mrs/renderer-web": ["../../../packages/renderer-web/src/index.ts"]
-    },
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,

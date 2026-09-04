@@ -1,7 +1,10 @@
 # Mandala RT4D Pipeline Upgrades: Organic Environments
 
-## Overview
-Extends the real-time 3D pipeline from human rendering to full organic environments with grass, foliage, and animals. Three architectural upgrades:
+**Start here:** [`docs/START_HERE_MRS_30_MIN.md`](docs/START_HERE_MRS_30_MIN.md) — practical onboarding in ~30 minutes (commands, layout, role paths). Not marketing.
+
+Published title: **4D Rendering System v1.0**  
+Formal engine name: **RT4D** (*Ray Tracer for Four Dimensions*)  
+Official validation scene: **Hyper-Caustic Lens**
 
 1. **Instanced Grass Geometry** - GPU-driven blade rendering with wind simulation
 2. **Animal Shell Fur** - DQS normal extrusion with alpha-noise hair strands
@@ -9,12 +12,84 @@ Extends the real-time 3D pipeline from human rendering to full organic environme
 
 ## Key Files Modified/Created
 
-### New Shaders
-- `mrs/packages/renderer-core/src/render/rt4d/gpu/MorphCorrective.wgsl` - Vertex shader extension for 12 corrective morph targets
-- `mrs/packages/renderer-core/src/render/rt4d/gpu/LensEffects.frag.wgsl` - Hexagonal bokeh DOF + optical vignette
+## Showcase (reference surfaces)
 
-### Enhanced Shaders
-- `mrs/packages/renderer-core/src/render/rt4d/gpu/shaders.js` - Skin BRDF with dual-lobe specular, micro-detail, multi-layer SSS
+Interactive Canvas demo and tutorials for the five registered surfaces — **reference implementation** showcase, not a claim of product-complete post-processing.
+
+| Entry | Path |
+| --- | --- |
+| Web demo | [`examples/web-demo.html`](examples/web-demo.html) |
+| Gallery | [`examples/gallery/`](examples/gallery/) |
+| Tutorials | [`examples/tutorials/`](examples/tutorials/) |
+| Suite index | [`examples/README.md`](examples/README.md) |
+
+```bash
+npm run serve
+# open http://localhost:8080/examples/web-demo.html
+```
+
+Package notes: [`4d-renderer/README.md`](4d-renderer/README.md) (shim) · canonical core: [`mrs/packages/renderer-core`](mrs/packages/renderer-core) (`@mrs/renderer-core`).
+
+**MRS × ChatGPT App (monorepo):** see [`mrs/README.md`](mrs/README.md) and [`mrs/apps/chatgpt-mrs/README.md`](mrs/apps/chatgpt-mrs/README.md).
+
+```bash
+cd mrs && pnpm run setup   # fresh clone: install + rebuild canvas/esbuild
+```
+
+### Windows native canvas (optional for widget)
+
+Headless PNG (CLI, gallery, some exports) needs native `canvas` + VS C++ Build Tools on Windows — see [`mrs/README.md`](mrs/README.md#windows-native-canvas-honest). Browser demo and ChatGPT widget use Canvas2D and do **not** require cairo.
+
+## Capability snapshot
+
+Statuses below match charter evidence (not marketing). Details: [`constitution/CHARTER.md`](constitution/CHARTER.md).
+
+| Capability | Status |
+| --- | --- |
+| 4D parametric surfaces | Present |
+| RT4D path rendering | Present |
+| Browser host | Present |
+| CSSV ledger | Partial |
+| Hyper-Caustic Lens validation | Present |
+| WebGPU | Present |
+| Canvas fallback | Present |
+| Unity adapter | Partial |
+| Unreal adapter | Partial |
+| Native Vulkan dispatch | Experimental |
+| Live engine link (shared-frame / MRS↔Unity) | Experimental |
+| 4D Inspector (MRS-IC) | Skeleton (contracts v1.1/v1.2 declared; curvature stub) |
+| 4D BVH GPU kernels | Skeleton |
+| Mathematical substrate / MRS-CRC | Declared |
+| 4D physics | Skeleton |
+| Shader graph | Skeleton |
+| 4D Engine v1 constitution / World Format / PLP | Declared (`docs/4d-engine/v1/`) |
+| WorldDocument schema + example validation | Declared / partial (`npm run validate:world-document`) |
+| PLP `projectWorld` stub | Skeleton (`@mrs/renderer-core` `/plp`) |
+| Unity FourDAdapter (Scene3D+lineage) | Skeleton |
+| Unreal FourDAdapter (Scene3D+lineage) | Skeleton (`unreal/FourDAdapter/`) |
+| FourDRenderer v2.0 architecture / RFCs | Declared / draft (`docs/4d-engine/v2/`) — Phase 1 **docs**; GPU/RHI **roadmap** |
+| FourDRenderer v2 Unreal RHI / Nanite / Lumen | Roadmap (not FourDAdapter v1.1) |
+| RT4D GPU evolution (v2–v4) | Roadmap / declared (`docs/4d-engine/rt4d/`) — wavefront, denoise, multi-GPU, Vulkan/DX **not implemented** |
+| Object storage (B2 S3-compatible) | Declared / operator-configured (`@mrs/storage-b2`, [`docs/ops/BACKBLAZE_B2_S3.md`](docs/ops/BACKBLAZE_B2_S3.md)) — not cloud rendering complete |
+
+## v1.0 publish package
+
+| Artifact | Path |
+| --- | --- |
+| Naming | [`docs/4drs/NAMING.md`](docs/4drs/NAMING.md) |
+| Spec | [`docs/4drs/SPEC-v1.0.md`](docs/4drs/SPEC-v1.0.md) |
+| Architecture | [`docs/4drs/ARCHITECTURE.md`](docs/4drs/ARCHITECTURE.md) |
+| Technical note | [`docs/4drs/First-4D-Renderer.md`](docs/4drs/First-4D-Renderer.md) |
+| RT4D API freeze | [`docs/4drs/api/rt4d-v1.0-freeze.md`](docs/4drs/api/rt4d-v1.0-freeze.md) |
+| Hyper-Caustic Lens | [`docs/4drs/validation/Hyper-Caustic-Lens.md`](docs/4drs/validation/Hyper-Caustic-Lens.md) |
+| Substrate / MRS-CRC | [`docs/4drs/substrate/`](docs/4drs/substrate/) |
+| Charter | [`constitution/CHARTER.md`](constitution/CHARTER.md) |
+| Citation / Zenodo | [`CITATION.cff`](CITATION.cff), [`.zenodo.json`](.zenodo.json) |
+| 4D Engine v1 (declared) | [`docs/4d-engine/v1/README.md`](docs/4d-engine/v1/README.md) |
+| FourDRenderer v2 (declared RFCs) | [`docs/4d-engine/v2/README.md`](docs/4d-engine/v2/README.md) |
+| FourDRenderer v2 scorecard | [`docs/scorecards/fourd-renderer-v2.md`](docs/scorecards/fourd-renderer-v2.md) |
+| RT4D GPU evolution roadmap (v2–v4) | [`docs/4d-engine/rt4d/RT4D_EVOLUTION_ROADMAP.md`](docs/4d-engine/rt4d/RT4D_EVOLUTION_ROADMAP.md) |
+| RT4D scorecard | [`docs/scorecards/rt4d.md`](docs/scorecards/rt4d.md) |
 
 ### New Source Files
 - `mrs/packages/engine3d-core/src/renderer/backend/GpuProfiler.ts` - WebGPU timestamp profiler with `smooth_k = 0.12` EMA
@@ -84,11 +159,19 @@ fn fur_strand_noise(p: vec3<f32>, scale: f32) -> f32 {
 3. Sample in shader: `textureSampleLevel(terrain_heightmap, height_sampler, terrain_uv, 0.0).r`
 4. Scale to elevation: `height_sample * 20.0`
 
-### UV Mapping
-```wgsl
-// Map world XZ to [0.0, 1.0] UV
-let terrain_uv = (inst.position_xz + 100.0) / 200.0;
-```
+| Command | Description |
+|---------|-------------|
+| `npm test` | Full smoke test suite |
+| `npm run test:conformance` | 16-check browser conformance profile |
+| `npm run test:cql` | CQL parser + interpreter |
+| `npm run test:ckl` | Mythar Ascension CKL policies |
+| `npm run init:cssv` | Initialize empty ledger files |
+| `npm run serve` | Static browser host only |
+| `npm run cssv:server` | CSSV dashboard + API only |
+| `npm start` | Both servers |
+| `npm run examples:gallery` | Generate gallery PNGs (needs native `canvas`; see mrs README) |
+| `npm run examples:bench` | Measure local Node CanvasRenderer timings |
+| `npm run test:examples` | Examples suite smoke |
 
 ## 4. TypeScript Runtime Integration
 

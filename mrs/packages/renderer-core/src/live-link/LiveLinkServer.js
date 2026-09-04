@@ -15,11 +15,6 @@ export class LiveLinkServer {
     this.onCommand = options.onCommand ?? null;
     /** Optional MRSInspector4D — enables inspect_* on the same live-link transport. */
     this.inspector = options.inspector ?? null;
-    /**
-     * When true (default), relay validated client shading_update to all clients
-     * (including publisher) so validation receivers can observe Unity publishes.
-     */
-    this.relayShadingUpdates = options.relayShadingUpdates !== false;
     this._running = false;
   }
 
@@ -41,9 +36,6 @@ export class LiveLinkServer {
       this.clients.add(clientInfo);
       const handler = new UnityClientProtocol(ws, clientInfo, {
         inspector: this.inspector,
-        onShadingUpdate: (msg) => {
-          if (this.relayShadingUpdates) this.broadcastShadingUpdate(msg);
-        },
       });
       this.protocols.set(clientInfo.id, handler);
 
@@ -102,19 +94,6 @@ export class LiveLinkServer {
     for (const handler of this.protocols.values()) {
       try {
         handler.sendStateSnapshot(snapshot);
-      } catch {}
-    }
-  }
-
-  /**
-   * Broadcast ShadingInput4D inspection JSON (`shading_update`).
-   * Status: partial transport — does not claim Shade4D execution.
-   * @param {object} shadingMessage
-   */
-  broadcastShadingUpdate(shadingMessage) {
-    for (const handler of this.protocols.values()) {
-      try {
-        handler.sendShadingUpdate(shadingMessage);
       } catch {}
     }
   }

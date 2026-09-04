@@ -1,12 +1,5 @@
 # Render Blueprint — free web service for MRS Genblaze Media MVP
 # Docs: https://render.com/docs/blueprint-spec
-#
-# This file is the smaller app-local deploy path only:
-#   Root Directory: mrs/apps/genblaze-media
-#   Dockerfile Path: ./Dockerfile
-# It does not bundle renderer-core, prompt-scene bridge, or Engine3D, so
-# rt4d.available stays false here. For the full judge/demo path use the
-# repo-root render.yaml instead.
 services:
   - type: web
     name: mrs-genblaze-media
@@ -34,47 +27,13 @@ services:
         sync: false
       - key: GENBLAZE_IMAGE_MODEL
         value: black-forest-labs/flux.1-schnell
-      # Judge demo: FLUX stills only. Opt in with "1" when Cosmos is live on the key.
-      - key: GENBLAZE_VIDEO_ENABLED
-        value: "0"
       - key: GENBLAZE_STORAGE_PREFIX
         value: genblaze-media
-      # RT4D renderer backend. These take effect only when the service builds
-      # the repo-root Dockerfile with a repo-root context (Root Directory
-      # empty): the app-local Dockerfile above cannot reach
-      # mrs/packages/renderer-core and reports rt4d.available=false.
-      # Off by default; NVIDIA FLUX stays the primary image backend.
-      - key: GENBLAZE_IMAGE_FALLBACK_TO_RT4D
-        value: "0"
-      # Free plan is a shared 0.1 CPU. Pin lattice-safe mid profile (256 / 6 spp
-      # / 180s) — denser tesseract-lattice (~540 objects) timed out at the old
-      # 448/20/180 defaults when env was unsynced. Sync blueprint after merge.
-      # Code hard-clamps unless RT4D_ALLOW_HEAVY=1.
-      - key: RT4D_RENDER_WIDTH
-        value: "256"
-      - key: RT4D_RENDER_HEIGHT
-        value: "256"
-      - key: RT4D_SAMPLES
-        value: "6"
-      - key: RT4D_TIMEOUT
-        value: "180"
       - key: GENBLAZE_HTTP_TIMEOUT
         value: "600"
       - key: GENBLAZE_NVCF_TIMEOUT
         value: "600"
       - key: GENBLAZE_PIPELINE_TIMEOUT
         value: "720"
-      # NVIDIA documents 300 as the NVCF-POLL-SECONDS maximum. Render plus a
-      # cold NIM otherwise risks returning an empty gateway 504 before 202.
       - key: GENBLAZE_NVCF_POLL_SECONDS
-        value: "300"
-      # Default off: do not auto-retry empty NVIDIA 504s (billing ambiguity).
-      - key: GENBLAZE_EMPTY_504_RETRY
-        value: "0"
-      # Invalid-payload probe at boot. If this also returns 504, /health marks
-      # the NIM unavailable; the probe did not successfully warm the model.
-      - key: GENBLAZE_NVIDIA_WARMUP_ON_STARTUP
-        value: "1"
-      # Default off: Render healthCheckPath=/health must not ListObjects (Class C).
-      - key: B2_PROBE_ON_HEALTH
-        value: "0"
+        value: "90"

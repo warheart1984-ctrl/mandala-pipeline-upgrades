@@ -29,48 +29,15 @@ export type InspectResult = Record<string, unknown> | null;
 export type ToolOutputPayload = {
   scene?: Scene4DDTO;
   inspectPath?: string;
-  render?: {
-    pngUrl?: string;
-    jobId?: string;
-    quality?: string;
-    provenance?: Record<string, unknown>;
-  };
   [key: string]: unknown;
-};
-
-type McpUiMessage = {
-  jsonrpc?: string;
-  method?: string;
-  params?: {
-    structuredContent?: unknown;
-  };
 };
 
 export function getOpenAi(): OpenAiHost | undefined {
   return typeof window !== "undefined" ? window.openai : undefined;
 }
 
-function asToolOutput(raw: unknown): ToolOutputPayload | null {
+export function readToolOutput(): ToolOutputPayload | null {
+  const raw = getOpenAi()?.toolOutput;
   if (!raw || typeof raw !== "object") return null;
   return raw as ToolOutputPayload;
-}
-
-export function readToolOutput(): ToolOutputPayload | null {
-  return asToolOutput(getOpenAi()?.toolOutput);
-}
-
-/** Standards-first MCP Apps result subscription with ChatGPT global fallback. */
-export function subscribeToToolOutput(
-  onOutput: (payload: ToolOutputPayload | null) => void
-): () => void {
-  const onMessage = (event: MessageEvent<McpUiMessage>) => {
-    if (event.source !== window.parent) return;
-    const message = event.data;
-    if (!message || message.jsonrpc !== "2.0") return;
-    if (message.method !== "ui/notifications/tool-result") return;
-    onOutput(asToolOutput(message.params?.structuredContent));
-  };
-
-  window.addEventListener("message", onMessage, { passive: true });
-  return () => window.removeEventListener("message", onMessage);
 }

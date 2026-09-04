@@ -6,7 +6,6 @@ import { Badge } from "./ui";
 import {
   getOpenAi,
   readToolOutput,
-  subscribeToToolOutput,
   type InspectResult,
   type ToolOutputPayload,
 } from "./types";
@@ -46,16 +45,13 @@ export default function App() {
   const inHost = Boolean(getOpenAi());
 
   useEffect(() => {
-    return subscribeToToolOutput(setPayload);
+    const id = window.setInterval(() => {
+      setPayload(readToolOutput());
+    }, 500);
+    return () => window.clearInterval(id);
   }, []);
 
   const scene = useMemo(() => extractScene(payload) ?? DEMO_SCENE, [payload]);
-  const pngUrl =
-    typeof payload?.render === "object" &&
-    payload.render &&
-    typeof payload.render.pngUrl === "string"
-      ? payload.render.pngUrl
-      : null;
   const displayMode = getOpenAi()?.displayMode ?? "inline";
 
   useEffect(() => {
@@ -69,14 +65,9 @@ export default function App() {
         <span className="text-[var(--mrs-fg)]">MRS × ChatGPT</span>
         <Badge>{inHost ? "host: chatgpt" : "host: local preview"}</Badge>
         <Badge>{displayMode}</Badge>
-        {pngUrl ? <Badge>rt4d still</Badge> : null}
       </header>
       <div className="flex min-h-0 flex-1">
-        <MRSViewport
-          scene={scene}
-          pngUrl={pngUrl}
-          onInspectResult={setInspect}
-        />
+        <MRSViewport scene={scene} onInspectResult={setInspect} />
         <InspectorPanel
           scene={scene}
           result={inspect}

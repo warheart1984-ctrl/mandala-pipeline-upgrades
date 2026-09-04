@@ -54,7 +54,7 @@ Do **not** treat this as “world’s first” or unqualified “production-read
 
 ## 2. What can I do in the first 30 minutes?
 
-Requires **Node.js 20+**. From the repository root (e.g. `G:\Mandala Rendering Software` or your clone path).
+Requires **Node.js 20+**. From the repository root (`G:\New folder` or your clone path).
 
 ### Minute 0–10 — Web demo (highest signal)
 
@@ -110,8 +110,6 @@ On Windows, headless PNG needs native `canvas` + VS C++ Build Tools; the **brows
 | [`docs/4d-engine/v1/README.md`](./4d-engine/v1/README.md) | Engine v1 / World Format / PLP / adapters |
 | [`docs/4d-engine/v2/README.md`](./4d-engine/v2/README.md) | FourDRenderer v2 RFC index |
 | [`docs/4d-engine/rt4d/RT4D_EVOLUTION_ROADMAP.md`](./4d-engine/rt4d/RT4D_EVOLUTION_ROADMAP.md) | RT4D GPU evolution **roadmap** (v2–v4) |
-| [`docs/4drs/roadmap/MRS_V2_ARCHITECTURAL_ROADMAP.md`](./4drs/roadmap/MRS_V2_ARCHITECTURAL_ROADMAP.md) | MRS v2.0 umbrella (**declared / roadmap**) |
-| [`docs/ops/GENBLAZE_MEDIA_V2_ROADMAP.md`](./ops/GENBLAZE_MEDIA_V2_ROADMAP.md) | Genblaze media ops v2 (**not** RT4D) |
 | [`docs/4drs/inspector/README.md`](./4drs/inspector/README.md) | Inspector contracts |
 | [`docs/ops/BACKBLAZE_B2_S3.md`](./ops/BACKBLAZE_B2_S3.md) | Optional B2 object storage (operator-configured) |
 
@@ -120,7 +118,7 @@ On Windows, headless PNG needs native `canvas` + VS C++ Build Tools; the **brows
 ## 3. How is the repository organized?
 
 ```text
-G:\Mandala Rendering Software\   (or your clone root)
+G:\New folder\          (or your clone root)
 ├── README.md                 # Capability snapshot + quick start
 ├── constitution/             # Charter / evidence bound
 ├── examples/                 # Web demo, gallery, tutorials, scenes

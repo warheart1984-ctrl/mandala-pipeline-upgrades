@@ -7,25 +7,42 @@ __pycache__/
 *.so
 .Python
 build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+output/
+4d-renderer/output/
+# Optional/legacy local junction → mrs/packages/renderer-core/src (npm run link:mrs-shim)
+4d-renderer/src/
+# Leftover shim copy — canonical clients live under mrs/packages/renderer-core/clients
+4d-renderer/clients/
+examples/comparisons/out/
+4d-renderer/node_modules/
+cssv/node_modules/
 
-# Virtual environments
-venv/
-env/
-ENV/
+# Unity
+unity/**/Library/
+unity/**/Temp/
+unity/**/Obj/
+unity/**/Logs/
+unity/**/UserSettings/
+unity/**/*.csproj
+unity/**/*.sln
+unity/**/*.userprefs
+unity/**/MemoryCaptures/
+
+# Unreal
+unreal/**/Binaries/
+unreal/**/DerivedDataCache/
+unreal/**/Intermediate/
+unreal/**/Saved/
+unreal/**/.vs/
+unreal/**/*.xcworkspace
+unreal/**/*.opendb
+unreal/**/*.opensdf
+unreal/**/*.sdf
+unreal/**/*.sln
+unreal/**/*.suo
+unreal/**/*.xcodeproj
+
+# Env / secrets
 .env
 .venv
 
@@ -33,96 +50,13 @@ ENV/
 .vscode/
 .idea/
 *.swp
-*.swo
-*~
 
-# OS
-.DS_Store
-Thumbs.db
+# Upstream reference clone (pip packages remain the runtime dependency)
+vendor/
 
-# Build artifacts
-*.so
-*.dll
-*.dylib
-
-# Test outputs
-tmp/
-*.log
-*.json
-evidence*.json
-
-# Runtime assets the movie scripts need (re-include from *.json / lib/)
-!mrs/packages/renderer-core/schemas/salt_map_anime_timeline.json
-!mrs/packages/renderer-core/scripts/lib/rt4d-movie.js
-
-# Cloud Agent environment config (must be tracked despite blanket *.json ignore)
-!.cursor/environment.json
-
-# Jarvis EMR MCP host config examples (blanket *.json ignore)
-!jarvis-memoryboard/config/mcp-cursor.example.json
-!jarvis-memoryboard/config/mcp-opencode.example.json
-!.opencode/config.json
-
-# HoloRT4D Spatial MCP package manifests (blanket *.json ignore)
-!mrs/apps/spatial-tokenizer/mcp/package.json
-!mrs/apps/spatial-tokenizer/mcp/package-lock.json
-!mrs/apps/spatial-tokenizer/mcp/tsconfig.json
-
-# Docker
-.docker/
-
-# Secrets (never commit!)
-*.pem
-*.key
-*.crt
-*.env
-.env.local
-.env.production
-
-# Large files
-*.png
-*.jpg
-*.mp4
-*.mov
-*.avi
-*.mkv
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# IDE specific
-.vs/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-
-# Optional: keep these if you want to track
-# docs/
-# examples/
-# H test output logs
-conformance-out.txt
-test-output.txt
-
-# Training datasets (never commit)
-Anime Pictures for training/
-
-# Nested git worktrees (do not commit checkouts)
-.worktrees/
-
-# Fox fixture E2E smoke evidence (partial hull — not anatomical fox)
-!docs/proofs/rt4d-fox-fixture-smoke/
-!docs/proofs/rt4d-fox-fixture-smoke/**
-!docs/proofs/rt4d-fox-fixture-smoke/**/*.json
-!docs/proofs/rt4d-fox-fixture-smoke/**/*.png
-!docs/proofs/rt4d-fox-fixture-smoke/**/*.glb
-
-# Character production pipeline (Mandala + Simulation Chamber)
-!character/**/*.json
-!character/**/*.mjs
-!character/**/*.wgsl
-!character/**/*.md
-
+# Python / local envs (hygiene)
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+*.pyc

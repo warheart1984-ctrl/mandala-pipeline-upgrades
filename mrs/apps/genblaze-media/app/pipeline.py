@@ -7,18 +7,14 @@ import json
 import logging
 import shutil
 import tempfile
-import time
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from app.config import APP_DIR, NVIDIA_SETUP_HELP, Settings
+from app.config import NVIDIA_SETUP_HELP, Settings
 from app.image_quality import assess_image_bytes, extract_nvidia_warnings
-from app.nvidia_errors import is_empty_nvidia_gateway_504
-from app.preview_cache import put_preview
-from app.prompt_rewrite import looks_like_people_prompt, rewrite_as_abstract_geometry
 from app.prompt_sanitize import sanitize_prompt
 
 logger = logging.getLogger(__name__)
@@ -44,29 +40,9 @@ class GenerateResult:
     detail: str | None = None
     prompt_sanitized: bool = False
     quality: dict[str, Any] | None = None
-    provenance: dict[str, Any] | None = None
-    # Media look lane (GENBLAZE_STYLE / API style) — anime is partial steer.
-    style: str | None = None
-    style_steered: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
-
-def _attach_local_preview(gen: GenerateResult, image_bytes: bytes | None) -> None:
-    """Cache still bytes for same-origin ``/api/preview`` without discarding B2 URL.
-
-    Must not overwrite ``gen.preview_url``: that field is persisted in the
-    recent-assets index and is the cloud fallback after prune / restart.
-    ``api_assets`` / ``api_generate`` prefer the local URL at response time when
-    the cache file is present.
-    """
-    if not image_bytes or not gen.run_id:
-        return
-    if put_preview(APP_DIR, gen.run_id, image_bytes):
-        note = "local preview cache (UI avoids B2 download)"
-        if note not in (gen.detail or ""):
-            gen.detail = (gen.detail + " · " if gen.detail else "") + note
 
 
 def _utc_now() -> str:
@@ -492,11 +468,8 @@ def generate_image(settings: Settings, prompt: str) -> GenerateResult:
     Before upload success is returned to the client, stills are checked for
     near-black / tiny / undecodable payloads (common FLUX.1-schnell NIM blank
     for photoreal people). Trailing user meta-commentary is stripped up front
-    so the first FLUX call uses the cleaned prompt. When a people-like prompt
-    blanks and ``GENBLAZE_ABSTRACT_RETRY`` is on (default), one more attempt
-    rewrites toward abstract geometry / mandala / tesseract (no faces/skin).
-    Rejected blank uploads are best-effort deleted from B2 so they are not left
-    as successful objects.
+    so the first FLUX call uses the cleaned prompt. Rejected blank uploads are
+    best-effort deleted from B2 so they are not left as successful objects.
     """
     raw_prompt = (prompt or "").strip()
     if not raw_prompt:
@@ -536,72 +509,26 @@ def generate_image(settings: Settings, prompt: str) -> GenerateResult:
 
     try:
         # Prefer cleaned prompt first so meta-commentary does not burn a FLUX call.
+        # If we somehow still ran the raw text and it blanked, retry once with cleaned.
         attempt_prompts: list[str] = [cleaned]
         last_quality_reason: str | None = None
         last_warnings: list[str] = []
         last_gen: GenerateResult | None = None
-        abstract_retry_used = False
-        empty_504_retry_used = False
 
-        def _attempt_live(attempt_idx: int, attempt_prompt: str) -> tuple[GenerateResult, bytes | None, list[str]]:
+        for attempt_idx, attempt_prompt in enumerate(attempt_prompts):
             attempt_dir = output_dir / f"attempt-{attempt_idx}"
             attempt_dir.mkdir(parents=True, exist_ok=True)
-            return _run_live_once(
+            gen, image_bytes, warnings = _run_live_once(
                 settings=settings,
                 prompt=attempt_prompt,
                 timeouts=timeouts,
                 http_client=http_client,
                 output_dir=attempt_dir,
             )
-
-        attempt_idx = 0
-        while attempt_idx < len(attempt_prompts):
-            attempt_prompt = attempt_prompts[attempt_idx]
-            try:
-                gen, image_bytes, warnings = _attempt_live(attempt_idx, attempt_prompt)
-            except Exception as exc:  # noqa: BLE001 — classify empty 504 then re-raise
-                # Opt-in: one delayed retry after empty gateway 504 only.
-                # Safe-ish only when no asset was returned (exception path —
-                # nothing uploaded yet). Still may double-bill if NIM completed
-                # after the gateway timed out; default remains OFF.
-                if (
-                    settings.empty_504_retry
-                    and not empty_504_retry_used
-                    and is_empty_nvidia_gateway_504(exc)
-                ):
-                    empty_504_retry_used = True
-                    delay = settings.empty_504_retry_delay_seconds
-                    logger.warning(
-                        "Empty NVIDIA gateway 504; waiting %.0fs then one retry "
-                        "(GENBLAZE_EMPTY_504_RETRY=1). First call may still bill.",
-                        delay,
-                    )
-                    time.sleep(delay)
-                    attempt_prompts.append(attempt_prompt)
-                    attempt_idx += 1
-                    continue
-                raise
-
             last_warnings = warnings
             last_gen = gen
-            # `prompt_sanitized` means meta-commentary was stripped from the raw
-            # prompt (cleaned != raw_prompt). The abstract-geometry rewrite is a
-            # different transform with its own detail note, so don't let it flip
-            # this flag — otherwise a successful abstract retry is mislabeled as
-            # "meta-commentary stripped" in the note and the API response.
-            gen.prompt_sanitized = prompt_sanitized
+            gen.prompt_sanitized = attempt_prompt != raw_prompt or prompt_sanitized
             gen.created_at = created_at
-            if empty_504_retry_used and attempt_idx > 0:
-                note = (
-                    f"empty-504 delayed retry after "
-                    f"{settings.empty_504_retry_delay_seconds:.0f}s"
-                )
-                if note not in (gen.detail or ""):
-                    gen.detail = (gen.detail + " · " if gen.detail else "") + note
-            if abstract_retry_used and attempt_idx > 0:
-                note = "abstract geometry retry after blank still"
-                if note not in (gen.detail or ""):
-                    gen.detail = (gen.detail + " · " if gen.detail else "") + note
 
             if warnings and not _looks_like_safety_block(warnings):
                 joined = " | ".join(warnings)
@@ -639,10 +566,9 @@ def generate_image(settings: Settings, prompt: str) -> GenerateResult:
                         gen.detail = (gen.detail + " · " if gen.detail else "") + (
                             "nvidia warnings: " + joined
                         )
-                if gen.prompt_sanitized and "prompt sanitized" not in (gen.detail or ""):
+                if gen.prompt_sanitized:
                     note = "prompt sanitized (meta-commentary stripped)"
                     gen.detail = (gen.detail + " · " if gen.detail else "") + note
-                _attach_local_preview(gen, image_bytes)
                 return gen
 
             last_quality_reason = assessment.reason
@@ -668,26 +594,6 @@ def generate_image(settings: Settings, prompt: str) -> GenerateResult:
                 and cleaned != raw_prompt
             ):
                 attempt_prompts.append(cleaned)
-                attempt_idx += 1
-                continue
-
-            # Photoreal-people blanks: one abstract geometry rewrite (costs a
-            # second FLUX + B2 write; disable with GENBLAZE_ABSTRACT_RETRY=0).
-            if (
-                settings.abstract_retry_on_blank
-                and not abstract_retry_used
-                and looks_like_people_prompt(cleaned)
-            ):
-                rewritten = rewrite_as_abstract_geometry(cleaned)
-                if rewritten and rewritten.lower() != attempt_prompt.lower():
-                    abstract_retry_used = True
-                    logger.info(
-                        "Retrying blank still with abstract rewrite: %s",
-                        rewritten[:160],
-                    )
-                    attempt_prompts.append(rewritten)
-
-            attempt_idx += 1
 
         warn_suffix = ""
         if last_warnings:
@@ -728,7 +634,7 @@ def _dry_run_generate(
     }
 
     if not settings.b2_configured:
-        gen = GenerateResult(
+        return GenerateResult(
             run_id=run_id,
             prompt=prompt,
             model="dry-run/mock",
@@ -742,8 +648,6 @@ def _dry_run_generate(
             dry_run=True,
             detail="B2 not configured; dry-run stayed local-only (no upload).",
         )
-        _attach_local_preview(gen, png)
-        return gen
 
     backend = build_backend(settings)
     try:
@@ -761,7 +665,7 @@ def _dry_run_generate(
             preview = getattr(ps, "url", None) or str(ps)
         except Exception:
             preview = None
-        gen = GenerateResult(
+        return GenerateResult(
             run_id=run_id,
             prompt=prompt,
             model="dry-run/mock",
@@ -774,8 +678,6 @@ def _dry_run_generate(
             created_at=created_at,
             dry_run=True,
         )
-        _attach_local_preview(gen, png)
-        return gen
     finally:
         close = getattr(backend, "close", None)
         if callable(close):

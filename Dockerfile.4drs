@@ -1,27 +1,22 @@
-# 4D Rendering System (4DRS) — Browser host + CSSV stack
+# Optional local/Node 4DRS image (NOT used by Render hackathon service).
+# Build: docker build -f Dockerfile.4drs -t mrs-4drs .
+# Lightweight 4DRS for local Docker (skip native canvas build)
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Install runtime dependencies
-RUN apk add --no-cache python3 cairo giflib pixman
+RUN apk add --no-cache python3
 
-# Copy package files
 COPY package.json package-lock.json ./
+RUN npm ci --omit=dev 2>&1 | tail -20
 
-# Install dependencies
-RUN npm ci --omit=dev
-
-# Copy project
 COPY . .
 
-# Initialize CSSV ledger (non-critical)
 RUN npm run init:cssv 2>/dev/null || true
 
 EXPOSE 8080 3000
 ENV NODE_ENV=production
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
 

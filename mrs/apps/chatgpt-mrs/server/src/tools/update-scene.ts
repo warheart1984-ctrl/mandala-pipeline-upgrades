@@ -2,7 +2,6 @@ import { z } from "zod";
 import type { Scene4DDTO } from "@mrs/scene-schema";
 import { getSceneOrThrow, sceneStore } from "../scene-store.js";
 import type { RendererClient } from "../mrs-adapter/renderer-client.js";
-import { asVec4, vec4NumberArray } from "./schema-helpers.js";
 
 export const updateSceneInputShape = {
   sceneId: z.string(),
@@ -24,9 +23,12 @@ export const updateSceneInputShape = {
       .optional(),
     camera: z
       .object({
-        // Fresh array schemas per field — shared Zod instances become $ref (OpenAI rejects)
-        position4d: vec4NumberArray().optional(),
-        target4d: vec4NumberArray().optional(),
+        position4d: z
+          .tuple([z.number(), z.number(), z.number(), z.number()])
+          .optional(),
+        target4d: z
+          .tuple([z.number(), z.number(), z.number(), z.number()])
+          .optional(),
       })
       .optional(),
     material: z
@@ -75,15 +77,7 @@ export async function handleUpdateScene(
       ? { ...current.projection, ...parsed.patch.projection }
       : current.projection,
     camera: parsed.patch.camera
-      ? {
-          ...current.camera,
-          ...(parsed.patch.camera.position4d
-            ? { position4d: asVec4(parsed.patch.camera.position4d) }
-            : {}),
-          ...(parsed.patch.camera.target4d
-            ? { target4d: asVec4(parsed.patch.camera.target4d) }
-            : {}),
-        }
+      ? { ...current.camera, ...parsed.patch.camera }
       : current.camera,
     material: parsed.patch.material
       ? { ...current.material, ...parsed.patch.material }
