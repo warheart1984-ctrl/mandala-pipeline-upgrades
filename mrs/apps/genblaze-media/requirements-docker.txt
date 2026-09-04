@@ -19,3 +19,5 @@ genblaze-core==0.3.8
 genblaze-s3==0.3.6
 genblaze-nvidia==0.3.3
 boto3==1.39.14
+# Blank/near-black still detection (app/image_quality.py) — must match requirements.txt pin
+Pillow==12.3.0
