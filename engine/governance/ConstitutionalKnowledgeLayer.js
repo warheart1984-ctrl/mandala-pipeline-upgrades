@@ -164,7 +164,7 @@ export function resolveDecision(intent, evidence, policySet, precedents = []) {
             violations.push(policy.id);
           }
         } else {
-          const hasContract = Object.values(CONTRACTS).some(
+          const hasContract = CONTRACTS.contracts.some(
             (c) => c.actor === intent.actor && c.status === "enforced",
           );
           if (!hasContract) {
@@ -343,67 +343,6 @@ export function resolveDecision(intent, evidence, policySet, precedents = []) {
     }
 
     // Expression-lite: intent.timeline == '...' [&& drift_score > N]
-    const timelineId =
-      intent.timeline ??
-      intent.timelineId ??
-      intent.payload?.timelineId ??
-      (typeof intent.params?.timeline === "string"
-        ? intent.params.timeline
-        : null) ??
-      "";
-    const driftScore =
-      typeof evidence?.driftScore === "number"
-        ? evidence.driftScore
-        : typeof intent.params?.driftScore === "number"
-          ? intent.params.driftScore
-          : 0;
-
-      if (!report) {
-        if (acceptIntent) {
-          violations.push(policy.id);
-          requirements.push("conformanceReport");
-        }
-      } else {
-        if (
-          policy.rule === "attach_acceptance" ||
-          policy.rule === "attach_provenance"
-        ) {
-          attachProvenance = true;
-          requirements.push("acceptance");
-        }
-        if (
-          (policy.rule === "deny_if_enforce_and_required_pi_fail" ||
-            policy.rule === "deny_if_false") &&
-          enforce
-        ) {
-          const requiredIds = Array.isArray(policy.requiredContractIds)
-            ? policy.requiredContractIds
-            : ["PI-GEO-LENGTH", "PI-CALC-ENERGY", "PI-TRIG-RADIAL"];
-          const claims = Array.isArray(report.claims) ? report.claims : [];
-          const hostIds = Array.isArray(report.hosts)
-            ? report.hosts.map((h) => h.runtimeId)
-            : [...new Set(claims.map((c) => c.runtimeId))];
-          const failed = [];
-          for (const runtimeId of hostIds) {
-            for (const invariantId of requiredIds) {
-              const claim = claims.find(
-                (c) =>
-                  c.runtimeId === runtimeId && c.invariantId === invariantId,
-              );
-              if (!claim || claim.verdict !== "pass") {
-                failed.push(`${invariantId}@${runtimeId}`);
-              }
-            }
-          }
-          if (failed.length || report.allRequiredPassed === false) {
-            violations.push(policy.id);
-            requirements.push(...failed.map((f) => `pi:${f}`));
-          }
-        }
-      }
-    }
-
-    // Expression-lite: intent.timeline == '...' [&& drift_score > N]
     if (
       typeof policy.condition === "string" &&
       policy.condition.includes("intent.timeline ==")
@@ -442,6 +381,52 @@ export function resolveDecision(intent, evidence, policySet, precedents = []) {
             policy: policy.id,
             reason: policy.message ?? policy.description,
           };
+        }
+      }
+    }
+
+    // SME v1.0 shorthand conditions
+    if (policy.condition === "drift > 0.7") {
+      if (
+        policy.action === "modify_param" &&
+        policy.param &&
+        policy.modifier &&
+        driftScore > 0.7
+      ) {
+        const current =
+          typeof evidence?.params?.[policy.param] === "number"
+            ? evidence.params[policy.param]
+            : typeof intent.params?.[policy.param] === "number"
+              ? intent.params[policy.param]
+              : 1;
+        const modified = evalModifier(policy.modifier, {
+          self: current,
+          [policy.param]: current,
+          speed: current,
+        });
+        paramAdjust = {
+          ...(paramAdjust || {}),
+          [policy.param]: modified,
+          policy: policy.id,
+          reason: policy.message ?? policy.description,
+        };
+      }
+    }
+    if (policy.condition === "dual_evidence") {
+      const isAscension =
+        timelineId === "mythar_ascension" ||
+        intent.kind === "mythar_ascension" ||
+        intent.type === "mythar_ascension";
+      if (isAscension) {
+        const required =
+          Array.isArray(policy.require) && policy.require.length
+            ? policy.require
+            : ["ev-ascension-001", "ev-ascension-002"];
+        const ids = collectEvidenceIds(evidence);
+        const missing = required.filter((r) => !ids.has(r));
+        if (missing.length) {
+          violations.push(policy.id);
+          requirements.push(...missing.map((m) => `evidence:${m}`));
         }
       }
     }
