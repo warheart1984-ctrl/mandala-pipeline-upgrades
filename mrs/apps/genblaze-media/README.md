@@ -16,10 +16,8 @@ Thin **FastAPI** service: user prompt → **Genblaze** (`genblaze-nvidia` + `gen
 | ChatGPT / Custom GPT plugin | **Prepared** — `/.well-known/ai-plugin.json` + scoped `/plugin/openapi.json` for Engine3D stills. Classic Plugins storefront is **sunset**; use **Custom GPT Actions**. Optional `CHATGPT_PLUGIN_KEY` bearer |
 | RT4D → NVIDIA vision | **Prepared** — `POST /api/rt4d-to-nvidia` sends a prior `run_id` PNG to NIM vision (`require_nvidia`). When the prior still's RT4D archetype is known (e.g. `tesseract-lattice`), the path biases `surfaceId` toward lattice/tesseract and expands `tesseract`/`lattice-grid` with beams+rings (not bare vertex/orbital blobs). **Not** img2img; fails clearly when key missing or NIM 5xx/504 |
 | Operator deploy | **Prepared** — Dockerfile + `render.yaml` (Render free web) |
-| Live NIM generate | **Requires** `NVIDIA_API_KEY` at runtime (default backend) |
-| NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared but off by default** (stills-only demo) — unset `GENBLAZE_VIDEO_ENABLED` defaults OFF (key or not); set `1` to re-enable UI + API. Cosmos catalog access is key-dependent; docs **declared** not enforced |
-| Seedance 2.0 video (fal) | **Prepared** opt-in path (`GENBLAZE_VIDEO_BACKEND=seedance` + `FAL_KEY`); **fal API is billed** — not Dreamina/Jimeng free credits; default `720p`; watermark/1080p **not guaranteed**; temporal layers **declared** only |
-| CROS (`/cros` page) | **Docs only** — static reference UI; this app does **not** implement or import CROS |
+| Live NIM generate | **Requires** `NVIDIA_API_KEY` at runtime |
+| NIM Cosmos video (CMM-NIM-Cosmos) | **Prepared** opt-in path (`GENBLAZE_VIDEO_ENABLED=1`); **default off** for the judge stills demo — Cosmos catalog access is key-dependent; docs **declared** not enforced |
 | B2 persistence | **Tests** path via `genblaze-s3` / dual-exported `B2_APP_KEY` |
 
 ## Product story (honest)
@@ -224,11 +222,10 @@ Copy secrets into the **repo-root** `.env` (preferred) or `mrs/apps/genblaze-med
 | `GENBLAZE_IMAGE_MODEL` | optional; default `black-forest-labs/flux.1-schnell` |
 | `GENBLAZE_VIDEO_BACKEND` | optional; `nvidia` (default) or `seedance` |
 | `GENBLAZE_VIDEO_MODEL` | optional; default `nvidia/cosmos-1.0-7b-diffusion-text2world`; fallback `nvidia/cosmos-1.0-12b-diffusion-text2world` when available on the key |
-| `GENBLAZE_VIDEO_ENABLED` | unset → **off** (stills-only demo default, even with `NVIDIA_API_KEY` set); set `1` to re-enable video UI + API. Render blueprint also pins `0` |
-| `FAL_KEY` / `SEEDANCE_API_KEY` | fal.ai credential required only when `GENBLAZE_VIDEO_BACKEND=seedance`; **fal API usage is billed** (Dreamina/Jimeng consumer free credits are a separate product surface) |
+| `GENBLAZE_VIDEO_ENABLED` | default **off** (judge stills demo); set `1` to show the video UI and enable `/api/generate-video` |
+| `FAL_KEY` / `SEEDANCE_API_KEY` | fal.ai credential required only when `GENBLAZE_VIDEO_BACKEND=seedance`; fal API usage is billed |
 | `SEEDANCE_MODEL` | optional; default `bytedance/seedance-2.0/text-to-video` |
-| `SEEDANCE_RESOLUTION` / `SEEDANCE_DURATION` / `SEEDANCE_ASPECT_RATIO` | Seedance request settings; defaults `720p` / `5` / `16:9` (`1080p` not claimed) |
-| `SEEDANCE_GENERATE_AUDIO` / `SEEDANCE_WATERMARK` | optional; defaults `1` / `0` — watermark outcome is gateway/account-dependent and **not guaranteed** |
+| `SEEDANCE_RESOLUTION` / `SEEDANCE_DURATION` / `SEEDANCE_ASPECT_RATIO` | Seedance request settings; defaults `720p` / `5` / `16:9` |
 | `GENBLAZE_VIDEO_HTTP_TIMEOUT` / `GENBLAZE_VIDEO_NVCF_TIMEOUT` / `GENBLAZE_VIDEO_PIPELINE_TIMEOUT` / `GENBLAZE_VIDEO_NVCF_POLL_SECONDS` | Cosmos video timeouts (defaults 900 / 900 / 1200 / 120) |
 | `GENBLAZE_HTTP_TIMEOUT` / `GENBLAZE_NVCF_TIMEOUT` / `GENBLAZE_PIPELINE_TIMEOUT` / `GENBLAZE_NVCF_POLL_SECONDS` | FLUX stills timeouts (defaults **600 / 600 / 720 / 180**). Render blueprint uses poll **300** (NVIDIA max) |
 | `GENBLAZE_EMPTY_504_RETRY` | default **off** — set `1` for one delayed server retry after an empty NVIDIA gateway 504 only (may bill a second NIM call; prefer manual wait+retry) |
@@ -448,13 +445,10 @@ Or from repo root (after venv + deps):
 npm run genblaze:media
 ```
 
-- UI: http://127.0.0.1:8787/ (stills `#stills`; video `#nim-cosmos` when video enabled)
+- UI: http://127.0.0.1:8787/ (stills `#stills`; video `#nim-cosmos` only when `GENBLAZE_VIDEO_ENABLED=1`)
 - Health: http://127.0.0.1:8787/health
 - `POST /api/generate` body: `{"prompt":"…"}` (FLUX stills — **judge demo path**)
 - `POST /api/generate-video` body: `{"prompt":"…"}` (selected Cosmos or Seedance backend — **503 when video disabled**)
-- `POST /api/image/ingest` — multipart `file` or JSON `{ "image_base64", "filename?", "mime?" }` → stores under `data/ingested/`
-- `POST /api/image/analyze` — `{ "id" }` or `{ "image_base64" }` → **heuristic** 4D surface/color suggestion (not RT4D reconstruction)
-- `GET /api/image/ingested` — list ingested photos; `GET /api/image/ingested/{id}/file` serves bytes
 - `GET /media/nim-cosmos` → 302 `/#nim-cosmos` when enabled, else `/#stills`
 - `GET /api/assets` — recent entries from local JSON index (`?modality=video` optional)
 
@@ -462,7 +456,7 @@ npm run genblaze:media
 
 If `NVIDIA_API_KEY` is missing, `/health` still boots and reports setup help; `POST /api/generate` returns **503** with instructions (unless `GENBLAZE_DRY_RUN=1`).
 
-**Judge demo:** stills-only is the **default** — video is off when `GENBLAZE_VIDEO_ENABLED` is unset, even with an NVIDIA key. Demo FLUX stills → B2 only. The video API/pipeline stays in place; set `GENBLAZE_VIDEO_ENABLED=1` to bring the Cosmos video UI + API back later.
+**Judge demo:** leave `GENBLAZE_VIDEO_ENABLED=0` (default). Demo FLUX stills → B2 only. Re-enable video only after the selected backend is configured: a live Cosmos catalog result for NVIDIA, or a funded fal.ai key for Seedance.
 
 ## Deploy (App URL)
 
@@ -559,8 +553,8 @@ With **valid** B2 keys (no NVIDIA): `/health` reports `b2_configured` without li
 | --- | --- |
 | `InvalidAccessKeyId` on ListObjects | B2 key ID / application key in `.env` rejected by the S3 API — refresh a **non-master** bucket-scoped key |
 | Genblaze `HeadBucket` 403 | Common with bucket-scoped keys; this app skips that preflight when `B2_REGION` is set |
-| NIM generate timeout | `NVCF-POLL-SECONDS` + longer HTTP read (defaults **180 / 600**; Render **300 / 600**) allow cold starts to return 202 and then poll |
-| `NVIDIA image generate failed (504): {"_raw": ""}` | Upstream gateway returned no diagnostic body. If warmup also returns 504, `/health.nvidia_nim_status` reports unavailable. Raise poll to 300, wait and retry once, or opt into delayed retry with double-bill risk. No fal image fallback is wired. |
+| NIM generate timeout | Was: sync POST read timeout (`The read operation timed out`). Fix: `NVCF-POLL-SECONDS` + longer httpx read (defaults 90 / 600) so cold starts return 202 then poll |
+| `NVIDIA image generate failed (504): {"_raw": ""}` | The upstream gateway returned no diagnostic body, which can occur during a NIM cold start or gateway timeout. The API now preserves the 504 and suggests waiting 30–60 seconds, retrying once, then checking model access/status and timeout settings. It does not auto-retry an ambiguous billed request. |
 | `asset transfer(s) failed; manifest was not uploaded` | NVIDIA FLUX returns base64; Genblaze writes `file://` under CWD (`/app` in Docker). `AssetTransfer` only allowlists system temp — transfer fails and SinkError omits the cause. Fix: write NVIDIA payloads under `tempfile` + surface underlying transfer exception in the API detail |
 | Solid black / empty JPEG after “success” | Observed: valid ~6 KiB 1024² JPEG, mean luminance 0, one color — common when FLUX.1-schnell NIM blanks photoreal-people prompts. Pipeline rejects near-black stills with HTTP **422**, strips trailing meta-commentary, optionally retries once with an abstract geometry rewrite (`GENBLAZE_ABSTRACT_RETRY`, default on), and best-effort deletes the rejected B2 asset/manifest |
 | RT4D `503` (setup) | `node` or `render-still.mjs` missing on this image — use repo-root Dockerfile + Manual Deploy, or local Node 18+ + monorepo checkout |
@@ -573,18 +567,9 @@ With **valid** B2 keys (no NVIDIA): `/health` reports `b2_configured` without li
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| GET | `/health` | Boots always; NVIDIA/B2/RT4D flags; `image_to_scene` probe; ListObjects probe only if `B2_PROBE_ON_HEALTH=1` |
-| POST | `/api/generate` | Live Genblaze FLUX→B2 (default), or RT4D when `GENBLAZE_IMAGE_BACKEND=rt4d`; optional `then_scene` / `GENBLAZE_FLUX_THEN_SCENE` dual MRS frame; **503** if setup missing; RT4D CLI failure → **502** |
+| GET | `/health` | Boots always; NVIDIA/B2 flags; video model flags; ListObjects probe only if `B2_PROBE_ON_HEALTH=1` |
+| POST | `/api/generate` | Live Genblaze FLUX→B2 or 503 if no NVIDIA key |
 | POST | `/api/generate-video` | Selected Cosmos or Seedance backend → B2; 503 if disabled or its credential is missing |
-| POST | `/api/image-to-scene` | Image → SceneSpecification → optional MRS full-frame path trace (`render` default **true**, `quality` default **draft**; optional `require_nvidia`). Scene interpretation — **not** reconstruction |
-| POST | `/api/rt4d-to-nvidia` | Prior still `run_id` → NIM vision → optional MRS re-render (`require_nvidia`); **503** missing key, **502** NIM 5xx/504; **not** img2img |
-| POST | `/api/polish-still` | Prior still `run_id` → diffusion img2img polish (fal.ai FLUX); **503** polish disabled/missing key, **502** upstream failure; structure still unchanged |
-| GET | `/.well-known/ai-plugin.json` | ChatGPT-style plugin manifest (absolute URLs; auth none or bearer) |
-| GET | `/plugin/openapi.json` | Scoped OpenAPI for Engine3D still Actions (full app schema remains `/openapi.json`) |
-| POST | `/api/engine3d-still` | Engine3D soft-raster structure (beauty+AOVs); optional `rt4d_background_run_id` composite; optional `polish`; **not** RT4D sphere-bridge for faces |
-| POST | `/api/engine3d-sequence` | Short Engine3D soft-raster orbit sequence (structure); first-frame preview; **not** 8K farm / per-frame polish |
-| POST | `/api/prompt-to-scene` | Prompt → SceneSpecification + Engine3D world stub via out-of-process bridge; optional `render=true` RT4D still; **503** disabled/missing script, **502** bridge failure |
-| POST | `/api/render-scene` | SceneSpecification JSON → RT4D still (`quality` default **draft**; pass `final` for RT4D_* profile) |
 | GET | `/api/assets` | Local recent index (capped); optional `?modality=image\|video` |
 | GET | `/media/stills` · `/media/nvidia` · `/media/nim-cosmos` | 302 into SPA hash anchors |
 | GET | `/` | Single-page UI (stills; Cosmos section hidden unless video enabled) |
@@ -606,12 +591,12 @@ invariants, the seven-artifact lineage chain, and the two conformance profiles
 
 ## NIM Cosmos Video Path (CMM-NIM-Cosmos)
 
-Parallel Genblaze/NIM text-to-video path (`app/pipeline_video.py`) on the same site as FLUX stills. **No Story Forge lineage.** Video is **off by default** — when `GENBLAZE_VIDEO_ENABLED` is unset the path is disabled even with `NVIDIA_API_KEY` set (stills-only demo default). Set `GENBLAZE_VIDEO_ENABLED=1` to re-enable. Constitutional docs under `docs/constitutional/` are **declared**, not runtime-enforced (JCR/CEL/Arena/Sovereign IDE are not hosted here).
+Operator **opt-in** text-to-video path (`app/pipeline_video.py`). **Default off** so the hackathon judge UI is FLUX stills + B2 only. **No Story Forge lineage.** Constitutional docs under `docs/constitutional/` are **declared**, not runtime-enforced (JCR/CEL/Arena/Sovereign IDE are not hosted here).
 
 | Concern | Honest status |
 | --- | --- |
-| Default | Unset → **off** (regardless of NVIDIA key); explicit `1` enables, `0` disables |
-| Live generate | Requires video enabled, `NVIDIA_API_KEY`, **and** Cosmos model access on that key (probe may be DEAD) |
+| Default | `GENBLAZE_VIDEO_ENABLED=0` — UI section hidden; `/api/generate-video` returns 503; `/media/nim-cosmos` → stills |
+| Live generate | Requires `GENBLAZE_VIDEO_ENABLED=1`, `NVIDIA_API_KEY`, **and** Cosmos model access on that key (probe may be DEAD) |
 | Default model | `nvidia/cosmos-1.0-7b-diffusion-text2world`; optional fallback `nvidia/cosmos-1.0-12b-diffusion-text2world` when the upstream probe confirms access |
 | Timeouts | Video defaults are higher than FLUX (see `.env.example`); first hit after Render/NIM idle can still feel slow |
 | NVCF cold-start | Cosmos is often **slower than FLUX** on cold start even with 600s+ timeouts — expect longer first-request latency; keep the browser tab open |
@@ -624,21 +609,14 @@ Parallel Genblaze/NIM text-to-video path (`app/pipeline_video.py`) on the same s
 
 Set `GENBLAZE_VIDEO_BACKEND=seedance`, `GENBLAZE_VIDEO_ENABLED=1`, and
 `FAL_KEY` to use ByteDance Seedance 2.0 through the fal.ai gateway. This is an
-operator opt-in cloud path: no local GPU is required, but **fal API usage is
-billed**. Do **not** treat this as Dreamina / Jimeng / CapCut consumer free
-credits — those are separate product surfaces (see
-[`docs/constitutional/CMM-Seedance-v1.0.md`](./docs/constitutional/CMM-Seedance-v1.0.md)).
-
-| Concern | Honest status |
-| --- | --- |
-| Default resolution | `720p` |
-| Free fal access | **Not claimed** |
-| Watermark / 1080p | Gateway/account-dependent — **not guaranteed** |
-| Temporal layers → 4DRS | **Declared** only — [`docs/SEEDANCE_TEMPORAL_LAYERS.md`](./docs/SEEDANCE_TEMPORAL_LAYERS.md) |
-| CROS adapter | Live HTTP lives here; `mrs/packages/cros` `adapters/seedance.py` is **skeleton** only |
+operator opt-in cloud path: no local GPU is required, but fal API usage is
+billed. Free access, watermark behavior, and 1080p availability are
+gateway/account-dependent and are **not claimed** here; the default is `720p`.
 
 The path emits model ID, prompt hash, provider request ID, asset SHA-256, and
 provider-contract replay metadata before persisting the clip and manifest to B2.
+Binding clips into 4DRS temporal layers remains **declared**, not implemented;
+see `docs/SEEDANCE_TEMPORAL_LAYERS.md`.
 
 ## Cross-links
 

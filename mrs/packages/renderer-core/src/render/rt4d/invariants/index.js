@@ -48,9 +48,6 @@ export {
   cpuReferenceHashDeterministic,
   orthogonalLengthPreserved,
   topologyPreservationHolds,
-  hyperBoxContained,
-  bvhMissImplicationHolds,
-  buildDefaultTopologyBVH,
 } from "./predicates.js";
 
 export {

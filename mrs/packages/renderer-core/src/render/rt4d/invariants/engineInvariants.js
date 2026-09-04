@@ -56,16 +56,14 @@ export const ENGINE_INVARIANTS = Object.freeze([
       "docs/4drs/substrate/DETERMINISTIC_REPLAY.md",
       "engine/conformance/default.conformance-profile.json::replay.deterministic-params",
       "src/render/rt4d/pipeline/CPUConformanceGate.js",
-      "src/render/rt4d/pipeline/PathTracerSeedHash.js",
     ]),
     anchors: Object.freeze([
       "CPUConformanceGate.hashBytes",
       "buildTinyReferenceFrame",
-      "cpuPathTracerHashDeterministic",
       "replay.deterministic-params",
     ]),
     notEnforcedBecause:
-      "Constitutional replay checks exist for timeline params; RT4D path-tracer bit-identical multi-host replay is not gated. M-CPU-REF-HASH + M-CPU-PATH-HASH are supporting measurements only.",
+      "Constitutional replay checks exist for timeline params; RT4D path-tracer bit-identical multi-host replay is not gated. Tiny CPU reference hash equality is a supporting measurement only (see M-CPU-REF-HASH).",
   }),
   Object.freeze({
     id: "EI-RADIOMETRIC",
@@ -96,25 +94,15 @@ export const ENGINE_INVARIANTS = Object.freeze([
     statement:
       "BVH4D / HyperBox AABB4 slab intersection preserves containment: child bounds ⊆ parent bounds; ray miss on parent implies miss on descendants.",
     derived_from: Object.freeze(["PI-GEO-LENGTH"]),
-    status: /** @type {InvariantStatus} */ ("tested"),
+    status: /** @type {InvariantStatus} */ ("skeleton"),
     evidence: Object.freeze([
       "src/render/rt4d/accel/BVH4D.js",
       "src/render/rt4d/accel/HyperBox.js",
-      "src/render/rt4d/invariants/predicates.js::topologyPreservationHolds",
-      "src/render/rt4d/pipeline/LiveSceneEiGate.js",
-      "src/render/rt4d/test/invariants.topology.test.js",
-      "src/render/rt4d/test/liveSceneEiGate.test.js",
       "docs/4drs/substrate/BVH4D_GPU.md",
     ]),
-    anchors: Object.freeze([
-      "HyperBox.intersect",
-      "BVH4D.traverse",
-      "topologyPreservationHolds",
-      "runLiveSceneEiGate",
-    ]),
+    anchors: Object.freeze(["HyperBox.intersect", "BVH4D.traverse"]),
     notEnforcedBecause:
-      "Containment is unit-proven and optionally soft-attached / deny-gated via LiveSceneEiGate " +
-      "(runEiGate / enforceEngineInvariantTopology). Catalog stays tested — not default CKL deny on every render.",
+      "AABB4 slab code exists; no unit test yet proves parent/child containment or miss-implication as an invariant predicate. Do not treat BVH presence as enforcement.",
   }),
   Object.freeze({
     id: "EI-LENGTH-PARENT",
@@ -132,27 +120,6 @@ export const ENGINE_INVARIANTS = Object.freeze([
     anchors: Object.freeze(["Transform4D.rotate", "lengthPreserved4"]),
     notEnforcedBecause:
       "Transform4D plane rotations are unit-tested for length preservation; render pipeline does not gate on PI-* at runtime.",
-  }),
-  Object.freeze({
-    id: "EI-ORGANIC-VARIANCE",
-    layer: /** @type {const} */ ("engine"),
-    title: "Organic variance floor (Amendment VII §3)",
-    statement:
-      "Render-time position variance must remain >= biometric profile minOrganicVariance; L/R vertex averaging that flattens lawful asymmetry is denied.",
-    derived_from: Object.freeze(["PI-GEO-LENGTH", "PI-TRIG-RADIAL"]),
-    status: /** @type {InvariantStatus} */ ("tested"),
-    evidence: Object.freeze([
-      "src/renderer/raster/OrganicVariance.ts::positionOrganicVariance",
-      "src/renderer/raster/OrganicVariance.ts::enforceOrganicVarianceAtRender",
-      "engine/governance/biometric/amendmentVII.js::validateFixtureOrganicVariance",
-    ]),
-    anchors: Object.freeze([
-      "positionOrganicVariance",
-      "enforceOrganicVarianceAtRender",
-      "validateFixtureOrganicVariance",
-    ]),
-    notEnforcedBecause:
-      "Soft-path evaluation available via OrganicVariance gate; CKL policy-organic-variance enforces when biometricAmendment/enforceAmendmentVII active. Not default CKL deny on every render.",
   }),
 ]);
 

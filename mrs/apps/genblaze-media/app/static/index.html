@@ -877,6 +877,14 @@
     </section>
 
     <p class="lede">
+      Provenanced concept stills for MRS / 4D scene authoring.
+      Prompt → NVIDIA NIM FLUX (via Genblaze) → private Backblaze B2 with SHA-256 manifest
+      → optional semantic index (nv-embedcode). Concept plates for the 4D renderer —
+      NIM does not simulate 4D worlds. Cosmos video is an optional operator path
+      (off by default for this demo).
+    </p>
+
+    <p class="lede">
       Render governance reference: <a href="/cros">CROS invariants, lineage &amp; replay profiles →</a>
       <br />
       <span style="font-size:0.9em">
@@ -1149,43 +1157,6 @@
       </section>
     </section>
 
-    <section class="path" id="engine3d-still">
-      <h2>Engine3D structure → polish</h2>
-      <p class="tips" role="note">
-        <strong>Portrait structure path.</strong>
-        Soft-raster Engine3D triangles (demo head/shoulders or optional HumanRig GLB)
-        produce a beauty PNG (+ depth/normal AOVs). Optional RT4D background
-        composite, then optional fal FLUX img2img polish.
-        Faces/skin come from <em>polish</em> — not RT4D sphere-bridge.
-        Requires <code>/health.engine3d_still.available</code> and (for polish)
-        <code>GENBLAZE_POLISH_ENABLED=1</code> + <code>FAL_KEY</code>.
-      </p>
-      <form id="e3d-form">
-        <label for="e3d-width">Width</label>
-        <input type="number" id="e3d-width" min="64" max="1024" value="256" />
-        <label for="e3d-height" style="margin-top:0.5rem">Height</label>
-        <input type="number" id="e3d-height" min="64" max="1024" value="256" />
-        <label for="e3d-bg-run" style="margin-top:0.75rem">Optional RT4D background run_id</label>
-        <input type="text" id="e3d-bg-run" maxlength="64" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
-        <label style="margin-top:0.75rem;font-weight:400;display:flex;gap:0.5rem;align-items:center;">
-          <input type="checkbox" id="e3d-polish" />
-          Also polish with FLUX img2img
-        </label>
-        <label for="e3d-prompt" style="margin-top:0.5rem">Polish prompt</label>
-        <textarea id="e3d-prompt" maxlength="2000"
-          placeholder="cinematic portrait, dramatic rim light, detailed skin"></textarea>
-        <div class="row">
-          <button type="submit" id="e3d-go">Render Engine3D structure</button>
-        </div>
-      </form>
-      <div id="e3d-status" class="status"></div>
-      <section class="result" id="e3d-result" hidden>
-        <h2>Engine3D / composite / polish</h2>
-        <div class="meta" id="e3d-result-meta"></div>
-        <img id="e3d-preview" alt="Engine3D structure or polish" hidden />
-      </section>
-    </section>
-
     <section class="path" id="nim-cosmos" hidden>
       <h2>NIM Cosmos · video (CMM-NIM-Cosmos)</h2>
       <p class="tips" role="note">
@@ -1194,8 +1165,7 @@
         People and faces may blank or degrade. <strong>NVCF cold-start:</strong> Cosmos is often slower than
         FLUX on the first hit after Render or NIM idle — even with 600s+ timeouts, expect longer
         first-request latency; keep this tab open. Larger mp4 objects cost more B2 Class C traffic.
-        This section is hidden by default (stills-only demo); it appears only
-        when the operator explicitly sets <code>GENBLAZE_VIDEO_ENABLED=1</code>.
+        This section only appears when <code>GENBLAZE_VIDEO_ENABLED=1</code> and the operator re-enables video.
       </p>
 
       <form id="video-form">
@@ -1291,10 +1261,7 @@
 
     <footer>
       Storage: Backblaze B2 (private bucket → presigned GET). Orchestration: Genblaze.
-      Image: NVIDIA NIM FLUX (stills) or optional MRS RT4D renderer
-      (<code>GENBLAZE_IMAGE_BACKEND=rt4d</code> — deterministic procedural 4D, not diffusion).
-      Video: NVIDIA NIM Cosmos (optional; off by default — set
-      <code>GENBLAZE_VIDEO_ENABLED=1</code> to re-enable).
+      Image: NVIDIA NIM FLUX (stills). Video: NVIDIA NIM Cosmos (optional; off by default).
       Embeddings: NVIDIA nv-embedcode. Operator readiness ≠ commercial self-serve.
       Anchors: <code>/media/stills</code> · <code>/media/nim-cosmos</code> (video when enabled).
       Render governance reference (docs only, not implemented here): <a href="/cros">/cros</a>.
@@ -1313,303 +1280,6 @@
     const videoResultMeta = document.getElementById("video-result-meta");
     const videoPreview = document.getElementById("video-preview");
     const videoGoBtn = document.getElementById("video-go");
-    const sceneStatusEl = document.getElementById("scene-status");
-    const sceneResultEl = document.getElementById("scene-result");
-    const sceneResultMeta = document.getElementById("scene-result-meta");
-    const scenePreview = document.getElementById("scene-preview");
-    const sceneGoBtn = document.getElementById("scene-go");
-    const dualPreviews = document.getElementById("dual-previews");
-    const previewFlux = document.getElementById("preview-flux");
-    const previewMrs = document.getElementById("preview-mrs");
-    const sendRt4dNvidiaBtn = document.getElementById("send-rt4d-nvidia");
-    const polishBtn = document.getElementById("polish-still");
-    const polishControls = document.getElementById("polish-controls");
-    const polishPrompt = document.getElementById("polish-prompt");
-    const polishStrength = document.getElementById("polish-strength");
-    const polishStrengthVal = document.getElementById("polish-strength-val");
-    const previewFluxCaption = document.getElementById("preview-flux-caption");
-    const thenSceneLabel = document.getElementById("then-scene-label");
-    const heroHealth = document.getElementById("hero-health");
-    const playlistStrip = document.getElementById("playlist-strip");
-    const presentationShell = document.getElementById("presentation-shell");
-    const presentationMedia = document.getElementById("presentation-media");
-    const presentationRunTitle = document.getElementById("presentation-run-title");
-    const presentationRunPrompt = document.getElementById("presentation-run-prompt");
-    const presentationOperatorNoteInput = document.getElementById("presentation-operator-note-input");
-    const presentationTalkTrack = document.getElementById("presentation-talk-track");
-    const presentationProgress = document.getElementById("presentation-progress");
-    const presentationPrev = document.getElementById("presentation-prev");
-    const presentationNext = document.getElementById("presentation-next");
-    const presentationClose = document.getElementById("presentation-close");
-    const presentationReuse = document.getElementById("presentation-reuse");
-    const presentationReveal = document.getElementById("presentation-reveal");
-
-    // Populated by the /health fetch below. Until it resolves, treat the backend
-    // as unknown and avoid naming FLUX or RT4D in progress copy.
-    let health = null;
-    let latestStill = null; // { run_id, preview_url, provider }
-    const isRt4dBackend = () => health && health.image_backend === "rt4d";
-
-    const BYOK_KEY = "genblaze_api_key";
-    const BYOK_MODEL = "genblaze_model_override";
-    const PINNED_RUNS_KEY = "genblaze_pinned_run_ids";
-    const PRESENTATION_NOTES_KEY = "genblaze_presentation_notes";
-    const MAX_PINNED_RUNS = 3;
-    let playlistPresentationItems = [];
-    let playlistPresentationIndex = 0;
-
-    function byokHeaders(extra) {
-      const headers = Object.assign({ "Content-Type": "application/json" }, extra || {});
-      const key = sessionStorage.getItem(BYOK_KEY);
-      const model = sessionStorage.getItem(BYOK_MODEL);
-      if (key) {
-        headers["X-NVIDIA-API-Key"] = key;
-        headers["Authorization"] = "Bearer " + key;
-      }
-      if (model) headers["X-Genblaze-Model"] = model;
-      return headers;
-    }
-
-    function refreshByokDiag() {
-      const el = document.getElementById("byok-diag");
-      if (!el) return;
-      const keyPresent = !!sessionStorage.getItem(BYOK_KEY);
-      const model = sessionStorage.getItem(BYOK_MODEL) || "None";
-      const server = health && health.byok ? health.byok : null;
-      const permitted = server ? server.permitted_for_this_request : "?";
-      const flag = server ? (server.allow_byok_flag ? "Enabled" : "Disabled (local-only default)") : "?";
-      const xss = document.getElementById("byok-xss-warn");
-      if (xss) {
-        const localHost =
-          location.hostname === "127.0.0.1" || location.hostname === "localhost";
-        xss.hidden = localHost && !(server && server.hosted_render_detected);
-      }
-      el.replaceChildren();
-      const title = document.createElement("strong");
-      title.textContent = "BYOK diagnostics";
-      el.appendChild(title);
-      el.appendChild(document.createElement("br"));
-      const lines = [
-        "Key present: " + (keyPresent ? "Yes (session)" : "No"),
-        "Model override: " + model,
-        "Scope: stills + assist",
-        "Hosted BYOK flag: " + flag,
-        "Permitted for this host: " + String(permitted),
-      ];
-      lines.forEach(function (line) {
-        el.appendChild(document.createTextNode(line));
-        el.appendChild(document.createElement("br"));
-      });
-      const note = document.createElement("span");
-      note.style.fontSize = "0.9em";
-      note.textContent =
-        "Keys are never logged, never persisted server-side, never sent to Digital Printer.";
-      el.appendChild(note);
-      refreshComplianceBadges();
-      refreshCapabilityRegistry();
-    }
-
-    function refreshComplianceBadges() {
-      const row = document.getElementById("compliance-badges");
-      if (!row) return;
-      const server = health && health.byok ? health.byok : null;
-      const keyPresent = !!sessionStorage.getItem(BYOK_KEY);
-      const badges = [];
-      badges.push({
-        ok: server && server.printSoT === false,
-        text: "printSoT: false",
-      });
-      badges.push({
-        ok: !!(server && Array.isArray(server.scope) && server.scope.indexOf("stills") >= 0),
-        text: "BYOK scope: stills+assist",
-      });
-      badges.push({
-        ok: !!(server && server.permitted_for_this_request),
-        text: server && server.permitted_for_this_request ? "BYOK permitted here" : "BYOK not permitted",
-        warn: !(server && server.permitted_for_this_request),
-      });
-      badges.push({
-        ok: keyPresent,
-        text: keyPresent ? "session key present" : "no session key",
-        warn: !keyPresent,
-      });
-      badges.push({
-        ok: true,
-        text: "disclosure ≠ certification",
-        warn: true,
-      });
-      row.replaceChildren();
-      badges.forEach(function (b) {
-        const span = document.createElement("span");
-        span.className = b.warn ? "badge warn" : b.ok ? "badge ok" : "badge";
-        span.textContent = b.text;
-        row.appendChild(span);
-      });
-    }
-
-    function refreshCapabilityRegistry() {
-      const dl = document.getElementById("cap-registry");
-      if (!dl) return;
-      dl.replaceChildren();
-      if (!health) {
-        const dt = document.createElement("dt");
-        dt.textContent = "status";
-        const dd = document.createElement("dd");
-        dd.textContent = "waiting for /health";
-        dl.appendChild(dt);
-        dl.appendChild(dd);
-        return;
-      }
-      function avail(obj) {
-        if (obj == null) return "n/a";
-        if (typeof obj === "boolean") return obj ? "true" : "false";
-        if (typeof obj === "object" && "available" in obj) {
-          return obj.available ? "available" : "unavailable";
-        }
-        return String(obj);
-      }
-      const entries = [
-        ["image_backend", health.image_backend],
-        ["byok.permitted", health.byok && health.byok.permitted_for_this_request],
-        ["rt4d", avail(health.rt4d)],
-        ["scene_spec", avail(health.scene_spec)],
-        ["image_to_scene", avail(health.image_to_scene)],
-        ["polish", avail(health.polish)],
-        ["engine3d_still", avail(health.engine3d_still)],
-        ["proton_raster", avail(health.proton_raster)],
-        ["printer", avail(health.printer)],
-        ["face_creation_assist", avail(health.face_creation_assist)],
-        ["prompt_scene", avail(health.prompt_scene)],
-        ["video_enabled", health.video_enabled],
-      ];
-      entries.forEach(function (pair) {
-        const dt = document.createElement("dt");
-        dt.textContent = String(pair[0]);
-        const dd = document.createElement("dd");
-        dd.textContent = String(pair[1]);
-        dl.appendChild(dt);
-        dl.appendChild(dd);
-      });
-    }
-
-    function warnByokModelIfNeeded(model) {
-      const catalog = Array.from(
-        document.querySelectorAll("#byok-model-catalog option"),
-      ).map(function (o) { return o.value; });
-      if (!model || catalog.indexOf(model) >= 0) return;
-      setStatus(
-        statusEl,
-        "Model id not in disclosed catalog (soft warn): " + model,
-        "warn",
-      );
-    }
-
-    document.getElementById("model-market-list")?.addEventListener("click", (ev) => {
-      const btn = ev.target && ev.target.closest ? ev.target.closest("[data-model]") : null;
-      if (!btn) return;
-      const model = btn.getAttribute("data-model");
-      const input = document.getElementById("byok-model");
-      if (input) input.value = model;
-      sessionStorage.setItem(BYOK_MODEL, model);
-      refreshByokDiag();
-    });
-
-    document.getElementById("byok-save")?.addEventListener("click", () => {
-      const key = document.getElementById("byok-key")?.value?.trim() || "";
-      const model = document.getElementById("byok-model")?.value?.trim() || "";
-      if (key) sessionStorage.setItem(BYOK_KEY, key);
-      else sessionStorage.removeItem(BYOK_KEY);
-      if (model) sessionStorage.setItem(BYOK_MODEL, model);
-      else sessionStorage.removeItem(BYOK_MODEL);
-      if (document.getElementById("byok-key")) document.getElementById("byok-key").value = "";
-      warnByokModelIfNeeded(model);
-      refreshByokDiag();
-      setStatus(statusEl, "BYOK session updated (key not shown).", "");
-    });
-    document.getElementById("byok-clear")?.addEventListener("click", () => {
-      sessionStorage.removeItem(BYOK_KEY);
-      sessionStorage.removeItem(BYOK_MODEL);
-      if (document.getElementById("byok-model")) document.getElementById("byok-model").value = "";
-      refreshByokDiag();
-      setStatus(statusEl, "BYOK session cleared.", "");
-    });
-    (function loadByokForm() {
-      const model = sessionStorage.getItem(BYOK_MODEL);
-      if (model && document.getElementById("byok-model")) {
-        document.getElementById("byok-model").value = model;
-      }
-      refreshByokDiag();
-    })();
-
-    function nvidiaVisionReady() {
-      return !!(health && (health.nvidia_configured || sessionStorage.getItem(BYOK_KEY)));
-    }
-
-    function updateRt4dNvidiaControls() {
-      if (!sendRt4dNvidiaBtn) return;
-      const hasStill = !!(latestStill && latestStill.run_id);
-      const show = hasStill && (isRt4dBackend() || latestStill.provider === "rt4d-render");
-      sendRt4dNvidiaBtn.hidden = !show;
-      sendRt4dNvidiaBtn.disabled = !show;
-      const polishAvailable = health && health.polish && health.polish.available;
-      if (polishBtn) {
-        const showPolish = !!polishAvailable && hasStill;
-        polishBtn.hidden = !showPolish;
-        polishBtn.disabled = !showPolish;
-      }
-      if (polishControls) {
-        const showPolishControls = !!polishAvailable;
-        polishControls.hidden = !showPolishControls;
-      }
-      if (thenSceneLabel) {
-        thenSceneLabel.textContent = isRt4dBackend()
-          ? "Also interpret with NVIDIA → MRS full frame (keeps RT4D still; dual previews)"
-          : "Also interpret → MRS full frame (keeps concept still; dual previews)";
-      }
-      if (previewFluxCaption) {
-        previewFluxCaption.textContent = isRt4dBackend()
-          ? "RT4D still"
-          : "Concept / FLUX still";
-      }
-    }
-
-    // Polish strength slider live value.
-    if (polishStrength && polishStrengthVal) {
-      polishStrength.addEventListener("input", () => {
-        const v = parseInt(polishStrength.value, 10) / 100;
-        polishStrengthVal.textContent = v.toFixed(2);
-      });
-    }
-
-    function rememberLatestStill(data) {
-      latestStill = {
-        run_id: data.run_id || null,
-        preview_url: data.preview_url || null,
-        provider: data.provider || null,
-      };
-      const runInput = document.getElementById("scene-run-id");
-      if (runInput && latestStill.run_id) {
-        runInput.value = latestStill.run_id;
-      }
-      updateRt4dNvidiaControls();
-    }
-
-    function nvidiaUnavailableMessage(detail) {
-      if (detail && typeof detail === "object") {
-        const msg = detail.message || JSON.stringify(detail);
-        return msg;
-      }
-      return typeof detail === "string" ? detail : JSON.stringify(detail || "NVIDIA unavailable");
-    }
-
-    function fileToDataUrl(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(reader.error || new Error("read failed"));
-        reader.readAsDataURL(file);
-      });
-    }
 
     function setStatus(el, msg, kind) {
       el.textContent = msg || "";
@@ -2854,26 +2524,13 @@
     }
 
     fetch("/health").then(r => r.json()).then(h => {
-      health = h;
-      updateRt4dNvidiaControls();
-      refreshByokDiag();
       const cosmosSection = document.getElementById("nim-cosmos");
       const videoOn = h.video_enabled === true;
       if (cosmosSection) {
         cosmosSection.hidden = !videoOn;
       }
-      const sessionKey = !!sessionStorage.getItem(BYOK_KEY);
-      if (!h.nvidia_configured && !sessionKey && !h.dry_run && h.image_backend !== "rt4d") {
-        setHeroHealth("NVIDIA key not configured on the server. Use Local BYOK or run RT4D-backed concept stills.");
-        setStatus(statusEl, h.nvidia_help || "NVIDIA_API_KEY not configured — set server env or use Settings · Local BYOK.", "warn");
-      } else if (h.image_backend === "rt4d" && h.rt4d && !h.rt4d.available) {
-        setHeroHealth("RT4D backend is selected, but this deploy is missing the required Node/script path.");
-        setStatus(
-          statusEl,
-          "RT4D backend selected but Node/script unavailable — " +
-            (h.rt4d_note || "see README for Node + render-still.mjs setup."),
-          "warn",
-        );
+      if (!h.nvidia_configured && !h.dry_run) {
+        setStatus(statusEl, h.nvidia_help || "NVIDIA_API_KEY not configured — generate will return 503 until set.", "warn");
       } else if (h.b2_error) {
         setHeroHealth("Storage is reachable enough to boot, but the B2 probe reported an operator-visible error.");
         setStatus(statusEl, "B2 probe error: " + h.b2_error, "err");
@@ -2898,32 +2555,16 @@
         setStatus(
           statusEl,
           "Ready · B2 " + h.b2_bucket +
-            " · " + backendLabel +
-            nimDown +
-            visionNote +
-            (h.polish && h.polish.available ? " · polish ready" : "") +
-            (h.image_fallback_to_rt4d ? " · RT4D fallback on" : "") +
+            " · image " + h.image_model +
             (videoOn
               ? (" · video " + (h.video_model || "—"))
               : " · video off (stills demo)") +
             " · embed " + h.embed_model
         );
-        setHeroHealth(
-          "Ready on " +
-          (h.image_backend === "rt4d" ? "RT4D deterministic stills" : "NVIDIA still generation") +
-          " with " +
-          (h.prompt_scene && h.prompt_scene.available ? "prompt-to-scene disclosure live" : "scene interpretation available via image lane") +
-          "."
-        );
       } else if (!h.dry_run) {
-        const backendLabel =
-          h.image_backend === "rt4d" ? "rt4d-render" : ("image " + h.image_model);
-        setHeroHealth("Ready without B2 persistence. Use the live forms for local previews and operator validation.");
-        setStatus(statusEl, "Ready · " + backendLabel + (videoOn ? "" : " · video off"), "");
+        setStatus(statusEl, "Ready · image " + h.image_model + (videoOn ? "" : " · video off"), "");
       }
-    }).catch(() => {
-      setHeroHealth("Could not read /health yet. The UI will stay conservative until the service answers.");
-    });
+    }).catch(() => {});
 
     loadAssets();
   </script>

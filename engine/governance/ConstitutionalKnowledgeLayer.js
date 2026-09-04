@@ -343,6 +343,67 @@ export function resolveDecision(intent, evidence, policySet, precedents = []) {
     }
 
     // Expression-lite: intent.timeline == '...' [&& drift_score > N]
+    const timelineId =
+      intent.timeline ??
+      intent.timelineId ??
+      intent.payload?.timelineId ??
+      (typeof intent.params?.timeline === "string"
+        ? intent.params.timeline
+        : null) ??
+      "";
+    const driftScore =
+      typeof evidence?.driftScore === "number"
+        ? evidence.driftScore
+        : typeof intent.params?.driftScore === "number"
+          ? intent.params.driftScore
+          : 0;
+
+      if (!report) {
+        if (acceptIntent) {
+          violations.push(policy.id);
+          requirements.push("conformanceReport");
+        }
+      } else {
+        if (
+          policy.rule === "attach_acceptance" ||
+          policy.rule === "attach_provenance"
+        ) {
+          attachProvenance = true;
+          requirements.push("acceptance");
+        }
+        if (
+          (policy.rule === "deny_if_enforce_and_required_pi_fail" ||
+            policy.rule === "deny_if_false") &&
+          enforce
+        ) {
+          const requiredIds = Array.isArray(policy.requiredContractIds)
+            ? policy.requiredContractIds
+            : ["PI-GEO-LENGTH", "PI-CALC-ENERGY", "PI-TRIG-RADIAL"];
+          const claims = Array.isArray(report.claims) ? report.claims : [];
+          const hostIds = Array.isArray(report.hosts)
+            ? report.hosts.map((h) => h.runtimeId)
+            : [...new Set(claims.map((c) => c.runtimeId))];
+          const failed = [];
+          for (const runtimeId of hostIds) {
+            for (const invariantId of requiredIds) {
+              const claim = claims.find(
+                (c) =>
+                  c.runtimeId === runtimeId && c.invariantId === invariantId,
+              );
+              if (!claim || claim.verdict !== "pass") {
+                failed.push(`${invariantId}@${runtimeId}`);
+              }
+            }
+          }
+          if (failed.length || report.allRequiredPassed === false) {
+            violations.push(policy.id);
+            requirements.push(...failed.map((f) => `pi:${f}`));
+          }
+        }
+      }
+    }
+
+    // Expression-lite: intent.timeline == '...' [&& drift_score > N]
     if (
       typeof policy.condition === "string" &&
       policy.condition.includes("intent.timeline ==")
