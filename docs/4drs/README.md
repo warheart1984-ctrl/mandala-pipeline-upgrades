@@ -15,7 +15,7 @@
 | CROS (separate) | Creative-render scaffold CI-001..006 — [`../../mrs/packages/cros`](../../mrs/packages/cros) (not RT4D; not implemented by genblaze-media) |
 | [inspector/](./inspector/) | 4D Inspector documentation index |
 | [RELEASE_NOTES_v1.0.md](./RELEASE_NOTES_v1.0.md) | GitHub / Zenodo release notes |
-| [roadmap/MRS_V2_ARCHITECTURAL_ROADMAP.md](./roadmap/MRS_V2_ARCHITECTURAL_ROADMAP.md) | MRS v2.0 umbrella (**declared / roadmap**) |
+| [roadmap/MRS_V2_ARCHITECTURAL_ROADMAP.md](./roadmap/MRS_V2_ARCHITECTURAL_ROADMAP.md) | MRS v2.0 umbrella (**contracts frozen** · capability roadmap) |
 | [constitution/](./constitution/) | 4D Engine v1 constitution mirror → [`docs/4d-engine/v1/`](../4d-engine/v1/README.md) |
 
 Charter: [`../../constitution/CHARTER.md`](../../constitution/CHARTER.md)  
