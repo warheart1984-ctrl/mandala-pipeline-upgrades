@@ -21,7 +21,14 @@ order, standalone implementation (no WaveField dependency).
 | Structural invariants (order-only) | **partial** — description says structurally enforced |
 | WebGPU backend classes | **skeleton** — Node has no `navigator.gpu` by default |
 | CIEMSOverlay / MandalaMapping pure helpers | **partial** (unit-tested) |
-| Cluster / GPU scheduler / wire protocols | **declared** — see RFC |
+| Governance DSL (`Engine3DRules` + default rules) | **partial** (unit-tested; `.ciems` parser declared) |
+| Constitutional suite (order, freeze, substrate, rules) | **partial** (real checks + skipped declared tests) |
+| SceneBridge → RT4D intermediate + headless receipt | **partial** — spheres/point samples; mesh triangles **declared** |
+| Cluster / GPU scheduler / wire protocols / RenderCoordinator | **declared** — see SPEC + RFC |
+| Engine3D constitution / rulebook / ledger docs | **declared** — `docs/4d-engine/engine3d/` |
+
+SceneBridge docs: `docs/4d-engine/engine3d/ENGINE3D_SCENE_BRIDGE_SPEC_v1.0.md`  
+Does **not** replace Genblaze `render-still.mjs` archetype stills.
 
 ## Locked tick order
 
